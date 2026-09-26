@@ -1,0 +1,268 @@
+# The whole JBH stack on the Hostinger VPS, next to Magus.
+#
+#   Internet :443 → Magus's Caddy ─ network "edge" ─┬─ jbh-gateway:8080  (/jbh-api/*)
+#                                                   └─ jbh-web:8080      (everything else)
+#   network "jbh-private": jbh-gateway → jbh-iam, jbh-personal-finance, jbh-consul, jbh-postgres
+#
+# Rules this file follows (see README.md "Production"):
+#   - NO service publishes a host port. Docker-published ports bypass ufw, and Magus's Caddy owns 80/443.
+#     Reach Postgres or Consul through an SSH tunnel to the container IP (make consul-tunnel).
+#   - Only jbh-gateway and jbh-web join "edge". Everything else stays on jbh-private.
+#   - Service names are also the Docker DNS names and the Consul hostnames. Keep them in sync with
+#     CONSUL_DISCOVERY_HOSTNAME below and with jbh.caddy.
+#   - Images are built in CI (GHCR, tagged with the git SHA). The VPS only pulls. Never build here:
+#     Gradle/Maven would fight Magus for the 2 vCPU.
+#   - Secrets come from .env (never committed). Each service gets only the variables it needs.
+#
+# Memory limits (defaults): postgres 512M + consul 256M + iam 768M + finance 768M + gateway 512M
+# + web 64M = about 2.9 GB. Magus reserves about 2 GB of the 7.7 GB VPS, so this leaves headroom.
+#
+# Run it through the Makefile (make up / make deploy s=<service>), which passes --env-file .env.
+
+name: jbh
+
+# Docker's default json-file driver has no size cap. Three files of 10 MB each per service at most.
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+# Every service also carries: no-new-privileges, cap_drop ALL (cap_add only where the image needs it),
+# and a read-only root filesystem with a narrow tmpfs. Same hardening as Magus's compose.yaml.
+
+services:
+  jbh-postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    logging: *default-logging
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-jbh_admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      # IAM database. initdb/ creates jbh_finance on the first start.
+      POSTGRES_DB: jbh
+    volumes:
+      - jbh-pgdata:/var/lib/postgresql/data
+      # Runs only when the volume is empty (first start).
+      - ./initdb:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d jbh"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - jbh-private
+    deploy:
+      resources:
+        limits:
+          cpus: "${POSTGRES_CPU_LIMIT:-0.5}"
+          memory: ${POSTGRES_MEM_LIMIT:-512M}
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    # The entrypoint starts as root to chown the data folder, then drops to the postgres user.
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - FOWNER
+      - SETUID
+      - SETGID
+    read_only: true
+    tmpfs:
+      - /var/run/postgresql
+      - /tmp
+
+  jbh-consul:
+    image: hashicorp/consul:1.16.2
+    restart: unless-stopped
+    logging: *default-logging
+    command: "agent -server -ui -node=jbh-consul -bootstrap-expect=1 -client=0.0.0.0"
+    volumes:
+      - jbh-consul-data:/consul/data
+    networks:
+      - jbh-private
+    deploy:
+      resources:
+        limits:
+          cpus: "${CONSUL_CPU_LIMIT:-0.25}"
+          memory: ${CONSUL_MEM_LIMIT:-256M}
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    # The entrypoint chowns /consul/data, then switches to the consul user with su-exec.
+    cap_add:
+      - CHOWN
+      - SETUID
+      - SETGID
+    read_only: true
+    tmpfs:
+      - /tmp
+
+  jbh-iam:
+    image: ghcr.io/kkpa-jbh/jbh-iam:${JBH_IAM_TAG:?set JBH_IAM_TAG in .env}
+    restart: unless-stopped
+    logging: *default-logging
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      DB_HOST: jbh-postgres
+      DB_NAME: jbh
+      DB_USERNAME: ${POSTGRES_USER:-jbh_admin}
+      JBH_ADMIN_PASS: ${POSTGRES_PASSWORD}
+      CONSUL_HOST: jbh-consul
+      # The name the gateway uses to reach IAM. Must match this service name.
+      CONSUL_DISCOVERY_HOSTNAME: jbh-iam
+      # Same value as jbh-gateway: IAM signs the tokens, the gateway checks them.
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
+      GOOGLE_CLIENT_IDS: ${GOOGLE_CLIENT_IDS:-}
+      JBH_GATEWAY_URL: http://jbh-gateway:8080
+      JAVA_OPTS: -Xmx${IAM_XMX:-384m}
+    depends_on:
+      jbh-postgres:
+        condition: service_healthy
+      jbh-consul:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:9999/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    networks:
+      - jbh-private
+    deploy:
+      resources:
+        limits:
+          cpus: "${IAM_CPU_LIMIT:-0.75}"
+          memory: ${IAM_MEM_LIMIT:-768M}
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: true
+    tmpfs:
+      - /tmp
+
+  jbh-personal-finance:
+    image: ghcr.io/kkpa-jbh/jbh-personal-finance:${JBH_FINANCE_TAG:?set JBH_FINANCE_TAG in .env}
+    restart: unless-stopped
+    logging: *default-logging
+    environment:
+      # No query string here: each datasource appends ?currentSchema=<module>.
+      DATABASE_URL: jdbc:postgresql://jbh-postgres:5432/jbh_finance
+      DATABASE_USERNAME: ${POSTGRES_USER:-jbh_admin}
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD}
+      CONSUL_HOST: jbh-consul
+      # Registers the container IP. Finance is only on jbh-private, so that IP is the right one.
+      CONSUL_PREFER_IP: "true"
+      JBH_GATEWAY_URL: http://jbh-gateway:8080
+      # Links inside invitation emails.
+      JBH_FRONTEND_URL: ${JBH_FRONTEND_URL:-https://jbh.usemagus.cloud}
+      GMAIL_HOST: ${GMAIL_HOST:-smtp.gmail.com}
+      GMAIL_PORT: ${GMAIL_PORT:-465}
+      GMAIL_USERNAME: ${GMAIL_USERNAME:?set GMAIL_USERNAME in .env}
+      GMAIL_APP_PASSWORD: ${GMAIL_APP_PASSWORD:?set GMAIL_APP_PASSWORD in .env}
+      GMAIL_FROM: ${GMAIL_FROM:?set GMAIL_FROM in .env}
+      JAVA_OPTS: -Xmx${FINANCE_XMX:-384m}
+    depends_on:
+      jbh-postgres:
+        condition: service_healthy
+      jbh-consul:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:7777/q/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    networks:
+      - jbh-private
+    deploy:
+      resources:
+        limits:
+          cpus: "${FINANCE_CPU_LIMIT:-0.75}"
+          memory: ${FINANCE_MEM_LIMIT:-768M}
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: true
+    tmpfs:
+      - /tmp
+
+  jbh-gateway:
+    image: ghcr.io/kkpa-jbh/jbh-gateway:${JBH_GATEWAY_TAG:?set JBH_GATEWAY_TAG in .env}
+    restart: unless-stopped
+    logging: *default-logging
+    environment:
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
+      CONSUL_HOST: jbh-consul
+      CONSUL_DISCOVERY_HOSTNAME: jbh-gateway
+      # Caddy calls from the edge subnet. Only from there is X-Forwarded-For trusted (real client IP).
+      JBH_TRUSTED_PROXIES: ${JBH_TRUSTED_PROXIES:-10.231.0.0/24}
+      JAVA_OPTS: -Xmx${GATEWAY_XMX:-256m}
+    depends_on:
+      jbh-consul:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:8080/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    # expose, not ports: only containers on these networks can reach 8080.
+    expose:
+      - "8080"
+    networks:
+      - jbh-private
+      - edge
+    deploy:
+      resources:
+        limits:
+          cpus: "${GATEWAY_CPU_LIMIT:-0.5}"
+          memory: ${GATEWAY_MEM_LIMIT:-512M}
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: true
+    tmpfs:
+      - /tmp
+
+  jbh-web:
+    image: ghcr.io/kkpa-jbh/jbh-web:${JBH_WEB_TAG:?set JBH_WEB_TAG in .env}
+    restart: unless-stopped
+    logging: *default-logging
+    expose:
+      - "8080"
+    networks:
+      - edge
+    deploy:
+      resources:
+        limits:
+          cpus: "${WEB_CPU_LIMIT:-0.1}"
+          memory: ${WEB_MEM_LIMIT:-64M}
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: true
+    # Caddy's config and data folders. Nothing there must survive a restart.
+    tmpfs:
+      - /config
+      - /data
+      - /tmp
+
+networks:
+  # Plain bridge, not internal: IAM needs the internet for Google keys, finance for SMTP.
+  jbh-private: {}
+  # Shared with Magus's Caddy. Created once on the VPS with a fixed subnet (make network),
+  # because the gateway trusts X-Forwarded-For only from that subnet.
+  edge:
+    external: true
+
+volumes:
+  jbh-pgdata:
+  jbh-consul-data:

@@ -1,0 +1,20 @@
+# JBH site for Magus's Caddy. Magus's Caddyfile imports /etc/caddy/sites/*.caddy.
+# Install with `make caddy-install`: it validates first and then reloads. Never restart Caddy:
+# a restart with a bad file stops Caddy, and Magus goes down with it.
+#
+# Caddy reaches jbh-gateway and jbh-web over the shared Docker network "edge".
+# No trusted_proxies here: Caddy then replaces any X-Forwarded-For the client sends with the
+# real client IP. jbh-gateway reads that value for its per-IP rate limit.
+
+jbh.usemagus.cloud {
+	encode gzip
+
+	# handle, not handle_path: the gateway routes need the /jbh-api prefix.
+	handle /jbh-api/* {
+		reverse_proxy jbh-gateway:8080
+	}
+
+	handle {
+		reverse_proxy jbh-web:8080
+	}
+}

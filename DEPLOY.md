@@ -6,6 +6,55 @@ Why the setup looks like this: `README.md`, section "Production (Hostinger VPS)"
 - **VPS** = SSH session on the Hostinger VPS, as the `magus` user.
 - Magus lives in `/home/magus/magus-tesla-api`. This repo goes next to it: `/home/magus/jbh-deploy`.
 
+## How a request reaches jbh
+
+Magus and jbh run on the **same VPS** and share **one Caddy** (Magus's). Four steps:
+
+**1. DNS only gives an address.** The `A` record `jbh` says "`jbh.usemagus.cloud` is at the VPS IP".
+Magus's domain (`BASE_DOMAIN` in Magus's `.env`) points to the **same IP**. DNS knows nothing about apps.
+
+**2. The browser says which name it wants.** Every HTTPS request carries the typed name (the `Host` header,
+and the TLS handshake). So the VPS receives "I want `jbh.usemagus.cloud`" or "I want Magus's domain".
+
+**3. Caddy is the only program on ports 80/443, and it reads that name.** Its config has one site block per name:
+
+```
+<Magus BASE_DOMAIN> {        ← Magus's Caddyfile
+    → Magus web:8080
+}
+
+jbh.usemagus.cloud {         ← jbh.caddy (imported from /etc/caddy/sites/)
+    /jbh-api/*       → jbh-gateway:8080
+    everything else  → jbh-web:8080
+}
+```
+
+Caddy picks the block that matches the name, and gets one HTTPS certificate per name.
+
+**4. The jbh block picks the container by path.**
+
+- `https://jbh.usemagus.cloud/` → `jbh-web`: the built `jbh-app` files. The browser loads the app.
+- The app then calls `https://jbh.usemagus.cloud/jbh-api/...` → same name, but the path starts with `/jbh-api/`
+  → `jbh-gateway` → `jbh-iam` or `jbh-personal-finance`.
+
+```
+browser ── jbh.usemagus.cloud ──┐
+                                ├──► VPS :443 ── Caddy ──┬─ <Magus domain>      → Magus web
+browser ── <Magus domain> ──────┘   (same IP)             └─ jbh.usemagus.cloud  → jbh-web / jbh-gateway
+```
+
+**Why one shared Caddy:** only one program can listen on port 443 of a machine, and Magus's Caddy has it. So jbh adds
+a site file instead of its own proxy. The Docker network `edge` lets that Caddy reach `jbh-web` and `jbh-gateway`.
+IAM, finance, Consul and Postgres stay on the private network `jbh-private`.
+
+**Why three containers can all use port 8080:** `jbh-gateway`, `jbh-web` and Magus's `web` all listen on 8080.
+That is fine: each container has its own network space and its own IP, so their ports never clash. Caddy calls them
+by name (`jbh-gateway:8080`, `web:8080`), and Docker's DNS gives the right IP. Ports clash only when published on the
+**host** (`ports:`), and no jbh service does that — Caddy's 80/443 are the only host ports.
+
+**Check:** Magus's `BASE_DOMAIN` must be Magus's own name, never `jbh.usemagus.cloud`. Two blocks with one name make
+`caddy validate` fail (step 16) — and because it validates first, Magus keeps running.
+
 ## 0. What you need first
 
 - [ ] The 4 images exist in GHCR (GitHub → org `kkpa-jbh` → Packages): `jbh-gateway`, `jbh-iam`,

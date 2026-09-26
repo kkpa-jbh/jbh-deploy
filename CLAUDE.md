@@ -8,6 +8,7 @@ It also holds `README.md`: the system map of all JBH services. The `kkpa-jbh/CLA
 | File | Role |
 |------|------|
 | `README.md` | System map (routes, calls, auth, build order, production layout). Single source of truth. |
+| `DEPLOY.md` | Operator runbook: every command with the folder to run it in. Update it when a step changes. |
 | `compose.yaml` | All jbh services. No host ports. Only `jbh-gateway` and `jbh-web` join `edge`. |
 | `jbh.caddy` | Site file Magus's Caddy imports from `/etc/caddy/sites/`. |
 | `.env.example` | Every variable, with placeholders. The real `.env` exists only on the VPS. |

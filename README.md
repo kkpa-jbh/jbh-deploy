@@ -160,6 +160,7 @@ Check http://localhost:8500 : `jbh-iam-service`, `jbh-personal-finance` and the 
 ## Production (Hostinger VPS)
 
 Status: code ready (JBH-40). The first deploy on the VPS is still to do.
+**Step-by-step commands (first deploy, update, rollback, backups): [`DEPLOY.md`](DEPLOY.md).**
 Everything lives in the `jbh-deploy` repo: `compose.yaml`, `jbh.caddy`, `.env.example`, `Makefile`,
 `initdb/`, `backup-db.sh`.
 

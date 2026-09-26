@@ -137,8 +137,14 @@ reinstall it before you build the services that use it.
 3. Each service repo → workflow `image`: builds the jar and pushes `ghcr.io/kkpa-jbh/<name>:<git-sha>`
    (`jbh-iam`, `jbh-personal-finance`, `jbh-gateway`, `jbh-web` from `jbh-app`).
 
-Maven uses the profile `-Pgithub` in CI; Gradle (`jbh-iam`) adds the GitHub repositories only when `GITHUB_TOKEN` is set.
-Each consuming repo needs read access to the package (GitHub → Package settings → Manage Actions access).
+Maven uses `-s .github/maven-settings.xml -Pgithub` in CI; Gradle (`jbh-iam`) adds the GitHub repositories only when
+`PACKAGES_READ_TOKEN` is set.
+
+**Package access.** GitHub Packages for Maven is repository-scoped: a workflow's `GITHUB_TOKEN` reads and writes only
+its own repo's packages. There is no "Manage Actions access" for Maven. So every repo that reads another repo's package
+has a repo secret `PACKAGES_READ_TOKEN`: a classic personal access token with only `read:packages`.
+It is a repo secret, not an org secret, because the org is on GitHub Free and its repos are private.
+Repos that need it: `jbh-gateway-client`, `jbh-iam`, `jbh-personal-finance`. When the token expires, renew it in all three.
 
 ## Start order (local)
 

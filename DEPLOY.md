@@ -141,7 +141,7 @@ bad file stops Caddy, and Magus goes down with it.
 | `502` on jbh.usemagus.cloud | VPS, `/home/magus/jbh-deploy`: `make ps`, then `make logs s=jbh-gateway` (or `jbh-web`). |
 | `401` on every API call | `JWT_SECRET` differs between IAM and gateway? It is one value in `.env`; restart both with `make deploy`. |
 | API returns `503` / "no instances" | The gateway cannot find a service in Consul. Check the Consul UI (tunnel above) and `make logs s=jbh-iam`. |
-| `make up` says `edge` not found | VPS, `/home/magus/jbh-deploy`: `make network`. |
+| `network edge ... could not be found` | VPS, `/home/magus/jbh-deploy`: `make network` (`make up` now runs it first). Then recreate Magus's Caddy (§1 step 7) so it joins `edge`. |
 | `docker pull` → `denied` / `unauthorized` | The token expired. Create a new one, `docker login ghcr.io` again, and update `PACKAGES_READ_TOKEN` in the 3 repos. |
 | CI: `Could not find artifact com.jbh:...` | `PACKAGES_READ_TOKEN` is missing or expired in that repo. |
 | Invitation emails do not arrive | `make logs s=jbh-personal-finance`; check `GMAIL_*` in `.env` (Gmail needs an app password). |

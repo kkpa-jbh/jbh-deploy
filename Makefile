@@ -25,7 +25,8 @@ network:
 pull:
 	$(COMPOSE) pull
 
-up:
+# network first: compose fails when the external network "edge" is missing. It is a no-op when it exists.
+up: network
 	$(COMPOSE) up -d
 
 down:

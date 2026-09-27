@@ -216,7 +216,9 @@ Rules:
 - **Rate limit:** Caddy replaces the client's `X-Forwarded-For` with the real client IP. The gateway trusts
   that header only from `JBH_TRUSTED_PROXIES` (the `edge` subnet), so each client gets its own limit.
 - **HTTPS:** Caddy gets the certificate for `jbh.usemagus.cloud` by itself, once the DNS `A` record points to the VPS.
-- **Same origin:** no CORS config is needed, and the auth cookies are first-party.
+- **Same origin:** the gateway needs no CORS config, and the auth cookies are first-party. But IAM (Spring Security)
+  still checks CORS: behind Caddy and the gateway it sees another host than the browser's `Origin`. So IAM gets
+  `CORS_ALLOWED_ORIGINS=https://jbh.usemagus.cloud`; without it, calls fail with `403 Invalid CORS request`.
   `jbh-app/src/environments/environment.prod.ts` uses the relative `baseUrl: '/jbh-api'`.
 - **Images come from CI** (GHCR, tagged with the git SHA). The VPS only pulls (`docker login ghcr.io` with a
   `read:packages` token). No Gradle/Maven build on the VPS: it would fight Magus for 2 vCPU.
@@ -232,7 +234,7 @@ Env vars set by `compose.yaml` inside Docker:
 | Service | Env vars |
 |---------|---------|
 | `jbh-gateway` | `JWT_SECRET`, `CONSUL_HOST=jbh-consul`, `CONSUL_DISCOVERY_HOSTNAME=jbh-gateway`, `JBH_TRUSTED_PROXIES` |
-| `jbh-iam` | `SPRING_PROFILES_ACTIVE=prod`, `DB_HOST=jbh-postgres`, `DB_NAME=jbh`, `DB_USERNAME`, `JBH_ADMIN_PASS`, `CONSUL_HOST=jbh-consul`, `CONSUL_DISCOVERY_HOSTNAME=jbh-iam`, `JWT_SECRET`, `GOOGLE_CLIENT_IDS`, `JBH_GATEWAY_URL=http://jbh-gateway:8080` |
+| `jbh-iam` | `SPRING_PROFILES_ACTIVE=prod`, `DB_HOST=jbh-postgres`, `DB_NAME=jbh`, `DB_USERNAME`, `JBH_ADMIN_PASS`, `CONSUL_HOST=jbh-consul`, `CONSUL_DISCOVERY_HOSTNAME=jbh-iam`, `JWT_SECRET`, `GOOGLE_CLIENT_IDS`, `CORS_ALLOWED_ORIGINS` (= `JBH_FRONTEND_URL`), `JBH_GATEWAY_URL=http://jbh-gateway:8080` |
 | `jbh-personal-finance` | `DATABASE_URL` (no query string), `DATABASE_USERNAME`, `DATABASE_PASSWORD`, `CONSUL_HOST=jbh-consul`, `CONSUL_PREFER_IP=true`, `JBH_GATEWAY_URL=http://jbh-gateway:8080`, `JBH_FRONTEND_URL`, `GMAIL_*` |
 
 **Magus side** (`magus-tesla-api/deploy/docker/`, one-time change):

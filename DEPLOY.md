@@ -114,7 +114,7 @@ You never build on the VPS. The flow is always: **push → CI builds and publish
 | `jbh-gateway-client` | `Publish` | Maven `jbh-gateway-client` |
 | `jbh-deploy` | none | nothing — the VPS runs `git pull` |
 
-Every image gets two tags: the full git SHA and `latest`. CI keeps only the 5 newest images per service.
+Every image gets two tags: the full git SHA and `latest`. CI keeps only the 2 newest images per service, so a rollback reaches one deploy back.
 Each workflow can also be started by hand: Actions → the workflow → **Run workflow**.
 
 ### 2.2 Deploy one service (the normal case)

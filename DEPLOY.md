@@ -72,7 +72,7 @@ by name (`jbh-gateway:8080`, `web:8080`), and Docker's DNS gives the right IP. P
 | 2 | VPS, any folder | `sudo apt install -y make` (skip if `make --version` works). |
 | 3 | VPS, `/home/magus` | `git clone https://github.com/kkpa-jbh/jbh-deploy.git` |
 | 4 | VPS, `/home/magus/jbh-deploy` | `make network` — creates the shared network `edge` (subnet `10.231.0.0/24`). |
-| 5 | VPS, any folder | `mkdir -p /home/magus/caddy-sites` |
+| 5 | VPS, any folder | `mkdir -p /home/magus/caddy-sites` — **before** step 7, or Docker creates it as `root` and step 16 fails. |
 | 6 | VPS, `/home/magus/magus-tesla-api` | `git pull` |
 | 7 | VPS, `/home/magus/magus-tesla-api` | `docker compose --project-directory . -f deploy/docker/compose.yaml up -d caddy` |
 | 8 | VPS, `/home/magus/magus-tesla-api` | `docker compose --project-directory . -f deploy/docker/compose.yaml exec caddy caddy validate --config /etc/caddy/Caddyfile` — a warning about the empty `sites` folder is fine; an error is not. |
@@ -144,6 +144,7 @@ bad file stops Caddy, and Magus goes down with it.
 | `network edge ... could not be found` | VPS, `/home/magus/jbh-deploy`: `make network` (`make up` now runs it first). Then recreate Magus's Caddy (§1 step 7) so it joins `edge`. |
 | `docker pull` → `denied` / `unauthorized` | The token expired. Create a new one, `docker login ghcr.io` again, and update `PACKAGES_READ_TOKEN` in the 3 repos. |
 | CI: `Could not find artifact com.jbh:...` | `PACKAGES_READ_TOKEN` is missing or expired in that repo. |
+| `make caddy-install`: `cp: ... Permission denied` | Docker created `/home/magus/caddy-sites` as `root` (it did not exist when Magus's Caddy started). VPS: `sudo chown magus:magus /home/magus/caddy-sites`, then retry. |
 | Invitation emails do not arrive | `make logs s=jbh-personal-finance`; check `GMAIL_*` in `.env` (Gmail needs an app password). |
 
 ## 7. Limits and cost

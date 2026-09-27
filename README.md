@@ -146,6 +146,29 @@ has a repo secret `PACKAGES_READ_TOKEN`: a classic personal access token with on
 It is a repo secret, not an org secret, because the org is on GitHub Free and its repos are private.
 Repos that need it: `jbh-gateway-client`, `jbh-iam`, `jbh-personal-finance`. When the token expires, renew it in all three.
 
+### Why packages (and not a build on the VPS)
+
+Two kinds of packages, for two reasons:
+
+1. **Maven packages** (`jbh-notification-contracts`, `jbh-gateway-client`) are shared libraries. On a laptop they come
+   from `~/.m2` (`mvn install`). CI machines start empty, so CI downloads them from GitHub Packages.
+2. **Container images** (GHCR) are the finished services. CI builds each image once; the VPS only downloads it.
+   That is why `make up` only pulls.
+
+`make up` could work without packages: clone all repos on the VPS, install the libraries in order, build with
+Gradle, Maven and npm, then build the images there. It was rejected:
+
+| | Packages + CI (chosen) | Build on the VPS |
+|---|---|---|
+| CPU / RAM on the VPS | Almost none (download only) | Gradle + Maven + npm on 2 vCPU, several GB of RAM |
+| Risk to Magus | Low | High: the build fights Magus for CPU and RAM |
+| Deploy time | About 1 minute | 10–20 minutes |
+| Setup | One token + repo secrets | JDK, Maven, Node on the VPS; 6 repos to keep in sync |
+| Rollback | Change the tag, `make deploy` | Check out the old commit and build again |
+
+A middle way also exists: build images on a laptop and copy them with `docker save | ssh <vps> docker load`.
+No registry is needed, but every deploy is manual. Keep it as a fallback if GitHub Packages is ever unavailable.
+
 ## Start order (local)
 
 1. Postgres on `localhost:5432`.

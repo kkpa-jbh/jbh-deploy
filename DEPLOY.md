@@ -100,14 +100,67 @@ by name (`jbh-gateway:8080`, `web:8080`), and Docker's DNS gives the right IP. P
 
 ## 2. Deploy an update
 
-1. **Laptop:** push to `main` in the service repo. Wait until its `Image` workflow is green.
-2. **VPS, `/home/magus/jbh-deploy`:** `make deploy s=<service>` — for example `make deploy s=jbh-gateway`.
-   It pulls the new image and restarts only that service.
+You never build on the VPS. The flow is always: **push → CI builds and publishes → the VPS pulls**.
 
-Service names: `jbh-gateway`, `jbh-iam`, `jbh-personal-finance`, `jbh-web`.
+### 2.1 What CI does on a push to `main`
 
-With `JBH_<SERVICE>_TAG=latest` in `.env`, the step above takes the newest image. To pin a version, put the git SHA
-of the commit instead (`JBH_IAM_TAG=34bcf39...`, full 40 characters).
+| Repo | Workflow (GitHub → repo → Actions) | Publishes |
+|------|-----------------------------------|-----------|
+| `jbh-gateway` | `Image` | image `ghcr.io/kkpa-jbh/jbh-gateway` |
+| `jbh-iam` | `Image` | image `ghcr.io/kkpa-jbh/jbh-iam` |
+| `jbh-personal-finance` | `Image` | image `ghcr.io/kkpa-jbh/jbh-personal-finance` |
+| `jbh-personal-finance` | `Publish notification contracts` (only when the contracts change) | Maven `jbh-notification-contracts` |
+| `jbh-app` | `Image` | image `ghcr.io/kkpa-jbh/jbh-web` |
+| `jbh-gateway-client` | `Publish` | Maven `jbh-gateway-client` |
+| `jbh-deploy` | none | nothing — the VPS runs `git pull` |
+
+Every image gets two tags: the full git SHA and `latest`. CI keeps only the 5 newest images per service.
+Each workflow can also be started by hand: Actions → the workflow → **Run workflow**.
+
+### 2.2 Deploy one service (the normal case)
+
+1. **Laptop, the service repo:** commit and `git push origin main`.
+2. **Browser or laptop:** wait until the `Image` workflow is green.
+   GitHub → repo → Actions, or `gh run list -R kkpa-jbh/<repo> -w Image -L 1`. Takes 2–4 minutes.
+3. **VPS, `/home/magus/jbh-deploy`:** `make deploy s=<service>`
+   (`jbh-gateway`, `jbh-iam`, `jbh-personal-finance` or `jbh-web`).
+   It pulls the new image and restarts only that service. The others keep running.
+4. **VPS, `/home/magus/jbh-deploy`:** `make ps` until the service is `healthy` (JVMs: 1–2 minutes).
+   If not: `make logs s=<service>` and read the **first** error.
+
+`jbh-web` is the `jbh-app` repo: push `jbh-app`, deploy `s=jbh-web`.
+
+### 2.3 A shared library changed (contracts or gateway-client)
+
+The services include the library at build time, so the order matters:
+
+1. **`jbh-personal-finance`** (only if `jbh-notification-contracts` changed): push → wait for
+   `Publish notification contracts`.
+2. **`jbh-gateway-client`**: push (or Run workflow) → wait for `Publish`.
+3. **`jbh-iam`** and **`jbh-personal-finance`**: push, or **Run workflow** on `Image` when nothing else changed →
+   wait for both.
+4. **VPS:** `make deploy s=jbh-iam`, then `make deploy s=jbh-personal-finance`.
+
+Skipping a step means an image is built with the old library.
+
+### 2.4 Several services at once
+
+Deploy them one by one, back end first: `jbh-iam` → `jbh-personal-finance` → `jbh-gateway` → `jbh-web`.
+Check `make ps` between each one.
+
+### 2.5 A change in this repo (`jbh-deploy`)
+
+1. **Laptop:** commit and push `jbh-deploy`.
+2. **VPS, `/home/magus/jbh-deploy`:** `git pull`.
+3. Then, by what changed:
+   - `compose.yaml` or `.env` → `make up` (recreates only the services whose config changed).
+   - `jbh.caddy` → `make caddy-install`.
+   - A new variable in `.env.example` → add it to `.env` on the VPS first, then `make up`.
+
+### 2.6 Pin a version
+
+With `JBH_<SERVICE>_TAG=latest` in `.env`, `make deploy` takes the newest image. To pin one version, put the full
+40-character git SHA instead (`JBH_IAM_TAG=0a40993c82b3...`). Section 3 uses this for rollback.
 
 ## 3. Roll back
 

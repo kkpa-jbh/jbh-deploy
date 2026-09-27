@@ -9,10 +9,11 @@ It also holds `README.md`: the system map of all JBH services. The `kkpa-jbh/CLA
 |------|------|
 | `README.md` | System map (routes, calls, auth, build order, production layout). Single source of truth. |
 | `DEPLOY.md` | Operator runbook: every command with the folder to run it in. Update it when a step changes. |
+| `CI.md` | GitHub Actions in every repo: triggers, steps, image retention, secrets. Update it when a workflow changes. |
 | `compose.yaml` | All jbh services. No host ports. Only `jbh-gateway` and `jbh-web` join `edge`. |
 | `jbh.caddy` | Site file Magus's Caddy imports from `/etc/caddy/sites/`. |
 | `.env.example` | Every variable, with placeholders. The real `.env` exists only on the VPS. |
-| `Makefile` | `network`, `up`, `deploy s=<svc>`, `caddy-install`, `consul-tunnel`, `backup`, `config`. |
+| `Makefile` | `network`, `up`, `deploy s=<svc>`, `caddy-install`, `consul-tunnel`, `db-tunnel`, `backup`, `config`. |
 | `initdb/` | First-start SQL: `jbh_finance`, its schemas, `pgcrypto`, time zone. |
 | `backup-db.sh` | Daily `pg_dump` of both databases. |
 

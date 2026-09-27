@@ -7,7 +7,7 @@
 COMPOSE = docker compose --env-file .env -f compose.yaml
 SUBNET  = 10.231.0.0/24
 
-.PHONY: help network pull up down ps logs deploy caddy-install consul-tunnel backup config
+.PHONY: help network pull up down ps logs deploy caddy-install consul-tunnel db-tunnel backup config
 
 help:
 	@echo "make network           Create the shared 'edge' network (once, before Magus's next up)"
@@ -16,6 +16,7 @@ help:
 	@echo "make deploy s=<svc>    Pull and restart one service (rollback: old tag in .env first)"
 	@echo "make caddy-install     Copy jbh.caddy into Magus's sites folder, validate, reload"
 	@echo "make consul-tunnel     Print the SSH command for the Consul UI"
+	@echo "make db-tunnel         Print the SSH command and the IntelliJ settings for Postgres"
 	@echo "make backup            Dump both databases into backups/"
 	@echo "make config            Check compose.yaml with the current .env"
 
@@ -53,6 +54,13 @@ caddy-install:
 consul-tunnel:
 	@ip=$$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $$($(COMPOSE) ps -q jbh-consul)); \
 	echo "On your laptop: ssh -L 8500:$$ip:8500 <user>@<vps>   then open http://localhost:8500"
+
+# Postgres has no host port, so the laptop reaches the container IP through SSH. The IP can change when the
+# container is recreated, so print it fresh each time. Laptop port 5433 avoids a clash with a local Postgres.
+db-tunnel:
+	@ip=$$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $$($(COMPOSE) ps -q jbh-postgres)); \
+	echo "On your laptop: ssh -N -L 5433:$$ip:5432 <user>@<vps>   then connect to localhost:5433"; \
+	echo "IntelliJ SSH tunnel instead: SSH host = the VPS, General host = $$ip, port = 5432"
 
 backup:
 	./backup-db.sh

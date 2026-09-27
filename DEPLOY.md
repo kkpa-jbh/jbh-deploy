@@ -104,6 +104,8 @@ You never build on the VPS. The flow is always: **push → CI builds and publish
 
 ### 2.1 What CI does on a push to `main`
 
+Full details (steps, pull requests, secrets, image retention): [`CI.md`](CI.md).
+
 | Repo | Workflow (GitHub → repo → Actions) | Publishes |
 |------|-----------------------------------|-----------|
 | `jbh-gateway` | `Image` | image `ghcr.io/kkpa-jbh/jbh-gateway` |
@@ -165,7 +167,7 @@ With `JBH_<SERVICE>_TAG=latest` in `.env`, `make deploy` takes the newest image.
 ## 3. Roll back
 
 1. Find the old commit SHA: GitHub → the repo → Actions → a green `Image` run, or `git log` in the repo.
-   Only the **last 5** images are kept (older ones are deleted to stay in the free 500 MB).
+   Only the **last 2** images are kept (older ones are deleted to stay in the free 500 MB).
 2. **VPS, `/home/magus/jbh-deploy`:** set `JBH_<SERVICE>_TAG=<full-sha>` in `.env`.
 3. **VPS, `/home/magus/jbh-deploy`:** `make deploy s=<service>`.
 
@@ -186,6 +188,23 @@ bad file stops Caddy, and Magus goes down with it.
   `scp -r magus@<vps-ip>:/home/magus/jbh-deploy/backups ./jbh-backups`
 - Restore one database (**VPS, `/home/magus/jbh-deploy`**, overwrites data):
   `docker compose --env-file .env -f compose.yaml exec -T jbh-postgres sh -c 'pg_restore -U "$POSTGRES_USER" -d jbh --clean' < backups/jbh-<date>.dump`
+
+### Connect from your laptop (IntelliJ, psql)
+
+Postgres has no public port. You reach it through an SSH tunnel to the **container IP**.
+
+1. **VPS, `/home/magus/jbh-deploy`:** `make db-tunnel`. It prints the container IP and the commands.
+   The IP can change when the container is recreated (for example after `make up`). Run it again if a connection breaks.
+2. **IntelliJ:** Database → **+** → Data Source → PostgreSQL.
+   - **SSH/SSL** tab: **Use SSH tunnel**, host = the VPS IP, port `22`, your SSH user and key.
+   - **General** tab: host = **the container IP** (not the VPS host, not `localhost`), port `5432`,
+     user and password = `POSTGRES_USER` / `POSTGRES_PASSWORD` from `.env`, database `jbh` or `jbh_finance`.
+3. **Or psql from the laptop:** run the printed `ssh -N -L 5433:<ip>:5432 ...`, then `psql -h localhost -p 5433 -U jbh_admin -d jbh`.
+
+The General host is resolved **on the VPS**, at the end of the tunnel. With the VPS host or `localhost` there, you reach
+`127.0.0.1:5432` on the VPS — that is **Magus's** database, not jbh's.
+
+This is production and `jbh_admin` can change everything. Tick **Read-only** in the IntelliJ data source unless you must write.
 
 ## 6. When something is wrong
 

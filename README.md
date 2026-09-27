@@ -130,7 +130,7 @@ jbh-iam            jbh-personal-finance (finance-infra, preferences-infra)
 If you change a public class in `jbh-gateway-client` or in `jbh-notification-contracts`,
 reinstall it before you build the services that use it.
 
-**In CI** the same order runs through GitHub Packages (Maven), not `~/.m2`:
+**In CI** the same order runs through GitHub Packages (Maven), not `~/.m2`. All workflows, triggers and steps: [`CI.md`](CI.md).
 
 1. `jbh-personal-finance` → workflow `publish-contracts` (runs when the contracts change, or by hand).
 2. `jbh-gateway-client` → workflow `publish`.
@@ -207,7 +207,7 @@ Internet ─:443─► Magus Caddy (Docker, owns ports 80/443, imports /etc/cadd
 Rules:
 
 - **No Nginx and no host ports.** No jbh service has `ports:`. Docker-published ports bypass `ufw`.
-  Reach Consul or Postgres with an SSH tunnel to the container IP (`make consul-tunnel`).
+  Reach Consul or Postgres with an SSH tunnel to the container IP (`make consul-tunnel`, `make db-tunnel`).
 - **Only `jbh-gateway` and `jbh-web` join `edge`.** IAM, finance, Consul and Postgres stay on `jbh-private`.
 - **Service names are the Docker DNS names and the Consul hostnames:** `jbh-postgres`, `jbh-consul`,
   `jbh-iam`, `jbh-personal-finance`, `jbh-gateway`, `jbh-web`. The `jbh-` prefix avoids clashes on `edge`.

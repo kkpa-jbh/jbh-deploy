@@ -50,7 +50,7 @@ Routes live in `jbh-gateway/src/main/resources/application.yml`.
 | `/jbh-api/auth/**` | `jbh-iam-service` (public, no token) |
 | `/jbh-api/users/**`, `/jbh-api/user-groups/**` | `jbh-iam-service` |
 | `/jbh-api/finance/**`, `/jbh-api/preferences/**` | `jbh-personal-finance` |
-| `/jbh-api/notifications/**` | `jbh-personal-finance` |
+| `/jbh-api/notifications/**` | `jbh-personal-finance`. Internal only: in production Caddy answers `404` from the internet. `jbh-iam` still calls it through the gateway. |
 | `/jbh-api/products/**` | `jbh-personal-finance`, but no endpoint uses it. Products live under `/jbh-api/finance/products`. |
 | `/jbh-api/admin/**` | no route. IAM admin endpoints work only on port 9999. |
 
@@ -67,7 +67,8 @@ The gateway also:
 
 - validates the JWT on every path except `/jbh-api/auth/**` (all other paths are protected by default),
 - reads the token from the `Authorization: Bearer` header, or from the `JBH_TOKEN` / `__Secure-JBH_TOKEN` cookie,
-- applies a rate limit of 10 requests per second per IP.
+- applies a rate limit of 10 requests per second per IP, and 10 requests per minute per IP on
+  `/jbh-api/auth/signin`, `/signup` and `/google` (route `auth_login_route`).
 
 ### 3. Service discovery
 
@@ -97,7 +98,8 @@ If you forget, they keep calling port 8080. On a server where another program us
 
 - `jbh-iam` issues the JWT (`/jbh-api/auth/signin`). Access token: 15 minutes. Refresh token: 30 days (`/jbh-api/auth/refresh`).
 - Tokens travel in the `Authorization` header or in cookies (`JBH_TOKEN` / `__Secure-JBH_TOKEN`).
-- `jbh-iam` and `jbh-gateway` share the same HMAC secret: env `JWT_SECRET`.
+- `jbh-iam` and `jbh-gateway` share the same HMAC secret: env `JWT_SECRET` (Base64, HS256). It has no default:
+  both services stop at start without it, also locally.
 - `jbh-gateway` validates the token on every path except `/jbh-api/auth/**`.
 - `jbh-personal-finance` does not read the JWT itself. It asks `jbh-iam` for the user id through the gateway.
 
@@ -258,13 +260,16 @@ and fill it · `docker login ghcr.io` · `make up` · `make caddy-install`.
 4. If another service must call it, add a method in `jbh-gateway-client` (see its `README.md`).
 5. Call it from `jbh-app` with the `/jbh-api/...` path.
 
-## Known gaps (as of 2026-09-26)
+## Known gaps (as of 2026-09-29)
 
 These are real config problems, not doc problems:
 
 - `jbh-gateway` has no CORS config. This is fine for the current setup (local proxy, and one host in production). It breaks if the app and the API move to different domains, or for native mobile builds.
 - `jbh-gateway` registers in Consul as `API Gateway` (`spring.cloud.consul.discovery.service-name`). Other services use kebab-case names.
 - `/jbh-api/products/**` is routed but unused. `/jbh-api/admin/**` is used but not routed.
+- `/jbh-api/notifications/**` is blocked only at Caddy (production). Locally, any logged-in user can call it through
+  the gateway and send email. A real fix needs a service-to-service credential in `jbh-gateway-client`.
+- `jbh-iam` and `jbh-personal-finance` use the same Postgres admin user. One user per service, with fewer rights, is better.
 - Build cycle: `jbh-gateway-client` needs `jbh-notification-contracts` (in `jbh-personal-finance`), and `jbh-personal-finance` needs `jbh-gateway-client`.
   CI breaks it by publishing the contracts first (`publish-contracts`), then the client, then the finance image.
 

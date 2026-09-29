@@ -9,6 +9,13 @@
 jbh.usemagus.cloud {
 	encode gzip
 
+	# Internal only. jbh-iam sends invitation emails through jbh-gateway:8080 on the Docker network,
+	# never through Caddy. From the internet, any logged-in user could send email with our account.
+	# Caddy sorts handle blocks by path length, so this one wins over /jbh-api/* below.
+	handle /jbh-api/notifications* {
+		respond 404
+	}
+
 	# handle, not handle_path: the gateway routes need the /jbh-api prefix.
 	handle /jbh-api/* {
 		reverse_proxy jbh-gateway:8080

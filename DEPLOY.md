@@ -223,5 +223,5 @@ This is production and `jbh_admin` can change everything. Tick **Read-only** in 
 
 - The VPS is already paid. DNS, the HTTPS certificate (Let's Encrypt) and Gmail SMTP are free.
 - GitHub Free, private repos: 2,000 Actions minutes and **500 MB package storage + 1 GB download per month**.
-  CI keeps only 5 images per service. With the default $0 spending limit, going over makes pushes or pulls fail;
+  CI keeps only 2 images per service. With the default $0 spending limit, going over makes pushes or pulls fail;
   it does not create a bill. Check usage in GitHub → org settings → Billing.

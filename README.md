@@ -227,6 +227,7 @@ Rules:
 - **Rollback:** set the old SHA in `.env` (`JBH_<SERVICE>_TAG`), then `make deploy s=<service>`.
 - **Secrets** only in `.env` on the VPS. `JWT_SECRET` is set once and compose passes it to IAM and the gateway.
 - **Memory:** every service has a limit, and each JVM has `-Xmx` (defaults: about 2.9 GB total).
+- **External AI APIs:** `jbh-personal-finance` calls Gemini and Jev over HTTPS for the bank statement import, so `jbh-private` must keep internet access.
 - **Postgres:** own container, no host port (Magus already uses `127.0.0.1:5432`), volume `jbh-pgdata`.
   `initdb/` creates `jbh_finance`, its schemas (`finance`, `preferences`, `notifications`) and `pgcrypto` on the first start.
   Migrations run when each service starts (Liquibase). `backup-db.sh` dumps both DBs daily; copy `backups/` off the VPS.
@@ -237,7 +238,7 @@ Env vars set by `compose.yaml` inside Docker:
 |---------|---------|
 | `jbh-gateway` | `JWT_SECRET`, `CONSUL_HOST=jbh-consul`, `CONSUL_DISCOVERY_HOSTNAME=jbh-gateway`, `JBH_TRUSTED_PROXIES` |
 | `jbh-iam` | `SPRING_PROFILES_ACTIVE=prod`, `DB_HOST=jbh-postgres`, `DB_NAME=jbh`, `DB_USERNAME`, `JBH_ADMIN_PASS`, `CONSUL_HOST=jbh-consul`, `CONSUL_DISCOVERY_HOSTNAME=jbh-iam`, `JWT_SECRET`, `GOOGLE_CLIENT_IDS`, `CORS_ALLOWED_ORIGINS` (= `JBH_FRONTEND_URL`), `JBH_GATEWAY_URL=http://jbh-gateway:8080` |
-| `jbh-personal-finance` | `DATABASE_URL` (no query string), `DATABASE_USERNAME`, `DATABASE_PASSWORD`, `CONSUL_HOST=jbh-consul`, `CONSUL_PREFER_IP=true`, `JBH_GATEWAY_URL=http://jbh-gateway:8080`, `JBH_FRONTEND_URL`, `GMAIL_*` |
+| `jbh-personal-finance` | `DATABASE_URL` (no query string), `DATABASE_USERNAME`, `DATABASE_PASSWORD`, `CONSUL_HOST=jbh-consul`, `CONSUL_PREFER_IP=true`, `JBH_GATEWAY_URL=http://jbh-gateway:8080`, `JBH_FRONTEND_URL`, `GMAIL_*`, `GEMINI_API_KEY`, `JEV_API_KEY` |
 
 **Magus side** (`magus-tesla-api/deploy/docker/`, one-time change):
 

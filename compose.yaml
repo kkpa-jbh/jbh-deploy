@@ -167,6 +167,9 @@ services:
       GMAIL_USERNAME: ${GMAIL_USERNAME:?set GMAIL_USERNAME in .env}
       GMAIL_APP_PASSWORD: ${GMAIL_APP_PASSWORD:?set GMAIL_APP_PASSWORD in .env}
       GMAIL_FROM: ${GMAIL_FROM:?set GMAIL_FROM in .env}
+      # Bank statement import. Empty keys keep the service up; the import endpoint then answers with an error.
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      JEV_API_KEY: ${JEV_API_KEY:-}
       JAVA_OPTS: -Xmx${FINANCE_XMX:-384m}
     depends_on:
       jbh-postgres:
@@ -262,7 +265,8 @@ services:
       - /tmp
 
 networks:
-  # Plain bridge, not internal: IAM needs the internet for Google keys, finance for SMTP.
+  # Plain bridge, not internal: IAM needs the internet for Google keys, finance for SMTP
+  # and for the Gemini and Jev APIs (bank statement import).
   jbh-private: {}
   # Shared with Magus's Caddy. Created once on the VPS with a fixed subnet (make network),
   # because the gateway trusts X-Forwarded-For only from that subnet.

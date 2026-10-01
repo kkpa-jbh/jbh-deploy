@@ -97,8 +97,6 @@ Only `jbh-personal-finance` checks a pull request (`CI Pipeline`). No other repo
 Nothing blocks a merge: `main` has no branch protection in any repo (checked on 2026-09-26), so no check is required.
 After the merge, the push to `main` starts the normal workflows above.
 
-The usual way of working is to push straight to `main` (no ticket branches).
-
 ## Order for shared libraries
 
 The services include the libraries when CI builds them. So when a library changes, publish in this order:

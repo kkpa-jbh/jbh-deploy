@@ -168,7 +168,13 @@ services:
       GMAIL_APP_PASSWORD: ${GMAIL_APP_PASSWORD:?set GMAIL_APP_PASSWORD in .env}
       GMAIL_FROM: ${GMAIL_FROM:?set GMAIL_FROM in .env}
       # Bank statement import. Empty keys keep the service up; the import endpoint then answers with an error.
-      STATEMENT_READER: ${STATEMENT_READER:-openrouter}
+      # Step 1 (PDF -> text): azure or pdfbox. Step 2 (text -> movements): openrouter or gemini.
+      STATEMENT_TEXT_SOURCE: ${STATEMENT_TEXT_SOURCE:-azure}
+      STATEMENT_LLM: ${STATEMENT_LLM:-openrouter}
+      AZURE_DI_ENDPOINT: ${AZURE_DI_ENDPOINT:-}
+      AZURE_DI_API_KEY: ${AZURE_DI_API_KEY:-}
+      # The Azure free tier reads only 2 pages per request. 0 = whole PDF (paid tier).
+      AZURE_DI_PAGES_PER_REQUEST: ${AZURE_DI_PAGES_PER_REQUEST:-2}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       JEV_API_KEY: ${JEV_API_KEY:-}

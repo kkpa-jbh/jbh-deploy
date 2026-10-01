@@ -62,7 +62,7 @@ by name (`jbh-gateway:8080`, `web:8080`), and Docker's DNS gives the right IP. P
 - [ ] A GitHub **classic token** with only `read:packages` (the same one stored as the `PACKAGES_READ_TOKEN`
       secret in `jbh-gateway-client`, `jbh-iam`, `jbh-personal-finance`).
 - [ ] The Magus changes are pushed (Caddyfile `import`, `edge` network in `compose.yaml`).
-- [ ] The values for `.env`: a Postgres password, a `JWT_SECRET`, the Gmail account and app password.
+- [ ] The values for `.env`: a Postgres password, a `JBH_JWT_SECRET`, the Gmail account and app password.
 
 ## 1. First deploy (one time)
 
@@ -77,7 +77,7 @@ by name (`jbh-gateway:8080`, `web:8080`), and Docker's DNS gives the right IP. P
 | 7 | VPS, `/home/magus/magus-tesla-api` | `docker compose --project-directory . -f deploy/docker/compose.yaml up -d caddy` |
 | 8 | VPS, `/home/magus/magus-tesla-api` | `docker compose --project-directory . -f deploy/docker/compose.yaml exec caddy caddy validate --config /etc/caddy/Caddyfile` — a warning about the empty `sites` folder is fine; an error is not. |
 | 9 | Browser | Open the Magus site. It must still work. **Stop here if it does not.** |
-| 10 | VPS, `/home/magus/jbh-deploy` | `cp .env.example .env` then `nano .env`. Fill every `change-me`. Generate `JWT_SECRET` with `openssl rand -base64 32`. |
+| 10 | VPS, `/home/magus/jbh-deploy` | `cp .env.example .env` then `nano .env`. Fill every `change-me`. Generate `JBH_JWT_SECRET` with `openssl rand -base64 32`. |
 | 11 | VPS, any folder | `docker ps --format '{{.Names}}' \| grep caddy` → put that name in `.env` as `MAGUS_CADDY_CONTAINER`. |
 | 12 | VPS, any folder | `docker login ghcr.io -u grug-dev` → paste the `read:packages` token as the password. |
 | 13 | VPS, `/home/magus/jbh-deploy` | `make config` — must print `compose.yaml OK`. |
@@ -211,7 +211,7 @@ This is production and `jbh_admin` can change everything. Tick **Read-only** in 
 | Symptom | Where / what |
 |---------|--------------|
 | `502` on jbh.usemagus.cloud | VPS, `/home/magus/jbh-deploy`: `make ps`, then `make logs s=jbh-gateway` (or `jbh-web`). |
-| `401` on every API call | `JWT_SECRET` differs between IAM and gateway? It is one value in `.env`; restart both with `make deploy`. |
+| `401` on every API call | `JBH_JWT_SECRET` differs between IAM and gateway? It is one value in `.env`; restart both with `make deploy`. |
 | API returns `503` / "no instances" | The gateway cannot find a service in Consul. Check the Consul UI (tunnel above) and `make logs s=jbh-iam`. |
 | `network edge ... could not be found` | VPS, `/home/magus/jbh-deploy`: `make network` (`make up` now runs it first). Then recreate Magus's Caddy (§1 step 7) so it joins `edge`. |
 | `docker pull` → `denied` / `unauthorized` | The token expired. Create a new one, `docker login ghcr.io` again, and update `PACKAGES_READ_TOKEN` in the 3 repos. |

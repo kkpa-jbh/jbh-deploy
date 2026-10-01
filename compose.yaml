@@ -115,7 +115,7 @@ services:
       # The name the gateway uses to reach IAM. Must match this service name.
       CONSUL_DISCOVERY_HOSTNAME: jbh-iam
       # Same value as jbh-gateway: IAM signs the tokens, the gateway checks them.
-      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
+      JBH_JWT_SECRET: ${JBH_JWT_SECRET:?set JBH_JWT_SECRET in .env}
       GOOGLE_CLIENT_IDS: ${GOOGLE_CLIENT_IDS:-}
       # The browser sends Origin: <site>. Behind Caddy and the gateway IAM sees another host, so it applies CORS.
       CORS_ALLOWED_ORIGINS: ${JBH_FRONTEND_URL:-https://jbh.usemagus.cloud}
@@ -202,7 +202,7 @@ services:
     restart: unless-stopped
     logging: *default-logging
     environment:
-      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
+      JBH_JWT_SECRET: ${JBH_JWT_SECRET:?set JBH_JWT_SECRET in .env}
       CONSUL_HOST: jbh-consul
       CONSUL_DISCOVERY_HOSTNAME: jbh-gateway
       # Caddy calls from the edge subnet. Only from there is X-Forwarded-For trusted (real client IP).

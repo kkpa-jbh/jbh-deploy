@@ -6,6 +6,7 @@
 #
 # deploy:   pull the newest image and restart. If it is not healthy, start the image from before by itself.
 #           After a healthy deploy, the image from before is kept as the local tag <service>:previous.
+#           "deploy <service> <sha>" runs the image of that commit instead of the tag in .env (auto-deploy uses it).
 # rollback: start <service>:previous (the image that ran before the last deploy).
 # A failed deploy always exits red, even when the rollback worked.
 set -eu
@@ -13,13 +14,21 @@ set -eu
 cd "$(dirname "$0")"
 
 cmd="${SSH_ORIGINAL_COMMAND:-$*}"
-action="${cmd%% *}"
-service="${cmd#* }"
 
 refuse() {
-	echo "Refused: '$cmd'. Use: deploy|rollback jbh-web|jbh-gateway|jbh-iam|jbh-personal-finance" >&2
+	echo "Refused: '$cmd'. Use: deploy|rollback jbh-web|jbh-gateway|jbh-iam|jbh-personal-finance, and for deploy an optional full git SHA" >&2
 	exit 2
 }
+
+# Split the text into words. No eval: the words stay data. -f: a "*" never matches file names.
+set -f
+# shellcheck disable=SC2086
+set -- $cmd
+set +f
+[ "$#" -ge 2 ] && [ "$#" -le 3 ] || refuse
+action=$1
+service=$2
+tag=${3:-}
 
 # Never Postgres or Consul: a restart there stops every service. Keep in sync with .github/workflows/deploy.yml.
 case "$action" in
@@ -27,9 +36,21 @@ case "$action" in
 	*) refuse ;;
 esac
 case "$service" in
-	jbh-web | jbh-gateway | jbh-iam | jbh-personal-finance) ;;
+	jbh-web) tag_var=JBH_WEB_TAG ;;
+	jbh-gateway) tag_var=JBH_GATEWAY_TAG ;;
+	jbh-iam) tag_var=JBH_IAM_TAG ;;
+	jbh-personal-finance) tag_var=JBH_FINANCE_TAG ;;
 	*) refuse ;;
 esac
+
+# The tag is a full git SHA: CI tags every image with it. Only deploy takes one.
+# Compose reads the shell env before .env, so this run uses that image. .env does not change.
+if [ -n "$tag" ]; then
+	[ "$action" = deploy ] || refuse
+	case "$tag" in *[!0-9a-f]*) refuse ;; esac
+	[ "${#tag}" -eq 40 ] || refuse
+	export "$tag_var=$tag"
+fi
 
 compose() {
 	docker compose --env-file .env -f compose.yaml "$@"
@@ -69,7 +90,7 @@ wait_healthy() {
 	return 1
 }
 
-# The image compose starts for the service, e.g. ghcr.io/kkpa-jbh/jbh-web:latest.
+# The image compose starts for the service, e.g. ghcr.io/kkpa-jbh/jbh-web:latest (or :<sha> with a tag).
 # config --images also lists the services it depends on, so keep only its own line.
 ref=$(compose config --images "$service" | grep "/$service:" || true)
 if [ -z "$ref" ]; then
@@ -89,7 +110,7 @@ deploy() {
 	if compose up -d --no-deps "$service" && wait_healthy; then
 		new=$(running_image)
 		if [ "$old" = "$new" ]; then
-			echo "No new image: $service already ran the newest one."
+			echo "No new image: $service already ran this image."
 		elif [ -n "$old" ]; then
 			docker tag "$old" "$service:previous"
 		fi

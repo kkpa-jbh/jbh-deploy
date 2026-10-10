@@ -137,8 +137,8 @@ Why the key is safe:
 
 - `command="…/ci-deploy.sh"`: the key runs only this script, whatever the runner asks for.
 - `restrict`: no shell, no terminal, no port forwarding.
-- The script accepts only `deploy` or `rollback`, and only `jbh-web`, `jbh-gateway`, `jbh-iam` and `jbh-personal-finance`.
-  Anything else ends with `Refused`.
+- The script accepts only `deploy` or `rollback`, only `jbh-web`, `jbh-gateway`, `jbh-iam` and `jbh-personal-finance`,
+  and for `deploy` an optional full git SHA (40 characters `0-9a-f`). Anything else ends with `Refused`.
 - If the key leaks, it can only deploy or roll back one of these 4 services, with images that are already in GHCR or on the VPS.
 
 Two more facts:
@@ -211,9 +211,55 @@ cd ~ && rm -r ~/jbh-ci-key
 The secret is now the only copy of the private key. If you lose it, make a new key (steps 2–6).
 
 **7. Browser:** GitHub → `jbh-deploy` → Actions → `Deploy` → **Run workflow** → `deploy`, `jbh-web`.
-It must end green with `jbh-web is running.`
+It must end green with `jbh-web is healthy.`
 
 **Block the key** (VPS, any folder): `sed -i '/jbh-ci-deploy$/d' ~/.ssh/authorized_keys`. Steps 2–6 make a new one.
+
+### 1.2 Turn on auto-deploy for jbh-web (one time)
+
+After this, a merge into `jbh-app`'s `main` deploys `jbh-web` by itself. How it works: `CI.md`, "Auto-deploy".
+It needs the Deploy button (§1.1).
+
+**1. VPS, `/home/magus/jbh-deploy`:** get the new `ci-deploy.sh` (it accepts a commit SHA) and the `jbh-web` health check.
+
+```bash
+git pull
+make config                      # must print: compose.yaml OK
+```
+
+**2. Browser:** create the token. GitHub → your picture → Settings → Developer settings → Personal access tokens →
+**Fine-grained tokens** → **Generate new token**:
+
+- Name: `jbh-deploy-dispatch`. Expiration: the longest you accept (write the date down: auto-deploy stops then).
+- Resource owner: `kkpa-jbh`.
+- Repository access: **Only select repositories** → `jbh-deploy`.
+- Permissions → Repository permissions → **Actions: Read and write**. Nothing else.
+
+If the org asks an owner to approve the token: org Settings → Personal access tokens → Pending requests.
+
+**3. Laptop, any folder:** save it in `jbh-app`. The command asks for the value; paste the token.
+
+```bash
+gh secret set DEPLOY_DISPATCH_TOKEN -R kkpa-jbh/jbh-app
+```
+
+**4. Browser:** merge the `jbh-app` PR that adds the auto-deploy job. Its `Image` run skips `deploy`, because
+`AUTO_DEPLOY` is not set yet.
+
+**5. Browser:** test the path with that commit. `jbh-deploy` → Actions → `Deploy` → **Run workflow** → `deploy`,
+`jbh-web`, tag = the full SHA of the merge commit (`gh run list -R kkpa-jbh/jbh-app -w Image -L 1 --json headSha -q '.[0].headSha'`).
+It must end green with `jbh-web is healthy.` (not `running`: that means the VPS still has the old `compose.yaml`).
+
+**6. Laptop, any folder:** turn it on.
+
+```bash
+gh variable set AUTO_DEPLOY -R kkpa-jbh/jbh-app --body true
+```
+
+The next merge into `jbh-app` deploys by itself. Check it in `jbh-deploy` → Actions → `Deploy`.
+
+**Turn it off:** `gh variable set AUTO_DEPLOY -R kkpa-jbh/jbh-app --body false`. Deploys go back to the button.
+**Token expired:** the `deploy` job in `jbh-app`'s `Image` turns red. Make a new token (step 2), then step 3.
 
 ## 2. Deploy an update
 
@@ -229,9 +275,9 @@ Full details (steps, pull requests, secrets, image retention): [`CI.md`](CI.md).
 | `jbh-iam` | `Image` | image `ghcr.io/kkpa-jbh/jbh-iam` |
 | `jbh-personal-finance` | `Image` | image `ghcr.io/kkpa-jbh/jbh-personal-finance` |
 | `jbh-personal-finance` | `Publish notification contracts` (only when the contracts change) | Maven `jbh-notification-contracts` |
-| `jbh-app` | `Image` | image `ghcr.io/kkpa-jbh/jbh-web` |
+| `jbh-app` | `Image` | image `ghcr.io/kkpa-jbh/jbh-web`, then deploys it by itself when `AUTO_DEPLOY` is on (§1.2) |
 | `jbh-gateway-client` | `Publish` | Maven `jbh-gateway-client` |
-| `jbh-deploy` | `Deploy` (by hand only) | nothing — deploys one service to the VPS (§2.2) |
+| `jbh-deploy` | `Deploy` (by hand, or from `jbh-app`'s `Image`) | nothing — deploys one service to the VPS (§2.2) |
 
 Every image gets two tags: the full git SHA and `latest`. CI keeps only the 2 newest images per service, so a rollback reaches one deploy back.
 Each workflow can also be started by hand: Actions → the workflow → **Run workflow**.
@@ -252,6 +298,8 @@ Each workflow can also be started by hand: Actions → the workflow → **Run wo
    same wait, same automatic rollback. For more of a failure: `make logs s=<service>` and read the **first** error.
 
 `jbh-web` is the `jbh-app` repo: merge into `jbh-app`, deploy `s=jbh-web`.
+With auto-deploy on (§1.2), steps 2 and 3 happen by themselves for `jbh-web`. Check the result in
+`jbh-deploy` → Actions → `Deploy`.
 
 ### 2.3 A shared library changed (contracts or gateway-client)
 
@@ -285,6 +333,7 @@ Wait until each one is healthy (a green `Deploy` run, or `make ps`) before the n
 
 With `JBH_<SERVICE>_TAG=latest` in `.env`, `make deploy` takes the newest image. To pin one version, put the full
 40-character git SHA instead (`JBH_IAM_TAG=0a40993c82b3...`). Section 3 uses this for rollback.
+A pin does not stop auto-deploy: it sends its own SHA. To pin `jbh-web`, turn auto-deploy off first (§1.2).
 
 ## 3. Roll back
 
@@ -310,6 +359,9 @@ How it works and its limits:
    Only the **last 2** images are kept in GHCR (older ones are deleted to stay in the free 500 MB).
 2. **VPS, `/home/magus/jbh-deploy`:** set `JBH_<SERVICE>_TAG=<full-sha>` in `.env`.
 3. **VPS, `/home/magus/jbh-deploy`:** `make deploy s=<service>` (or the `Deploy` button: it reads the tag from `.env`).
+
+For a quick try without a change in `.env`: `Deploy` → `deploy`, the service, and the SHA in `tag`.
+It lasts until the next deploy without a tag, which goes back to the `.env` tag. For `jbh-web`, turn auto-deploy off first.
 
 ## 4. Change the Caddy site
 
@@ -361,6 +413,7 @@ This is production and `jbh_admin` can change everything. Tick **Read-only** in 
 | `Deploy`: `Host key verification failed` | `VPS_KNOWN_HOSTS` does not match the VPS (for example after a VPS rebuild). Redo §1.1 step 5, then only the `VPS_KNOWN_HOSTS` line of step 6. |
 | `make config` or `Deploy`: `set JBH_JWT_SECRET in .env` | `.env` still has the old name `JWT_SECRET` (renamed on 2026-10-01). VPS, `/home/magus/jbh-deploy`: `cp .env ~/jbh-env-backup && chmod 600 ~/jbh-env-backup`, then `sed -i 's/^JWT_SECRET=/JBH_JWT_SECRET=/' .env`, then `make config`. Then deploy `jbh-iam` and `jbh-gateway`: their new images read the new name. |
 | `Deploy`: `Unknown service` or `Refused` | `ci-deploy.sh` on the VPS does not match the workflow. VPS, `/home/magus/jbh-deploy`: `git pull`. |
+| `jbh-app` `Image`, job `deploy`: `Bad credentials` (401), or 403 / 404 | `DEPLOY_DISPATCH_TOKEN` expired, is missing, or lacks "Actions: Read and write" on `jbh-deploy`. Redo §1.2 steps 2–3. |
 | `rollback`: `No previous image` | No healthy deploy has run with the current `ci-deploy.sh` yet, or the image was pruned. Use §3 "A chosen version, by commit SHA". |
 | Invitation emails do not arrive | `make logs s=jbh-personal-finance`; check `GMAIL_*` in `.env` (Gmail needs an app password). |
 

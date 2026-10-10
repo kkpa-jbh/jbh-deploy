@@ -248,6 +248,19 @@ services:
     image: ghcr.io/kkpa-jbh/jbh-web:${JBH_WEB_TAG:?set JBH_WEB_TAG in .env}
     restart: unless-stopped
     logging: *default-logging
+    # A page check, not only "Caddy runs". Unknown paths answer index.html with 200 (single-page app),
+    # so a missing bundle still looks fine to a plain wget. This reads the main bundle name from index.html,
+    # then checks that the file is JavaScript: its first character is not "<". ci-deploy.sh waits for it.
+    healthcheck:
+      test: >-
+        f=$$(wget -qO- http://localhost:8080/ | grep -oE 'main-[A-Z0-9]{8}[.]js' | head -n 1)
+        && [ -n "$$f" ]
+        && c=$$(wget -qO- "http://localhost:8080/$$f" | head -c 1)
+        && [ -n "$$c" ] && [ "$$c" != "<" ]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
     expose:
       - "8080"
     networks:

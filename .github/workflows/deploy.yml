@@ -1,9 +1,9 @@
 # Deploys or rolls back one service on the VPS, then waits until it is healthy (ci-deploy.sh).
 # deploy: newest image; if it is not healthy, the VPS goes back to the image from before by itself.
 # rollback: the image that ran before the last deploy.
-# Only by hand: Actions → Deploy → Run workflow. A push never deploys (CI.md, "Deploy").
+# Started by hand (Actions → Deploy → Run workflow), or by jbh-app's Image workflow with a tag (CI.md, "Auto-deploy").
 name: Deploy
-run-name: ${{ inputs.action }} ${{ inputs.service }}
+run-name: ${{ inputs.action }} ${{ inputs.service }} ${{ inputs.tag }}
 
 on:
   workflow_dispatch:
@@ -24,13 +24,19 @@ on:
           - jbh-gateway
           - jbh-iam
           - jbh-personal-finance
+      tag:
+        description: Optional, deploy only. Full git SHA of the image. Empty = the tag in .env on the VPS (latest).
+        type: string
+        default: ''
 
 # The job only opens an SSH connection. It needs no access to the repo.
 permissions: {}
 
-# One deploy at a time. A second run waits for the first one.
+# One run per service at a time; a second run for the same service waits.
+# GitHub keeps only one waiting run per group: a newer one replaces it, so the newest image wins.
+# One group per service, so a waiting deploy of one service never cancels another service's deploy.
 concurrency:
-  group: deploy-vps
+  group: deploy-${{ inputs.service }}
   cancel-in-progress: false
 
 jobs:
@@ -45,6 +51,7 @@ jobs:
         env:
           ACTION: ${{ inputs.action }}
           SERVICE: ${{ inputs.service }}
+          TAG: ${{ inputs.tag }}
           VPS_HOST: ${{ secrets.VPS_HOST }}
           VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
           VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
@@ -54,4 +61,4 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           printf '%s\n' "$VPS_KNOWN_HOSTS" > ~/.ssh/known_hosts
           ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=yes \
-            "magus@$VPS_HOST" "$ACTION $SERVICE"
+            "magus@$VPS_HOST" "$ACTION $SERVICE${TAG:+ $TAG}"

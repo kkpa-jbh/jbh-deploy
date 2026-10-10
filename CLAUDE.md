@@ -17,7 +17,7 @@ It also holds `README.md`: the system map of all JBH services. The `kkpa-jbh/CLA
 | `initdb/` | First-start SQL: `jbh_finance`, its schemas, `pgcrypto`, time zone. |
 | `backup-db.sh` | Daily `pg_dump` of both databases. |
 | `ci-deploy.sh` | Deploy or roll back one app service, wait until healthy, roll back by itself on failure. Forced command of the CI deploy key; `make deploy` / `make rollback` call it too. |
-| `.github/workflows/deploy.yml` | `Deploy` workflow (by hand only): SSH to the VPS, runs `ci-deploy.sh`. |
+| `.github/workflows/deploy.yml` | `Deploy` workflow: SSH to the VPS, runs `ci-deploy.sh`. By hand, or from `jbh-app`'s `Image` (auto-deploy of `jbh-web`). |
 
 ## Rules
 
@@ -28,7 +28,8 @@ It also holds `README.md`: the system map of all JBH services. The `kkpa-jbh/CLA
   and `JBH_GATEWAY_URL`.
 - **`edge` subnet `10.231.0.0/24`** must match `JBH_TRUSTED_PROXIES`, or the rate limit breaks.
 - **`ci-deploy.sh` is a security boundary.** The CI key can run nothing else. Keep its service list strict
-  (never `jbh-postgres` or `jbh-consul`), never pass the input to `eval` or a shell, and keep the list equal to `deploy.yml`.
+  (never `jbh-postgres` or `jbh-consul`), accept only a full 40-character hex SHA as tag, never pass the input
+  to `eval` or a shell, and keep the list equal to `deploy.yml`.
 - **Static checks only:** `docker compose --env-file .env.example -f compose.yaml config -q`. Never `up` from a laptop.
 
 ## System map sync

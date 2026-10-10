@@ -225,7 +225,8 @@ Rules:
   `jbh-app/src/environments/environment.prod.ts` uses the relative `baseUrl: '/jbh-api'`.
 - **Images come from CI** (GHCR, tagged with the git SHA). The VPS only pulls (`docker login ghcr.io` with a
   `read:packages` token). No Gradle/Maven build on the VPS: it would fight Magus for 2 vCPU.
-- **A push never deploys.** You start a deploy by hand: the `Deploy` workflow in `jbh-deploy`, or `make deploy` on the VPS.
+- **Deploys are by hand, except `jbh-web`.** You start a deploy with the `Deploy` workflow in `jbh-deploy`, or `make deploy`
+  on the VPS. `jbh-web` deploys by itself after a merge into `jbh-app` (repo variable `AUTO_DEPLOY`; `CI.md`, "Auto-deploy").
   The workflow's SSH key can run only `ci-deploy.sh` (a forced command), and that script accepts only the 4 app services.
 - **Rollback:** a deploy that is not healthy goes back by itself. `make rollback s=<service>` (or `Deploy` → `rollback`)
   starts the image from before the last deploy, kept on the VPS as `<service>:previous`.

@@ -238,7 +238,8 @@ Each workflow can also be started by hand: Actions → the workflow → **Run wo
 
 ### 2.2 Deploy one service (the normal case)
 
-1. **Laptop, the service repo:** commit and `git push origin main`.
+1. **Laptop, the service repo:** push a branch and merge it with a pull request (`gh pr create`, then `gh pr merge`).
+   `main` accepts no direct push in `jbh-app`, `jbh-gateway`, `jbh-iam`, `jbh-personal-finance` (`CI.md`, "Pull requests").
 2. **Browser or laptop:** wait until the `Image` workflow is green.
    GitHub → repo → Actions, or `gh run list -R kkpa-jbh/<repo> -w Image -L 1`. Takes 2–4 minutes.
 3. **Browser:** GitHub → `jbh-deploy` → Actions → `Deploy` → **Run workflow**, pick `deploy` and the service
@@ -250,16 +251,16 @@ Each workflow can also be started by hand: Actions → the workflow → **Run wo
 4. **Or without the button, VPS, `/home/magus/jbh-deploy`:** `make deploy s=<service>`. It runs the same script:
    same wait, same automatic rollback. For more of a failure: `make logs s=<service>` and read the **first** error.
 
-`jbh-web` is the `jbh-app` repo: push `jbh-app`, deploy `s=jbh-web`.
+`jbh-web` is the `jbh-app` repo: merge into `jbh-app`, deploy `s=jbh-web`.
 
 ### 2.3 A shared library changed (contracts or gateway-client)
 
 The services include the library at build time, so the order matters:
 
-1. **`jbh-personal-finance`** (only if `jbh-notification-contracts` changed): push → wait for
+1. **`jbh-personal-finance`** (only if `jbh-notification-contracts` changed): merge a PR → wait for
    `Publish notification contracts`.
 2. **`jbh-gateway-client`**: push (or Run workflow) → wait for `Publish`.
-3. **`jbh-iam`** and **`jbh-personal-finance`**: push, or **Run workflow** on `Image` when nothing else changed →
+3. **`jbh-iam`** and **`jbh-personal-finance`**: merge a PR, or **Run workflow** on `Image` when nothing else changed →
    wait for both.
 4. **Deploy** `jbh-iam`, then `jbh-personal-finance` (the `Deploy` button, or `make deploy` on the VPS).
 
@@ -366,6 +367,7 @@ This is production and `jbh_admin` can change everything. Tick **Read-only** in 
 ## 7. Limits and cost
 
 - The VPS is already paid. DNS, the HTTPS certificate (Let's Encrypt) and Gmail SMTP are free.
-- GitHub Free, private repos: 2,000 Actions minutes and **500 MB package storage + 1 GB download per month**.
+- GitHub Free: Actions minutes are free in public repos (all repos except `jbh-discovery-nexus`).
+  Private packages share **500 MB storage + 1 GB download per month**; public packages do not count.
   CI keeps only 2 images per service. With the default $0 spending limit, going over makes pushes or pulls fail;
   it does not create a bill. Check usage in GitHub → org settings → Billing.

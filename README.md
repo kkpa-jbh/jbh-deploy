@@ -145,7 +145,8 @@ Maven uses `-s .github/maven-settings.xml -Pgithub` in CI; Gradle (`jbh-iam`) ad
 **Package access.** GitHub Packages for Maven is repository-scoped: a workflow's `GITHUB_TOKEN` reads and writes only
 its own repo's packages. There is no "Manage Actions access" for Maven. So every repo that reads another repo's package
 has a repo secret `PACKAGES_READ_TOKEN`: a classic personal access token with only `read:packages`.
-It is a repo secret, not an org secret, because the org is on GitHub Free and its repos are private.
+It is a repo secret in each repo. On GitHub Free, an org secret reaches only public repos, and until 2026-10-10 most repos were private.
+Visibility now: all repos are public except `jbh-discovery-nexus`.
 Repos that need it: `jbh-gateway-client`, `jbh-iam`, `jbh-personal-finance`. When the token expires, renew it in all three.
 
 ### Why packages (and not a build on the VPS)

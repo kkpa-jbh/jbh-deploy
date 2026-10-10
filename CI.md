@@ -113,7 +113,15 @@ Setup: `DEPLOY.md` §1.1.
 ## Pull requests
 
 Only `jbh-personal-finance` checks a pull request (`CI Pipeline`). No other repo runs anything on a PR.
-Nothing blocks a merge: `main` has no branch protection in any repo (checked on 2026-09-26), so no check is required.
+**`main` is protected** in `jbh-app`, `jbh-gateway`, `jbh-iam` and `jbh-personal-finance` (since 2026-10-10).
+Each has the ruleset `protect-main` (repo → Settings → Rules → Rulesets):
+
+- No direct push: every change goes through a pull request. 0 approvals, because nobody can approve their own PR.
+- No force push, and the branch cannot be deleted.
+- Nobody can bypass it, also not an org admin. To change it, edit the ruleset.
+- No check is required yet, so a red `CI Pipeline` does not block a merge.
+
+`jbh-deploy`, `jbh-gateway-client` and `jbh-discovery-nexus` have no protection: you still push to `main` there.
 After the merge, the push to `main` starts the normal workflows above.
 
 ## Order for shared libraries
@@ -128,7 +136,7 @@ If you skip a step, the image is built with the old library. `DEPLOY.md` §2.3 h
 
 ## Image retention
 
-- GitHub Free gives 500 MB for private packages.
+- GitHub Free gives 500 MB for private packages. Public packages do not count.
 - `actions/delete-package-versions` keeps the **2 newest** versions of each image: the one you run and one to roll back to.
 - `provenance: false` keeps one version per push. Without it, build attestations add untagged versions that use up the 2 slots.
 - Deleted images are gone for good. A rollback by commit SHA reaches only one deploy back.

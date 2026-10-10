@@ -94,18 +94,21 @@ The version is `1.0.0-SNAPSHOT`, so each run replaces the previous build.
 
 ### `Deploy` (`jbh-deploy`)
 
-Only by hand: `jbh-deploy` → Actions → `Deploy` → **Run workflow**, then pick the service.
-It deploys the newest image of that service. So start it only after that repo's `Image` run is green.
+Only by hand: `jbh-deploy` → Actions → `Deploy` → **Run workflow**, then pick the action and the service.
+
+- `deploy`: the newest image of that service. Start it only after that repo's `Image` run is green.
+- `rollback`: the image that ran before the last deploy (`DEPLOY.md` §3).
 
 1. GitHub connects to the VPS with SSH, as `magus`, with the deploy key.
 2. The key can run only `ci-deploy.sh` (a forced command in `~/.ssh/authorized_keys`), whatever the workflow sends.
-3. `ci-deploy.sh` accepts only `jbh-web`, `jbh-gateway`, `jbh-iam` and `jbh-personal-finance`.
-   It runs `make deploy s=<service>`, then waits up to 3 minutes until the service is healthy.
+3. `ci-deploy.sh` accepts only `deploy` or `rollback`, and only `jbh-web`, `jbh-gateway`, `jbh-iam` and
+   `jbh-personal-finance`. It changes the image, then waits up to 3 minutes until the service is healthy.
 4. Green = the service is healthy. Red = it is not: the log shows its last 50 log lines.
-   The new image stays running. To go back, follow `DEPLOY.md` §3.
+   After a red `deploy`, the VPS starts the image from before by itself, and the log says so.
 
-One deploy runs at a time; a second run waits. The VPS runs its own copy of `ci-deploy.sh`,
-so a change to that file counts only after `git pull` on the VPS. Setup: `DEPLOY.md` §1.1.
+`make deploy` and `make rollback` on the VPS run the same script. One run at a time; a second run waits.
+The VPS runs its own copy of `ci-deploy.sh`, so a change to that file counts only after `git pull` on the VPS.
+Setup: `DEPLOY.md` §1.1.
 
 ## Pull requests
 
@@ -128,7 +131,8 @@ If you skip a step, the image is built with the old library. `DEPLOY.md` §2.3 h
 - GitHub Free gives 500 MB for private packages.
 - `actions/delete-package-versions` keeps the **2 newest** versions of each image: the one you run and one to roll back to.
 - `provenance: false` keeps one version per push. Without it, build attestations add untagged versions that use up the 2 slots.
-- Deleted images are gone for good. A rollback reaches only one deploy back.
+- Deleted images are gone for good. A rollback by commit SHA reaches only one deploy back.
+  The `rollback` action does not need GHCR: it uses an image kept on the VPS.
 - Maven packages (contracts, gateway-client) are not cleaned up.
 
 ## Secrets
@@ -148,7 +152,7 @@ Maven uses `-s .github/maven-settings.xml -Pgithub`; Gradle (`jbh-iam`) adds the
 ## What CI does not do
 
 - It does not deploy on a push. You start `Deploy` by hand (or run `make deploy` on the VPS).
-- It does not roll back. A red `Deploy` leaves the new image running.
+- It does not roll back a deploy that is healthy but has a bug. Use `rollback` for that (`DEPLOY.md` §3).
 - It does not run tests for `jbh-app`, `jbh-gateway`, `jbh-iam` or `jbh-gateway-client`.
 - It does not stop an image when `CI Pipeline` fails.
 - It does not run the dev server. Some bugs appear only in the production build (`ng build --configuration production`),

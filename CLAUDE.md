@@ -13,10 +13,10 @@ It also holds `README.md`: the system map of all JBH services. The `kkpa-jbh/CLA
 | `compose.yaml` | All jbh services. No host ports. Only `jbh-gateway` and `jbh-web` join `edge`. |
 | `jbh.caddy` | Site file Magus's Caddy imports from `/etc/caddy/sites/`. |
 | `.env.example` | Every variable, with placeholders. The real `.env` exists only on the VPS. |
-| `Makefile` | `network`, `up`, `deploy s=<svc>`, `caddy-install`, `consul-tunnel`, `db-tunnel`, `backup`, `config`. |
+| `Makefile` | `network`, `up`, `deploy s=<svc>`, `rollback s=<svc>`, `caddy-install`, `consul-tunnel`, `db-tunnel`, `backup`, `config`. |
 | `initdb/` | First-start SQL: `jbh_finance`, its schemas, `pgcrypto`, time zone. |
 | `backup-db.sh` | Daily `pg_dump` of both databases. |
-| `ci-deploy.sh` | Forced command of the CI deploy key: deploys one allowed service, waits until healthy. |
+| `ci-deploy.sh` | Deploy or roll back one app service, wait until healthy, roll back by itself on failure. Forced command of the CI deploy key; `make deploy` / `make rollback` call it too. |
 | `.github/workflows/deploy.yml` | `Deploy` workflow (by hand only): SSH to the VPS, runs `ci-deploy.sh`. |
 
 ## Rules

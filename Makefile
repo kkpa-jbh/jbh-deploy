@@ -7,13 +7,14 @@
 COMPOSE = docker compose --env-file .env -f compose.yaml
 SUBNET  = 10.231.0.0/24
 
-.PHONY: help network pull up down ps logs deploy caddy-install consul-tunnel db-tunnel backup config
+.PHONY: help network pull up down ps logs deploy rollback caddy-install consul-tunnel db-tunnel backup config
 
 help:
 	@echo "make network           Create the shared 'edge' network (once, before Magus's next up)"
 	@echo "make pull | up | down  Pull images / start all / stop all"
 	@echo "make ps | logs s=<svc> Status / follow one service's logs"
-	@echo "make deploy s=<svc>    Pull and restart one service (rollback: old tag in .env first)"
+	@echo "make deploy s=<svc>    Pull, restart, wait until healthy; goes back by itself if not healthy"
+	@echo "make rollback s=<svc>  Start the image that ran before the last deploy"
 	@echo "make caddy-install     Copy jbh.caddy into Magus's sites folder, validate, reload"
 	@echo "make consul-tunnel     Print the SSH command for the Consul UI"
 	@echo "make db-tunnel         Print the SSH command and the IntelliJ settings for Postgres"
@@ -39,10 +40,14 @@ ps:
 logs:
 	$(COMPOSE) logs -f --tail=200 $(s)
 
+# Same script as the Deploy button, so both keep <service>:previous right. Only the 4 app services.
 deploy:
 	@test -n "$(s)" || (echo "usage: make deploy s=<service>" && exit 1)
-	$(COMPOSE) pull $(s)
-	$(COMPOSE) up -d --no-deps $(s)
+	./ci-deploy.sh deploy $(s)
+
+rollback:
+	@test -n "$(s)" || (echo "usage: make rollback s=<service>" && exit 1)
+	./ci-deploy.sh rollback $(s)
 
 # validate first, reload only if valid. Never restart Caddy: a bad file would stop Magus too.
 caddy-install:

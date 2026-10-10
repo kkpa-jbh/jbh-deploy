@@ -108,18 +108,18 @@ Daily use: §2.2. Workflow details: `CI.md`, "Deploy".
 It uses plain SSH, like your laptop does. Only the key is different.
 
 ```
-You click "Run workflow" and pick jbh-web
+You click "Run workflow" and pick deploy + jbh-web
         │
         ▼
 GitHub runner: a temporary Ubuntu machine, deleted after the run
-        │  ssh magus@<VPS_HOST> "jbh-web"   (port 22, key from VPS_SSH_KEY)
+        │  ssh magus@<VPS_HOST> "deploy jbh-web"   (port 22, key from VPS_SSH_KEY)
         ▼
 VPS sshd: the key matches the line command="…/ci-deploy.sh",restrict
         │  sshd ignores the requested command and runs ci-deploy.sh.
-        │  The sent text "jbh-web" goes into SSH_ORIGINAL_COMMAND.
+        │  The sent text "deploy jbh-web" goes into SSH_ORIGINAL_COMMAND.
         ▼
-ci-deploy.sh: check the name → make deploy s=jbh-web
-              (docker pull from ghcr.io, restart only jbh-web) → wait until healthy
+ci-deploy.sh: check the text → docker pull from ghcr.io → restart only jbh-web → wait until healthy
+              (not healthy: start the image from before again)
         │  output and exit code go back over the same SSH connection
         ▼
 GitHub run: green or red, with the full output in the log
@@ -137,8 +137,9 @@ Why the key is safe:
 
 - `command="…/ci-deploy.sh"`: the key runs only this script, whatever the runner asks for.
 - `restrict`: no shell, no terminal, no port forwarding.
-- The script accepts only `jbh-web`, `jbh-gateway`, `jbh-iam` and `jbh-personal-finance`. Anything else ends with `Unknown service`.
-- If the key leaks, it can only restart one of these 4 services with an image that is already in GHCR.
+- The script accepts only `deploy` or `rollback`, and only `jbh-web`, `jbh-gateway`, `jbh-iam` and `jbh-personal-finance`.
+  Anything else ends with `Refused`.
+- If the key leaks, it can only deploy or roll back one of these 4 services, with images that are already in GHCR or on the VPS.
 
 Two more facts:
 
@@ -183,7 +184,7 @@ Use `>>`, never `>`. A single `>` deletes your own key and locks you out.
 ssh -i jbh-ci-deploy -o IdentitiesOnly=yes magus@<vps-ip> hello
 ```
 
-It must print `Unknown service: 'hello'` and close. If a shell opens, the `command=` part is wrong: fix step 3.
+It must print `Refused: 'hello'. Use: deploy|rollback ...` and close. If a shell opens, the `command=` part is wrong: fix step 3.
 Without `IdentitiesOnly`, ssh may log in with your own key, and the test proves nothing.
 
 **5. Laptop and VPS:** get the VPS host key, and check that it is the real one.
@@ -209,7 +210,7 @@ cd ~ && rm -r ~/jbh-ci-key
 
 The secret is now the only copy of the private key. If you lose it, make a new key (steps 2–6).
 
-**7. Browser:** GitHub → `jbh-deploy` → Actions → `Deploy` → **Run workflow** → `jbh-web`.
+**7. Browser:** GitHub → `jbh-deploy` → Actions → `Deploy` → **Run workflow** → `deploy`, `jbh-web`.
 It must end green with `jbh-web is running.`
 
 **Block the key** (VPS, any folder): `sed -i '/jbh-ci-deploy$/d' ~/.ssh/authorized_keys`. Steps 2–6 make a new one.
@@ -240,12 +241,14 @@ Each workflow can also be started by hand: Actions → the workflow → **Run wo
 1. **Laptop, the service repo:** commit and `git push origin main`.
 2. **Browser or laptop:** wait until the `Image` workflow is green.
    GitHub → repo → Actions, or `gh run list -R kkpa-jbh/<repo> -w Image -L 1`. Takes 2–4 minutes.
-3. **Browser:** GitHub → `jbh-deploy` → Actions → `Deploy` → **Run workflow**, pick the service
+3. **Browser:** GitHub → `jbh-deploy` → Actions → `Deploy` → **Run workflow**, pick `deploy` and the service
    (`jbh-gateway`, `jbh-iam`, `jbh-personal-finance` or `jbh-web`).
    It pulls the new image and restarts only that service. The others keep running.
-   Green = the service is healthy (JVMs: 1–2 minutes). Red = it is not: the run log ends with the service's last 50 log lines.
-4. **Or without the button, VPS, `/home/magus/jbh-deploy`:** `make deploy s=<service>`, then `make ps` until the
-   service is `healthy`. If not: `make logs s=<service>` and read the **first** error.
+   - Green = the service is healthy (JVMs: 1–2 minutes).
+   - Red = it is not. The VPS then starts the image from before by itself. The run log shows the service's
+     last 50 log lines, then the rollback.
+4. **Or without the button, VPS, `/home/magus/jbh-deploy`:** `make deploy s=<service>`. It runs the same script:
+   same wait, same automatic rollback. For more of a failure: `make logs s=<service>` and read the **first** error.
 
 `jbh-web` is the `jbh-app` repo: push `jbh-app`, deploy `s=jbh-web`.
 
@@ -284,8 +287,26 @@ With `JBH_<SERVICE>_TAG=latest` in `.env`, `make deploy` takes the newest image.
 
 ## 3. Roll back
 
+**Automatic.** When a deployed image is not healthy, the VPS starts the image from before by itself (§2.2).
+
+**Fast, for a bug the health check does not see.** Start the image that ran before the last deploy:
+
+- **Browser:** GitHub → `jbh-deploy` → Actions → `Deploy` → **Run workflow** → `rollback` and the service.
+- **Or VPS, `/home/magus/jbh-deploy`:** `make rollback s=<service>`.
+
+How it works and its limits:
+
+- After each healthy deploy, `ci-deploy.sh` keeps the image from before as the local tag `<service>:previous`
+  (see them with `docker images | grep previous`). It lives only on the VPS, so GHCR's 2-image limit does not matter.
+- It goes back one deploy only. A second rollback does nothing.
+- `deploy` brings the newest image back. So fix the bug first, then push and deploy again.
+- Never run `docker image prune -a` on the VPS: it deletes the `:previous` images.
+- A rollback brings back the old code, not the old database. Migrations that already ran stay.
+
+**A chosen version, by commit SHA:**
+
 1. Find the old commit SHA: GitHub → the repo → Actions → a green `Image` run, or `git log` in the repo.
-   Only the **last 2** images are kept (older ones are deleted to stay in the free 500 MB).
+   Only the **last 2** images are kept in GHCR (older ones are deleted to stay in the free 500 MB).
 2. **VPS, `/home/magus/jbh-deploy`:** set `JBH_<SERVICE>_TAG=<full-sha>` in `.env`.
 3. **VPS, `/home/magus/jbh-deploy`:** `make deploy s=<service>` (or the `Deploy` button: it reads the tag from `.env`).
 
@@ -338,7 +359,8 @@ This is production and `jbh_admin` can change everything. Tick **Read-only** in 
 | `Deploy`: `Permission denied (publickey)` | The key line is missing in `~/.ssh/authorized_keys`, or `VPS_SSH_KEY` is wrong. Redo §1.1. |
 | `Deploy`: `Host key verification failed` | `VPS_KNOWN_HOSTS` does not match the VPS (for example after a VPS rebuild). Redo §1.1 step 5, then only the `VPS_KNOWN_HOSTS` line of step 6. |
 | `make config` or `Deploy`: `set JBH_JWT_SECRET in .env` | `.env` still has the old name `JWT_SECRET` (renamed on 2026-10-01). VPS, `/home/magus/jbh-deploy`: `cp .env ~/jbh-env-backup && chmod 600 ~/jbh-env-backup`, then `sed -i 's/^JWT_SECRET=/JBH_JWT_SECRET=/' .env`, then `make config`. Then deploy `jbh-iam` and `jbh-gateway`: their new images read the new name. |
-| `Deploy`: `Unknown service` | `ci-deploy.sh` on the VPS is old. VPS, `/home/magus/jbh-deploy`: `git pull`. |
+| `Deploy`: `Unknown service` or `Refused` | `ci-deploy.sh` on the VPS does not match the workflow. VPS, `/home/magus/jbh-deploy`: `git pull`. |
+| `rollback`: `No previous image` | No healthy deploy has run with the current `ci-deploy.sh` yet, or the image was pruned. Use §3 "A chosen version, by commit SHA". |
 | Invitation emails do not arrive | `make logs s=jbh-personal-finance`; check `GMAIL_*` in `.env` (Gmail needs an app password). |
 
 ## 7. Limits and cost

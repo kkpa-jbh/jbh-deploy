@@ -100,22 +100,119 @@ by name (`jbh-gateway:8080`, `web:8080`), and Docker's DNS gives the right IP. P
 
 ### 1.1 Set up the Deploy button (one time)
 
-The `Deploy` workflow (GitHub → `jbh-deploy` → Actions) connects to the VPS with its own SSH key.
-That key can run only `ci-deploy.sh`: no shell, no other command. Details: `CI.md`, "Deploy".
+The `Deploy` workflow deploys one service from GitHub, without your own SSH session.
+Daily use: §2.2. Workflow details: `CI.md`, "Deploy".
 
-| # | Where | Do |
-|---|-------|----|
-| 1 | Laptop, an empty folder | `ssh-keygen -t ed25519 -N '' -C jbh-ci-deploy -f jbh-ci-deploy` — creates `jbh-ci-deploy` (private) and `jbh-ci-deploy.pub`. |
-| 2 | VPS, `/home/magus/jbh-deploy` | `git pull` — brings `ci-deploy.sh`. `ls -l ci-deploy.sh` must show `-rwxr-xr-x`. |
-| 3 | VPS, any folder | `echo 'command="/home/magus/jbh-deploy/ci-deploy.sh",restrict <content of jbh-ci-deploy.pub>' >> ~/.ssh/authorized_keys` — use `>>`. A single `>` deletes your own key and locks you out. |
-| 4 | Laptop, the same folder | `ssh -i jbh-ci-deploy magus@<vps-ip> hello` must print `Unknown service: 'hello'` and close. No shell opens. |
-| 5 | Laptop, the same folder | `ssh-keyscan -t ed25519 <vps-ip> > known_hosts.txt`, then `ssh-keygen -lf known_hosts.txt`. VPS: `ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub`. Both must show the same `SHA256:...`. |
-| 6 | Laptop, the same folder | `gh secret set VPS_HOST -R kkpa-jbh/jbh-deploy -b '<vps-ip>'` · `gh secret set VPS_SSH_KEY -R kkpa-jbh/jbh-deploy < jbh-ci-deploy` · `gh secret set VPS_KNOWN_HOSTS -R kkpa-jbh/jbh-deploy < known_hosts.txt` |
-| 7 | Laptop, the same folder | `rm jbh-ci-deploy jbh-ci-deploy.pub known_hosts.txt` — the secret is now the only copy. If you lose it, make a new key. |
-| 8 | Browser | GitHub → `jbh-deploy` → Actions → `Deploy` → **Run workflow** → `jbh-web`. It must end green with `jbh-web is running.` |
+#### How it reaches the VPS
 
-**If the key leaks:** it can only restart one of the 4 services with an image that is already in GHCR.
-To block it, delete its line (`jbh-ci-deploy`) from `~/.ssh/authorized_keys` on the VPS.
+It uses plain SSH, like your laptop does. Only the key is different.
+
+```
+You click "Run workflow" and pick jbh-web
+        │
+        ▼
+GitHub runner: a temporary Ubuntu machine, deleted after the run
+        │  ssh magus@<VPS_HOST> "jbh-web"   (port 22, key from VPS_SSH_KEY)
+        ▼
+VPS sshd: the key matches the line command="…/ci-deploy.sh",restrict
+        │  sshd ignores the requested command and runs ci-deploy.sh.
+        │  The sent text "jbh-web" goes into SSH_ORIGINAL_COMMAND.
+        ▼
+ci-deploy.sh: check the name → make deploy s=jbh-web
+              (docker pull from ghcr.io, restart only jbh-web) → wait until healthy
+        │  output and exit code go back over the same SSH connection
+        ▼
+GitHub run: green or red, with the full output in the log
+```
+
+The 3 secrets live in `jbh-deploy` (GitHub → Settings → Secrets and variables → Actions):
+
+| Secret | What it is |
+|--------|-----------|
+| `VPS_HOST` | The VPS IP. |
+| `VPS_SSH_KEY` | The private deploy key. Its public half is in `~/.ssh/authorized_keys` on the VPS. |
+| `VPS_KNOWN_HOSTS` | The VPS host key, its "ID card". The runner refuses a server that shows another key, so it cannot connect to a fake server. |
+
+Why the key is safe:
+
+- `command="…/ci-deploy.sh"`: the key runs only this script, whatever the runner asks for.
+- `restrict`: no shell, no terminal, no port forwarding.
+- The script accepts only `jbh-web`, `jbh-gateway`, `jbh-iam` and `jbh-personal-finance`. Anything else ends with `Unknown service`.
+- If the key leaks, it can only restart one of these 4 services with an image that is already in GHCR.
+
+Two more facts:
+
+- Only GitHub connects to the VPS. The VPS never calls GitHub, except `docker pull` from `ghcr.io` (as before).
+- The runner IP changes on every run, so the VPS must accept SSH from the internet. It does: `ufw allow OpenSSH` (Magus setup).
+
+#### Steps
+
+The steps move between the laptop and the VPS. Keep your normal SSH session to the VPS open the whole time.
+
+**1. VPS, `/home/magus/jbh-deploy`:** get `ci-deploy.sh`.
+
+```bash
+git pull
+ls -l ci-deploy.sh               # must show -rwxr-xr-x
+make config                      # must print: compose.yaml OK
+```
+
+If `make config` says `set JBH_JWT_SECRET in .env`, see §6.
+
+**2. Laptop:** create the deploy key in an empty folder.
+
+```bash
+mkdir -p ~/jbh-ci-key && cd ~/jbh-ci-key
+ssh-keygen -t ed25519 -N '' -C jbh-ci-deploy -f jbh-ci-deploy
+cat jbh-ci-deploy.pub            # copy this line
+```
+
+**3. VPS, any folder:** allow the key, limited to the script.
+
+```bash
+cp ~/.ssh/authorized_keys ~/.ssh/authorized_keys.bak
+echo 'command="/home/magus/jbh-deploy/ci-deploy.sh",restrict <paste the jbh-ci-deploy.pub line>' >> ~/.ssh/authorized_keys
+tail -1 ~/.ssh/authorized_keys
+```
+
+Use `>>`, never `>`. A single `>` deletes your own key and locks you out.
+
+**4. Laptop, `~/jbh-ci-key`:** test the key.
+
+```bash
+ssh -i jbh-ci-deploy -o IdentitiesOnly=yes magus@<vps-ip> hello
+```
+
+It must print `Unknown service: 'hello'` and close. If a shell opens, the `command=` part is wrong: fix step 3.
+Without `IdentitiesOnly`, ssh may log in with your own key, and the test proves nothing.
+
+**5. Laptop and VPS:** get the VPS host key, and check that it is the real one.
+
+```bash
+# Laptop, ~/jbh-ci-key
+ssh-keyscan -t ed25519 <vps-ip> > known_hosts.txt
+ssh-keygen -lf known_hosts.txt
+# VPS, any folder
+ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub
+```
+
+Both must show the same `SHA256:...`.
+
+**6. Laptop, `~/jbh-ci-key`:** save the 3 secrets, then delete the files.
+
+```bash
+gh secret set VPS_HOST -R kkpa-jbh/jbh-deploy -b '<vps-ip>'
+gh secret set VPS_SSH_KEY -R kkpa-jbh/jbh-deploy < jbh-ci-deploy
+gh secret set VPS_KNOWN_HOSTS -R kkpa-jbh/jbh-deploy < known_hosts.txt
+cd ~ && rm -r ~/jbh-ci-key
+```
+
+The secret is now the only copy of the private key. If you lose it, make a new key (steps 2–6).
+
+**7. Browser:** GitHub → `jbh-deploy` → Actions → `Deploy` → **Run workflow** → `jbh-web`.
+It must end green with `jbh-web is running.`
+
+**Block the key** (VPS, any folder): `sed -i '/jbh-ci-deploy$/d' ~/.ssh/authorized_keys`. Steps 2–6 make a new one.
 
 ## 2. Deploy an update
 
@@ -239,7 +336,8 @@ This is production and `jbh_admin` can change everything. Tick **Read-only** in 
 | CI: `Could not find artifact com.jbh:...` | `PACKAGES_READ_TOKEN` is missing or expired in that repo. |
 | `make caddy-install`: `cp: ... Permission denied` | Docker created `/home/magus/caddy-sites` as `root` (it did not exist when Magus's Caddy started). VPS: `sudo chown magus:magus /home/magus/caddy-sites`, then retry. |
 | `Deploy`: `Permission denied (publickey)` | The key line is missing in `~/.ssh/authorized_keys`, or `VPS_SSH_KEY` is wrong. Redo §1.1. |
-| `Deploy`: `Host key verification failed` | `VPS_KNOWN_HOSTS` does not match the VPS (for example after a VPS rebuild). Redo §1.1 steps 5–6. |
+| `Deploy`: `Host key verification failed` | `VPS_KNOWN_HOSTS` does not match the VPS (for example after a VPS rebuild). Redo §1.1 step 5, then only the `VPS_KNOWN_HOSTS` line of step 6. |
+| `make config` or `Deploy`: `set JBH_JWT_SECRET in .env` | `.env` still has the old name `JWT_SECRET` (renamed on 2026-10-01). VPS, `/home/magus/jbh-deploy`: `cp .env ~/jbh-env-backup && chmod 600 ~/jbh-env-backup`, then `sed -i 's/^JWT_SECRET=/JBH_JWT_SECRET=/' .env`, then `make config`. Then deploy `jbh-iam` and `jbh-gateway`: their new images read the new name. |
 | `Deploy`: `Unknown service` | `ci-deploy.sh` on the VPS is old. VPS, `/home/magus/jbh-deploy`: `git pull`. |
 | Invitation emails do not arrive | `make logs s=jbh-personal-finance`; check `GMAIL_*` in `.env` (Gmail needs an app password). |
 

@@ -16,6 +16,8 @@ It also holds `README.md`: the system map of all JBH services. The `kkpa-jbh/CLA
 | `Makefile` | `network`, `up`, `deploy s=<svc>`, `caddy-install`, `consul-tunnel`, `db-tunnel`, `backup`, `config`. |
 | `initdb/` | First-start SQL: `jbh_finance`, its schemas, `pgcrypto`, time zone. |
 | `backup-db.sh` | Daily `pg_dump` of both databases. |
+| `ci-deploy.sh` | Forced command of the CI deploy key: deploys one allowed service, waits until healthy. |
+| `.github/workflows/deploy.yml` | `Deploy` workflow (by hand only): SSH to the VPS, runs `ci-deploy.sh`. |
 
 ## Rules
 
@@ -25,6 +27,8 @@ It also holds `README.md`: the system map of all JBH services. The `kkpa-jbh/CLA
 - **Service names are Consul hostnames.** Renaming a service also changes `CONSUL_DISCOVERY_HOSTNAME`, `jbh.caddy`
   and `JBH_GATEWAY_URL`.
 - **`edge` subnet `10.231.0.0/24`** must match `JBH_TRUSTED_PROXIES`, or the rate limit breaks.
+- **`ci-deploy.sh` is a security boundary.** The CI key can run nothing else. Keep its service list strict
+  (never `jbh-postgres` or `jbh-consul`), never pass the input to `eval` or a shell, and keep the list equal to `deploy.yml`.
 - **Static checks only:** `docker compose --env-file .env.example -f compose.yaml config -q`. Never `up` from a laptop.
 
 ## System map sync

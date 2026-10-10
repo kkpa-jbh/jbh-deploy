@@ -98,6 +98,25 @@ by name (`jbh-gateway:8080`, `web:8080`), and Docker's DNS gives the right IP. P
       and `API Gateway` are green.
 - [ ] VPS: `docker stats --no-stream` — total memory well under 7.7 GB.
 
+### 1.1 Set up the Deploy button (one time)
+
+The `Deploy` workflow (GitHub → `jbh-deploy` → Actions) connects to the VPS with its own SSH key.
+That key can run only `ci-deploy.sh`: no shell, no other command. Details: `CI.md`, "Deploy".
+
+| # | Where | Do |
+|---|-------|----|
+| 1 | Laptop, an empty folder | `ssh-keygen -t ed25519 -N '' -C jbh-ci-deploy -f jbh-ci-deploy` — creates `jbh-ci-deploy` (private) and `jbh-ci-deploy.pub`. |
+| 2 | VPS, `/home/magus/jbh-deploy` | `git pull` — brings `ci-deploy.sh`. `ls -l ci-deploy.sh` must show `-rwxr-xr-x`. |
+| 3 | VPS, any folder | `echo 'command="/home/magus/jbh-deploy/ci-deploy.sh",restrict <content of jbh-ci-deploy.pub>' >> ~/.ssh/authorized_keys` — use `>>`. A single `>` deletes your own key and locks you out. |
+| 4 | Laptop, the same folder | `ssh -i jbh-ci-deploy magus@<vps-ip> hello` must print `Unknown service: 'hello'` and close. No shell opens. |
+| 5 | Laptop, the same folder | `ssh-keyscan -t ed25519 <vps-ip> > known_hosts.txt`, then `ssh-keygen -lf known_hosts.txt`. VPS: `ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub`. Both must show the same `SHA256:...`. |
+| 6 | Laptop, the same folder | `gh secret set VPS_HOST -R kkpa-jbh/jbh-deploy -b '<vps-ip>'` · `gh secret set VPS_SSH_KEY -R kkpa-jbh/jbh-deploy < jbh-ci-deploy` · `gh secret set VPS_KNOWN_HOSTS -R kkpa-jbh/jbh-deploy < known_hosts.txt` |
+| 7 | Laptop, the same folder | `rm jbh-ci-deploy jbh-ci-deploy.pub known_hosts.txt` — the secret is now the only copy. If you lose it, make a new key. |
+| 8 | Browser | GitHub → `jbh-deploy` → Actions → `Deploy` → **Run workflow** → `jbh-web`. It must end green with `jbh-web is running.` |
+
+**If the key leaks:** it can only restart one of the 4 services with an image that is already in GHCR.
+To block it, delete its line (`jbh-ci-deploy`) from `~/.ssh/authorized_keys` on the VPS.
+
 ## 2. Deploy an update
 
 You never build on the VPS. The flow is always: **push → CI builds and publishes → the VPS pulls**.
@@ -114,7 +133,7 @@ Full details (steps, pull requests, secrets, image retention): [`CI.md`](CI.md).
 | `jbh-personal-finance` | `Publish notification contracts` (only when the contracts change) | Maven `jbh-notification-contracts` |
 | `jbh-app` | `Image` | image `ghcr.io/kkpa-jbh/jbh-web` |
 | `jbh-gateway-client` | `Publish` | Maven `jbh-gateway-client` |
-| `jbh-deploy` | none | nothing — the VPS runs `git pull` |
+| `jbh-deploy` | `Deploy` (by hand only) | nothing — deploys one service to the VPS (§2.2) |
 
 Every image gets two tags: the full git SHA and `latest`. CI keeps only the 2 newest images per service, so a rollback reaches one deploy back.
 Each workflow can also be started by hand: Actions → the workflow → **Run workflow**.
@@ -124,11 +143,12 @@ Each workflow can also be started by hand: Actions → the workflow → **Run wo
 1. **Laptop, the service repo:** commit and `git push origin main`.
 2. **Browser or laptop:** wait until the `Image` workflow is green.
    GitHub → repo → Actions, or `gh run list -R kkpa-jbh/<repo> -w Image -L 1`. Takes 2–4 minutes.
-3. **VPS, `/home/magus/jbh-deploy`:** `make deploy s=<service>`
+3. **Browser:** GitHub → `jbh-deploy` → Actions → `Deploy` → **Run workflow**, pick the service
    (`jbh-gateway`, `jbh-iam`, `jbh-personal-finance` or `jbh-web`).
    It pulls the new image and restarts only that service. The others keep running.
-4. **VPS, `/home/magus/jbh-deploy`:** `make ps` until the service is `healthy` (JVMs: 1–2 minutes).
-   If not: `make logs s=<service>` and read the **first** error.
+   Green = the service is healthy (JVMs: 1–2 minutes). Red = it is not: the run log ends with the service's last 50 log lines.
+4. **Or without the button, VPS, `/home/magus/jbh-deploy`:** `make deploy s=<service>`, then `make ps` until the
+   service is `healthy`. If not: `make logs s=<service>` and read the **first** error.
 
 `jbh-web` is the `jbh-app` repo: push `jbh-app`, deploy `s=jbh-web`.
 
@@ -141,14 +161,14 @@ The services include the library at build time, so the order matters:
 2. **`jbh-gateway-client`**: push (or Run workflow) → wait for `Publish`.
 3. **`jbh-iam`** and **`jbh-personal-finance`**: push, or **Run workflow** on `Image` when nothing else changed →
    wait for both.
-4. **VPS:** `make deploy s=jbh-iam`, then `make deploy s=jbh-personal-finance`.
+4. **Deploy** `jbh-iam`, then `jbh-personal-finance` (the `Deploy` button, or `make deploy` on the VPS).
 
 Skipping a step means an image is built with the old library.
 
 ### 2.4 Several services at once
 
 Deploy them one by one, back end first: `jbh-iam` → `jbh-personal-finance` → `jbh-gateway` → `jbh-web`.
-Check `make ps` between each one.
+Wait until each one is healthy (a green `Deploy` run, or `make ps`) before the next.
 
 ### 2.5 A change in this repo (`jbh-deploy`)
 
@@ -158,6 +178,7 @@ Check `make ps` between each one.
    - `compose.yaml` or `.env` → `make up` (recreates only the services whose config changed).
    - `jbh.caddy` → `make caddy-install`.
    - A new variable in `.env.example` → add it to `.env` on the VPS first, then `make up`.
+   - `ci-deploy.sh` → nothing more. The next `Deploy` run uses the new file.
 
 ### 2.6 Pin a version
 
@@ -169,7 +190,7 @@ With `JBH_<SERVICE>_TAG=latest` in `.env`, `make deploy` takes the newest image.
 1. Find the old commit SHA: GitHub → the repo → Actions → a green `Image` run, or `git log` in the repo.
    Only the **last 2** images are kept (older ones are deleted to stay in the free 500 MB).
 2. **VPS, `/home/magus/jbh-deploy`:** set `JBH_<SERVICE>_TAG=<full-sha>` in `.env`.
-3. **VPS, `/home/magus/jbh-deploy`:** `make deploy s=<service>`.
+3. **VPS, `/home/magus/jbh-deploy`:** `make deploy s=<service>` (or the `Deploy` button: it reads the tag from `.env`).
 
 ## 4. Change the Caddy site
 
@@ -217,6 +238,9 @@ This is production and `jbh_admin` can change everything. Tick **Read-only** in 
 | `docker pull` → `denied` / `unauthorized` | The token expired. Create a new one, `docker login ghcr.io` again, and update `PACKAGES_READ_TOKEN` in the 3 repos. |
 | CI: `Could not find artifact com.jbh:...` | `PACKAGES_READ_TOKEN` is missing or expired in that repo. |
 | `make caddy-install`: `cp: ... Permission denied` | Docker created `/home/magus/caddy-sites` as `root` (it did not exist when Magus's Caddy started). VPS: `sudo chown magus:magus /home/magus/caddy-sites`, then retry. |
+| `Deploy`: `Permission denied (publickey)` | The key line is missing in `~/.ssh/authorized_keys`, or `VPS_SSH_KEY` is wrong. Redo §1.1. |
+| `Deploy`: `Host key verification failed` | `VPS_KNOWN_HOSTS` does not match the VPS (for example after a VPS rebuild). Redo §1.1 steps 5–6. |
+| `Deploy`: `Unknown service` | `ci-deploy.sh` on the VPS is old. VPS, `/home/magus/jbh-deploy`: `git pull`. |
 | Invitation emails do not arrive | `make logs s=jbh-personal-finance`; check `GMAIL_*` in `.env` (Gmail needs an app password). |
 
 ## 7. Limits and cost

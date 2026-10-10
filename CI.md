@@ -6,7 +6,8 @@ For the deploy commands on the VPS, read [`DEPLOY.md`](DEPLOY.md).
 
 ## The short version
 
-- **CI builds, the VPS only pulls.** CI never deploys. After CI is green, you run `make deploy s=<service>` on the VPS.
+- **CI builds, the VPS only pulls.** A push never deploys. After `Image` is green, you start the deploy by hand:
+  the `Deploy` workflow in `jbh-deploy`, or `make deploy s=<service>` on the VPS.
 - **Merging a PR into `main` is a push to `main`.** The same workflows run.
 - **Only `jbh-personal-finance` runs tests.** The other repos only build.
 - **Images do not wait for tests.** In `jbh-personal-finance`, `CI Pipeline` and `Image` run side by side.
@@ -23,7 +24,7 @@ For the deploy commands on the VPS, read [`DEPLOY.md`](DEPLOY.md).
 | `jbh-personal-finance` | `CI Pipeline` (`ci.yml`) | yes (also `develop`) | yes (into `main` or `develop`) | no | nothing (reports and artifacts) |
 | `jbh-personal-finance` | `Publish notification contracts` (`publish-contracts.yml`) | only if the contracts or a parent `pom.xml` changed | no | yes | Maven `jbh-notification-contracts` |
 | `jbh-gateway-client` | `Publish` (`publish.yml`) | yes | no | yes | Maven `jbh-gateway-client` |
-| `jbh-deploy` | none | — | — | — | nothing. The VPS runs `git pull` |
+| `jbh-deploy` | `Deploy` (`deploy.yml`) | no | no | yes | nothing. Deploys one service to the VPS. For this repo's own files, the VPS runs `git pull` |
 | `jbh-discovery-nexus` | none | — | — | — | nothing. Production uses the official Consul image |
 
 "By hand": GitHub → the repo → Actions → the workflow → **Run workflow**.
@@ -48,7 +49,7 @@ flowchart TD
     pc --> pkg[(GitHub Packages<br/>Maven)]
     pub --> pkg
 
-    ghcr -. you run make deploy on the VPS .-> vps[VPS pulls the image]
+    ghcr -. you run Deploy or make deploy .-> vps[VPS pulls the image]
 ```
 
 ### `Image` (4 service repos)
@@ -91,6 +92,21 @@ It runs `mvn deploy` for the contracts and their parent POMs (`-am`), because a 
 Runs on every push to `main`. It runs `mvn deploy` and publishes the library to GitHub Packages.
 The version is `1.0.0-SNAPSHOT`, so each run replaces the previous build.
 
+### `Deploy` (`jbh-deploy`)
+
+Only by hand: `jbh-deploy` → Actions → `Deploy` → **Run workflow**, then pick the service.
+It deploys the newest image of that service. So start it only after that repo's `Image` run is green.
+
+1. GitHub connects to the VPS with SSH, as `magus`, with the deploy key.
+2. The key can run only `ci-deploy.sh` (a forced command in `~/.ssh/authorized_keys`), whatever the workflow sends.
+3. `ci-deploy.sh` accepts only `jbh-web`, `jbh-gateway`, `jbh-iam` and `jbh-personal-finance`.
+   It runs `make deploy s=<service>`, then waits up to 3 minutes until the service is healthy.
+4. Green = the service is healthy. Red = it is not: the log shows its last 50 log lines.
+   The new image stays running. To go back, follow `DEPLOY.md` §3.
+
+One deploy runs at a time; a second run waits. The VPS runs its own copy of `ci-deploy.sh`,
+so a change to that file counts only after `git pull` on the VPS. Setup: `DEPLOY.md` §1.1.
+
 ## Pull requests
 
 Only `jbh-personal-finance` checks a pull request (`CI Pipeline`). No other repo runs anything on a PR.
@@ -121,6 +137,9 @@ If you skip a step, the image is built with the old library. `DEPLOY.md` §2.3 h
 |--------|-------|----------|
 | `GITHUB_TOKEN` | automatic, every workflow | Push images to GHCR, delete old images, deploy the repo's own Maven package |
 | `PACKAGES_READ_TOKEN` | repo secret in `jbh-gateway-client`, `jbh-iam`, `jbh-personal-finance` | Read another repo's Maven package. A classic PAT with only `read:packages` |
+| `VPS_HOST` | repo secret in `jbh-deploy` | The VPS IP, for `Deploy` |
+| `VPS_SSH_KEY` | repo secret in `jbh-deploy` | Private deploy key. It can run only `ci-deploy.sh` on the VPS |
+| `VPS_KNOWN_HOSTS` | repo secret in `jbh-deploy` | The VPS host key, so `Deploy` connects only to the real VPS |
 
 GitHub Packages for Maven is repository-scoped: `GITHUB_TOKEN` reads only its own repo's packages.
 That is why `PACKAGES_READ_TOKEN` exists. When it expires, renew it in all three repos.
@@ -128,7 +147,8 @@ Maven uses `-s .github/maven-settings.xml -Pgithub`; Gradle (`jbh-iam`) adds the
 
 ## What CI does not do
 
-- It does not deploy. You run `make deploy s=<service>` on the VPS.
+- It does not deploy on a push. You start `Deploy` by hand (or run `make deploy` on the VPS).
+- It does not roll back. A red `Deploy` leaves the new image running.
 - It does not run tests for `jbh-app`, `jbh-gateway`, `jbh-iam` or `jbh-gateway-client`.
 - It does not stop an image when `CI Pipeline` fails.
 - It does not run the dev server. Some bugs appear only in the production build (`ng build --configuration production`),

@@ -224,6 +224,8 @@ Rules:
   `jbh-app/src/environments/environment.prod.ts` uses the relative `baseUrl: '/jbh-api'`.
 - **Images come from CI** (GHCR, tagged with the git SHA). The VPS only pulls (`docker login ghcr.io` with a
   `read:packages` token). No Gradle/Maven build on the VPS: it would fight Magus for 2 vCPU.
+- **A push never deploys.** You start a deploy by hand: the `Deploy` workflow in `jbh-deploy`, or `make deploy` on the VPS.
+  The workflow's SSH key can run only `ci-deploy.sh` (a forced command), and that script accepts only the 4 app services.
 - **Rollback:** set the old SHA in `.env` (`JBH_<SERVICE>_TAG`), then `make deploy s=<service>`.
 - **Secrets** only in `.env` on the VPS. `JBH_JWT_SECRET` is set once and compose passes it to IAM and the gateway.
 - **Memory:** every service has a limit, and each JVM has `-Xmx` (defaults: about 2.9 GB total).

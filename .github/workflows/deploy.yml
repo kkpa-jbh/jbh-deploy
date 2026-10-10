@@ -1,0 +1,46 @@
+# Deploys one service to the VPS: pulls its newest image, restarts it, and waits until it is healthy.
+# Only by hand: Actions → Deploy → Run workflow. A push never deploys (CI.md, "Deploy").
+name: Deploy
+run-name: Deploy ${{ inputs.service }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      service:
+        description: Service to deploy
+        type: choice
+        # Keep in sync with the list in ci-deploy.sh. That list is the real check.
+        options:
+          - jbh-web
+          - jbh-gateway
+          - jbh-iam
+          - jbh-personal-finance
+
+# The job only opens an SSH connection. It needs no access to the repo.
+permissions: {}
+
+# One deploy at a time. A second run waits for the first one.
+concurrency:
+  group: deploy-vps
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      # The key can run only ci-deploy.sh on the VPS (forced command), whatever command we send.
+      # Plain ssh, no third-party action: the secrets go to no other code.
+      - name: Deploy ${{ inputs.service }}
+        env:
+          SERVICE: ${{ inputs.service }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "$VPS_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=yes \
+            "magus@$VPS_HOST" "$SERVICE"

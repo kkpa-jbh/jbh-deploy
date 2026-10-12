@@ -59,7 +59,8 @@ The same 5 steps in every service repo:
 
 1. **Checkout** the code.
 2. **Build**, without tests:
-   - `jbh-app`: `npm ci`, then `ng build --configuration production` into `www/`.
+   - `jbh-app`: `npm ci`, then `npm run lint:boundary`, then `ng build --configuration production` into `www/`.
+     `lint:boundary` fails when a page uses Ionic or ngx-charts directly instead of the `jbh-*` layer. Then no image is built.
    - `jbh-gateway`: `./gradlew bootJar`.
    - `jbh-iam`: `./gradlew :jbh-iam-api:bootJar`. Reads `jbh-gateway-client` from GitHub Packages.
    - `jbh-personal-finance`: `mvn -pl jbh-z-assembly -am -DskipTests package`. Reads `jbh-gateway-client` from GitHub Packages.

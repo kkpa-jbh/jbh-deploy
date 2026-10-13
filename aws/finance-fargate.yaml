@@ -1,0 +1,596 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+  jbh-personal-finance on ECS Fargate behind an HTTPS Application Load Balancer, with RDS PostgreSQL
+  and CPU-based auto scaling.
+
+# Internet :443 → ALB (public subnets) → Fargate tasks :7777 (private subnets) → RDS :5432 (private subnets)
+#                                          └─ NAT gateway → internet (GHCR, VPS gateway, SMTP, AI APIs)
+#
+# Rules this file follows (see README.md):
+#   - Only the ALB is public. Tasks and the database have no public IP.
+#   - The ALB forwards only /jbh-api/finance/* and /jbh-api/preferences/*. Everything else answers 404,
+#     /jbh-api/notifications/* included (it sends email, so it must never be public).
+#   - Consul is off. The ALB finds the tasks itself (target type "ip").
+#   - The service still asks jbh-iam for the user id through the VPS gateway (JBH_GATEWAY_URL).
+#   - Secrets come from Secrets Manager, never from parameters or plain env vars.
+
+Parameters:
+  ImageTag:
+    Type: String
+    Description: Git SHA tag of ghcr.io/kkpa-jbh/jbh-personal-finance (built by the image workflow).
+  CertificateArn:
+    Type: String
+    Description: ACM certificate ARN for the HTTPS listener. Must be in the same region as this stack.
+  GhcrCredentialsSecretArn:
+    Type: String
+    Description: 'Secrets Manager ARN with {"username": "...", "password": "<read:packages token>"}.'
+  AppSecretArn:
+    Type: String
+    Description: Secrets Manager ARN with the app keys (GMAIL_*, AZURE_DI_*, OPENROUTER_API_KEY, GEMINI_API_KEY, JEV_API_KEY).
+  GatewayUrl:
+    Type: String
+    Default: https://jbh.usemagus.cloud
+    Description: jbh-gateway base URL, without /jbh-api. The service calls it to find the user id.
+  FrontendUrl:
+    Type: String
+    Default: https://jbh.usemagus.cloud
+    Description: Frontend URL used for links inside invitation emails.
+  StatementTextSource:
+    Type: String
+    Default: azure
+    AllowedValues: [azure, pdfbox]
+  StatementLlm:
+    Type: String
+    Default: openrouter
+    AllowedValues: [openrouter, gemini]
+  AzurePagesPerRequest:
+    Type: Number
+    Default: 2
+    Description: Pages per Azure request. 2 = free tier, 0 = whole PDF (paid tier).
+  DesiredCount:
+    Type: Number
+    Default: 3
+    MinValue: 1
+    Description: Number of tasks at start. Also the auto scaling minimum.
+  MaxCount:
+    Type: Number
+    Default: 6
+    MinValue: 1
+    Description: Auto scaling maximum.
+  CpuTargetPercent:
+    Type: Number
+    Default: 80
+    MinValue: 10
+    MaxValue: 95
+    Description: Average CPU of the service that auto scaling keeps.
+  TaskCpu:
+    Type: String
+    Default: "512"
+    AllowedValues: ["256", "512", "1024", "2048"]
+  TaskMemory:
+    Type: String
+    Default: "1024"
+    AllowedValues: ["512", "1024", "2048", "3072", "4096"]
+    Description: Must be a valid pair with TaskCpu (see the Fargate task size table).
+  JavaHeap:
+    Type: String
+    Default: 512m
+    Description: -Xmx for the JVM. Keep it about half of TaskMemory.
+  DbInstanceClass:
+    Type: String
+    Default: db.t4g.micro
+  VpcCidr:
+    Type: String
+    Default: 10.40.0.0/16
+    Description: The subnets take the first two /24 blocks (public) and blocks 10 and 11 (private).
+
+Resources:
+  # ---------- Network ----------
+
+  Vpc:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VpcCidr
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: !Ref AWS::StackName
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+
+  InternetGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref Vpc
+      InternetGatewayId: !Ref InternetGateway
+
+  PublicSubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref Vpc
+      AvailabilityZone: !Select [0, !GetAZs ""]
+      CidrBlock: !Select [0, !Cidr [!Ref VpcCidr, 12, 8]]
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-public-a
+
+  PublicSubnetB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref Vpc
+      AvailabilityZone: !Select [1, !GetAZs ""]
+      CidrBlock: !Select [1, !Cidr [!Ref VpcCidr, 12, 8]]
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-public-b
+
+  PrivateSubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref Vpc
+      AvailabilityZone: !Select [0, !GetAZs ""]
+      CidrBlock: !Select [10, !Cidr [!Ref VpcCidr, 12, 8]]
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-private-a
+
+  PrivateSubnetB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref Vpc
+      AvailabilityZone: !Select [1, !GetAZs ""]
+      CidrBlock: !Select [11, !Cidr [!Ref VpcCidr, 12, 8]]
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-private-b
+
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref Vpc
+
+  PublicDefaultRoute:
+    Type: AWS::EC2::Route
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  PublicSubnetARouteTable:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnetA
+      RouteTableId: !Ref PublicRouteTable
+
+  PublicSubnetBRouteTable:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnetB
+      RouteTableId: !Ref PublicRouteTable
+
+  # One NAT gateway for both private subnets. If its AZ fails, the tasks lose internet access.
+  # One NAT per AZ removes that risk, for about 33 USD/month more each.
+  NatEip:
+    Type: AWS::EC2::EIP
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      Domain: vpc
+
+  NatGateway:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt NatEip.AllocationId
+      SubnetId: !Ref PublicSubnetA
+
+  PrivateRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref Vpc
+
+  PrivateDefaultRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGateway
+
+  PrivateSubnetARouteTable:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnetA
+      RouteTableId: !Ref PrivateRouteTable
+
+  PrivateSubnetBRouteTable:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnetB
+      RouteTableId: !Ref PrivateRouteTable
+
+  # ---------- Security groups: internet → ALB → tasks → database ----------
+
+  AlbSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Public HTTPS (and HTTP, redirected) to the load balancer
+      VpcId: !Ref Vpc
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+
+  TaskSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Port 7777 from the load balancer only
+      VpcId: !Ref Vpc
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 7777
+          ToPort: 7777
+          SourceSecurityGroupId: !Ref AlbSecurityGroup
+
+  DatabaseSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Postgres from the tasks only
+      VpcId: !Ref Vpc
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 5432
+          ToPort: 5432
+          SourceSecurityGroupId: !Ref TaskSecurityGroup
+
+  # ---------- Database ----------
+
+  # A plain secret, not RDS ManageMasterUserPassword: RDS rotates its own secret every 7 days,
+  # and running tasks keep the old password until they restart.
+  DatabaseSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Description: !Sub Master user of the ${AWS::StackName} database
+      GenerateSecretString:
+        SecretStringTemplate: '{"username": "jbh_admin"}'
+        GenerateStringKey: password
+        PasswordLength: 32
+        ExcludePunctuation: true
+
+  DatabaseSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: Private subnets for the finance database
+      SubnetIds: [!Ref PrivateSubnetA, !Ref PrivateSubnetB]
+
+  # Snapshot on delete or replace: deleting the stack keeps the data. Delete the snapshot by hand.
+  # EngineVersion "16" (major only): RDS picks the current default minor version. cfn-lint flags every
+  # major-only version as deprecated (W3691), so that check is off here.
+  Database:
+    Type: AWS::RDS::DBInstance
+    DeletionPolicy: Snapshot
+    UpdateReplacePolicy: Snapshot
+    Metadata:
+      cfn-lint:
+        config:
+          ignore_checks: [W3691]
+    Properties:
+      Engine: postgres
+      EngineVersion: "16"
+      DBInstanceClass: !Ref DbInstanceClass
+      AllocatedStorage: "20"
+      StorageType: gp3
+      StorageEncrypted: true
+      DBName: jbh_finance
+      MasterUsername: !Sub "{{resolve:secretsmanager:${DatabaseSecret}:SecretString:username}}"
+      MasterUserPassword: !Sub "{{resolve:secretsmanager:${DatabaseSecret}:SecretString:password}}"
+      DBSubnetGroupName: !Ref DatabaseSubnetGroup
+      VPCSecurityGroups: [!Ref DatabaseSecurityGroup]
+      PubliclyAccessible: false
+      MultiAZ: false
+      BackupRetentionPeriod: 1
+      CopyTagsToSnapshot: true
+
+  # ---------- Load balancer ----------
+
+  LoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Type: application
+      Scheme: internet-facing
+      Subnets: [!Ref PublicSubnetA, !Ref PublicSubnetB]
+      SecurityGroups: [!Ref AlbSecurityGroup]
+
+  # Target type "ip" is required for Fargate (awsvpc network mode).
+  TargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      VpcId: !Ref Vpc
+      TargetType: ip
+      Protocol: HTTP
+      Port: 7777
+      HealthCheckPath: /q/health
+      HealthCheckIntervalSeconds: 15
+      HealthyThresholdCount: 2
+      UnhealthyThresholdCount: 3
+      Matcher:
+        HttpCode: "200"
+      TargetGroupAttributes:
+        - Key: deregistration_delay.timeout_seconds
+          Value: "30"
+
+  HttpListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref LoadBalancer
+      Protocol: HTTP
+      Port: 80
+      DefaultActions:
+        - Type: redirect
+          RedirectConfig:
+            Protocol: HTTPS
+            Port: "443"
+            StatusCode: HTTP_301
+
+  # Default 404. Only the rule below forwards to the tasks.
+  HttpsListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref LoadBalancer
+      Protocol: HTTPS
+      Port: 443
+      SslPolicy: ELBSecurityPolicy-TLS13-1-2-2021-06
+      Certificates:
+        - CertificateArn: !Ref CertificateArn
+      DefaultActions:
+        - Type: fixed-response
+          FixedResponseConfig:
+            StatusCode: "404"
+            ContentType: application/json
+            MessageBody: '{"error":"not found"}'
+
+  ApiListenerRule:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Properties:
+      ListenerArn: !Ref HttpsListener
+      Priority: 10
+      Conditions:
+        - Field: path-pattern
+          PathPatternConfig:
+            Values:
+              - /jbh-api/finance/*
+              - /jbh-api/preferences/*
+      Actions:
+        - Type: forward
+          TargetGroupArn: !Ref TargetGroup
+
+  # ---------- ECS ----------
+
+  Cluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterSettings:
+        - Name: containerInsights
+          Value: disabled
+
+  LogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /ecs/${AWS::StackName}
+      RetentionInDays: 14
+
+  # Used by ECS itself: pull the GHCR image, read the secrets, write the logs.
+  TaskExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+      Policies:
+        - PolicyName: read-secrets
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: secretsmanager:GetSecretValue
+                Resource:
+                  - !Ref GhcrCredentialsSecretArn
+                  - !Ref AppSecretArn
+                  - !Ref DatabaseSecret
+
+  # Two containers per task:
+  #   1. db-init (postgres image) creates the schemas, then exits. Safe on every start: IF NOT EXISTS,
+  #      and an advisory lock so 3 tasks starting together do not race on CREATE SCHEMA.
+  #   2. app starts only when db-init exited with 0. Liquibase then migrates (its own lock table).
+  TaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: !Ref AWS::StackName
+      RequiresCompatibilities: [FARGATE]
+      NetworkMode: awsvpc
+      Cpu: !Ref TaskCpu
+      Memory: !Ref TaskMemory
+      RuntimePlatform:
+        OperatingSystemFamily: LINUX
+        CpuArchitecture: X86_64
+      ExecutionRoleArn: !GetAtt TaskExecutionRole.Arn
+      Volumes:
+        - Name: tmp
+      ContainerDefinitions:
+        - Name: db-init
+          Image: public.ecr.aws/docker/library/postgres:16-alpine
+          Essential: false
+          EntryPoint: [psql]
+          Command:
+            - -v
+            - ON_ERROR_STOP=1
+            - -c
+            - >-
+              SELECT pg_advisory_lock(7777);
+              CREATE EXTENSION IF NOT EXISTS pgcrypto;
+              CREATE SCHEMA IF NOT EXISTS finance;
+              CREATE SCHEMA IF NOT EXISTS preferences;
+              CREATE SCHEMA IF NOT EXISTS notifications;
+              ALTER DATABASE jbh_finance SET TIME ZONE 'America/Bogota';
+          Environment:
+            - Name: PGHOST
+              Value: !GetAtt Database.Endpoint.Address
+            - Name: PGPORT
+              Value: !GetAtt Database.Endpoint.Port
+            - Name: PGDATABASE
+              Value: jbh_finance
+            - Name: PGSSLMODE
+              Value: require
+          Secrets:
+            - Name: PGUSER
+              ValueFrom: !Sub "${DatabaseSecret}:username::"
+            - Name: PGPASSWORD
+              ValueFrom: !Sub "${DatabaseSecret}:password::"
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref LogGroup
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: db-init
+
+        - Name: app
+          Image: !Sub ghcr.io/kkpa-jbh/jbh-personal-finance:${ImageTag}
+          Essential: true
+          RepositoryCredentials:
+            CredentialsParameter: !Ref GhcrCredentialsSecretArn
+          DependsOn:
+            - ContainerName: db-init
+              Condition: SUCCESS
+          PortMappings:
+            - ContainerPort: 7777
+              Protocol: tcp
+          ReadonlyRootFilesystem: true
+          MountPoints:
+            - SourceVolume: tmp
+              ContainerPath: /tmp
+          Environment:
+            # No query string: each datasource appends ?currentSchema=<module>.
+            - Name: DATABASE_URL
+              Value: !Sub jdbc:postgresql://${Database.Endpoint.Address}:${Database.Endpoint.Port}/jbh_finance
+            - Name: CONSUL_ENABLED
+              Value: "false"
+            - Name: JBH_GATEWAY_URL
+              Value: !Ref GatewayUrl
+            - Name: JBH_FRONTEND_URL
+              Value: !Ref FrontendUrl
+            - Name: STATEMENT_TEXT_SOURCE
+              Value: !Ref StatementTextSource
+            - Name: STATEMENT_LLM
+              Value: !Ref StatementLlm
+            - Name: AZURE_DI_PAGES_PER_REQUEST
+              Value: !Ref AzurePagesPerRequest
+            - Name: JAVA_OPTS
+              Value: !Sub -Xmx${JavaHeap}
+          Secrets:
+            - Name: DATABASE_USERNAME
+              ValueFrom: !Sub "${DatabaseSecret}:username::"
+            - Name: DATABASE_PASSWORD
+              ValueFrom: !Sub "${DatabaseSecret}:password::"
+            - Name: GMAIL_USERNAME
+              ValueFrom: !Sub "${AppSecretArn}:GMAIL_USERNAME::"
+            - Name: GMAIL_APP_PASSWORD
+              ValueFrom: !Sub "${AppSecretArn}:GMAIL_APP_PASSWORD::"
+            - Name: GMAIL_FROM
+              ValueFrom: !Sub "${AppSecretArn}:GMAIL_FROM::"
+            - Name: AZURE_DI_ENDPOINT
+              ValueFrom: !Sub "${AppSecretArn}:AZURE_DI_ENDPOINT::"
+            - Name: AZURE_DI_API_KEY
+              ValueFrom: !Sub "${AppSecretArn}:AZURE_DI_API_KEY::"
+            - Name: OPENROUTER_API_KEY
+              ValueFrom: !Sub "${AppSecretArn}:OPENROUTER_API_KEY::"
+            - Name: GEMINI_API_KEY
+              ValueFrom: !Sub "${AppSecretArn}:GEMINI_API_KEY::"
+            - Name: JEV_API_KEY
+              ValueFrom: !Sub "${AppSecretArn}:JEV_API_KEY::"
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref LogGroup
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: app
+
+  # The circuit breaker rolls back to the last working task definition when new tasks keep failing.
+  # The grace period covers db-init + Quarkus start + Liquibase before the ALB health check counts.
+  Service:
+    Type: AWS::ECS::Service
+    DependsOn: ApiListenerRule
+    Properties:
+      Cluster: !Ref Cluster
+      TaskDefinition: !Ref TaskDefinition
+      LaunchType: FARGATE
+      DesiredCount: !Ref DesiredCount
+      HealthCheckGracePeriodSeconds: 120
+      DeploymentConfiguration:
+        MinimumHealthyPercent: 100
+        MaximumPercent: 200
+        DeploymentCircuitBreaker:
+          Enable: true
+          Rollback: true
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: DISABLED
+          Subnets: [!Ref PrivateSubnetA, !Ref PrivateSubnetB]
+          SecurityGroups: [!Ref TaskSecurityGroup]
+      LoadBalancers:
+        - ContainerName: app
+          ContainerPort: 7777
+          TargetGroupArn: !Ref TargetGroup
+
+  # ---------- Auto scaling ----------
+
+  ScalableTarget:
+    Type: AWS::ApplicationAutoScaling::ScalableTarget
+    Properties:
+      ServiceNamespace: ecs
+      ScalableDimension: ecs:service:DesiredCount
+      ResourceId: !Sub service/${Cluster}/${Service.Name}
+      MinCapacity: !Ref DesiredCount
+      MaxCapacity: !Ref MaxCount
+
+  # Target tracking: adds tasks when the average CPU is above the target, removes them when it is
+  # well below. Never below MinCapacity. Scale out fast (60 s), scale in slowly (300 s).
+  CpuScalingPolicy:
+    Type: AWS::ApplicationAutoScaling::ScalingPolicy
+    Properties:
+      PolicyName: !Sub ${AWS::StackName}-cpu
+      PolicyType: TargetTrackingScaling
+      ScalingTargetId: !Ref ScalableTarget
+      TargetTrackingScalingPolicyConfiguration:
+        PredefinedMetricSpecification:
+          PredefinedMetricType: ECSServiceAverageCPUUtilization
+        TargetValue: !Ref CpuTargetPercent
+        ScaleOutCooldown: 60
+        ScaleInCooldown: 300
+
+Outputs:
+  LoadBalancerDnsName:
+    Description: Point your subdomain here (CNAME).
+    Value: !GetAtt LoadBalancer.DNSName
+  ClusterName:
+    Value: !Ref Cluster
+  ServiceName:
+    Value: !GetAtt Service.Name
+  LogGroupName:
+    Value: !Ref LogGroup
+  DatabaseEndpoint:
+    Value: !GetAtt Database.Endpoint.Address
+  DatabaseSecretArn:
+    Value: !Ref DatabaseSecret

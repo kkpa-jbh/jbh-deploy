@@ -92,6 +92,7 @@ If you forget, they keep calling port 8080. On a server where another program us
 | Caller | Call | Why |
 |--------|------|-----|
 | `jbh-personal-finance` (finance, preferences) | `getUserClient().findUserId(...)` → `GET /jbh-api/users/find-user-id` on `jbh-iam` | Get the user id from the JWT |
+| `jbh-personal-finance` (team preferences) | `getUserClient().findUserGroup(...)` → `GET /jbh-api/user-groups/{id}` on `jbh-iam` | Check that the caller is a team member (`403`/`404` = not a member) |
 | `jbh-iam` (user groups) | `getNotificationClient().sendNotification(...)` → `POST /jbh-api/notifications/v1?type=EMAIL` on `jbh-personal-finance` | Send team invitation emails |
 
 ### 5. Authentication

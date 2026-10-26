@@ -3,6 +3,8 @@
 
 # Only MAGUS_CADDY_CONTAINER and CADDY_SITES_DIR are read here. Compose reads .env itself.
 -include .env
+# Local dev stack commands (make local-up, local-swap, ...). Kept apart from the VPS commands.
+-include local.mk
 
 COMPOSE = docker compose --env-file .env -f compose.yaml
 SUBNET  = 10.231.0.0/24
@@ -20,6 +22,10 @@ help:
 	@echo "make db-tunnel         Print the SSH command and the IntelliJ settings for Postgres"
 	@echo "make backup            Dump both databases into backups/"
 	@echo "make config            Check compose.yaml with the current .env"
+	@echo "make local-up | local-down | local-ps   Local dev stack (LOCAL.md): start / stop / status"
+	@echo "make local-logs s=<svc>                 Follow one local service's logs"
+	@echo "make local-swap s=<svc>                 Stop that container, print the env vars for your IDE"
+	@echo "make local-restore s=<svc>              Start the container again"
 
 network:
 	docker network inspect edge >/dev/null 2>&1 || docker network create --subnet $(SUBNET) edge

@@ -11,6 +11,7 @@ It also holds `README.md`: the system map of all JBH services. The `kkpa-jbh/CLA
 | `DEPLOY.md` | Operator runbook: every command with the folder to run it in. Update it when a step changes. |
 | `CI.md` | GitHub Actions in every repo: triggers, steps, image retention, secrets. Update it when a workflow changes. |
 | `compose.yaml` | All jbh services. No host ports. Only `jbh-gateway` and `jbh-web` join `edge`. |
+| `compose.local.yaml`, `local.mk`, `.env.local.example`, `LOCAL.md` | Local dev stack for a developer machine (`make local-up`). Publishes host ports. Never used on the VPS. |
 | `jbh.caddy` | Site file Magus's Caddy imports from `/etc/caddy/sites/`. |
 | `.env.example` | Every variable, with placeholders. The real `.env` exists only on the VPS. |
 | `Makefile` | `network`, `up`, `deploy s=<svc>`, `rollback s=<svc>`, `caddy-install`, `consul-tunnel`, `db-tunnel`, `backup`, `config`. |
@@ -21,7 +22,7 @@ It also holds `README.md`: the system map of all JBH services. The `kkpa-jbh/CLA
 
 ## Rules
 
-- **Never add `ports:`** to a service. Docker-published ports bypass `ufw`, and Magus's Caddy owns 80/443.
+- **Never add `ports:`** to a service in `compose.yaml` (`compose.local.yaml` is the only exception). Docker-published ports bypass `ufw`, and Magus's Caddy owns 80/443.
 - **Caddy: validate, then reload** (`make caddy-install`). Never restart Magus's Caddy.
 - **Never commit `.env`** or real secret values. Add every new variable to `.env.example`.
 - **Service names are Consul hostnames.** Renaming a service also changes `CONSUL_DISCOVERY_HOSTNAME`, `jbh.caddy`
@@ -30,7 +31,8 @@ It also holds `README.md`: the system map of all JBH services. The `kkpa-jbh/CLA
 - **`ci-deploy.sh` is a security boundary.** The CI key can run nothing else. Keep its service list strict
   (never `jbh-postgres` or `jbh-consul`), accept only a full 40-character hex SHA as tag, never pass the input
   to `eval` or a shell, and keep the list equal to `deploy.yml`.
-- **Static checks only:** `docker compose --env-file .env.example -f compose.yaml config -q`. Never `up` from a laptop.
+- **Static checks only:** `docker compose --env-file .env.example -f compose.yaml config -q`. Never `up` `compose.yaml` from a laptop.
+  `compose.local.yaml` is for a laptop; check it with `--env-file .env.local.example -f compose.local.yaml config -q`.
 
 ## System map sync
 

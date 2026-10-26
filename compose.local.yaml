@@ -1,0 +1,151 @@
+# The JBH stack on a developer machine. Steps: LOCAL.md.
+#
+# Why this is not compose.yaml: that file has no host ports, needs the external "edge" network, and
+# makes the file system read-only. It also runs IAM with the "prod" profile. This file publishes the
+# ports, so you can swap one container for the same service running in your IDE.
+#
+# One Consul address for everything: every service saves "host.docker.internal" in Consul.
+#   - In a container, host-gateway makes that name point to the Mac (extra_hosts).
+#   - On the Mac, one line in /etc/hosts does the same: 127.0.0.1 host.docker.internal
+# So the gateway reaches a service at the same address when it runs in Docker or in the IDE.
+#
+# Images are "latest", built by CI from main. Only the service you swap runs your local code.
+# Run it through the Makefile (make local-up), which passes --env-file .env.local.
+
+name: jbh-local
+
+x-app-host: &app-host
+  extra_hosts:
+    - "host.docker.internal:host-gateway"
+
+services:
+  jbh-postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-jbh_admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env.local}
+      # IAM database. initdb/ creates jbh_finance on the first start.
+      POSTGRES_DB: jbh
+    volumes:
+      - jbh-local-pgdata:/var/lib/postgresql/data
+      # Runs only when the volume is empty (first start).
+      - ./initdb:/docker-entrypoint-initdb.d:ro
+    # Mac port 5433, so it never clashes with a Postgres on the Mac (5432).
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d jbh"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  jbh-consul:
+    image: hashicorp/consul:1.16.2
+    command: "agent -server -ui -node=jbh-consul -bootstrap-expect=1 -client=0.0.0.0"
+    volumes:
+      - jbh-local-consul-data:/consul/data
+    # Port 8500 is also used by jbh-discovery-nexus. Stop it before make local-up.
+    ports:
+      - "8500:8500"
+
+  jbh-iam:
+    image: ghcr.io/kkpa-jbh/jbh-iam:latest
+    pull_policy: always
+    <<: *app-host
+    environment:
+      # "local", not "prod": prod sets Secure cookies, which a browser drops on http://localhost.
+      SPRING_PROFILES_ACTIVE: local
+      DB_HOST: jbh-postgres
+      DB_NAME: jbh
+      DB_USERNAME: ${POSTGRES_USER:-jbh_admin}
+      JBH_ADMIN_PASS: ${POSTGRES_PASSWORD}
+      CONSUL_HOST: jbh-consul
+      CONSUL_DISCOVERY_HOSTNAME: host.docker.internal
+      # Same value as jbh-gateway: IAM signs the tokens, the gateway checks them.
+      JBH_JWT_SECRET: ${JBH_JWT_SECRET:?set JBH_JWT_SECRET in .env.local}
+      GOOGLE_CLIENT_IDS: ${GOOGLE_CLIENT_IDS:-}
+      CORS_ALLOWED_ORIGINS: http://localhost:8100
+      JBH_GATEWAY_URL: http://host.docker.internal:8080
+    ports:
+      - "9999:9999"
+    depends_on:
+      jbh-postgres:
+        condition: service_healthy
+      jbh-consul:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:9999/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+
+  jbh-personal-finance:
+    image: ghcr.io/kkpa-jbh/jbh-personal-finance:latest
+    pull_policy: always
+    <<: *app-host
+    environment:
+      # No query string here: each datasource appends ?currentSchema=<module>.
+      DATABASE_URL: jdbc:postgresql://jbh-postgres:5432/jbh_finance
+      DATABASE_USERNAME: ${POSTGRES_USER:-jbh_admin}
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD}
+      CONSUL_HOST: jbh-consul
+      # The address comes from CONSUL_DISCOVERY_HOSTNAME, so no container IP.
+      CONSUL_PREFER_IP: "false"
+      CONSUL_DISCOVERY_HOSTNAME: host.docker.internal
+      # Consul runs in a container: 127.0.0.1 there is Consul itself.
+      CONSUL_HEALTH_CHECK_HOST: host.docker.internal
+      JBH_GATEWAY_URL: http://host.docker.internal:8080
+      JBH_FRONTEND_URL: http://localhost:8100
+      GMAIL_HOST: ${GMAIL_HOST:-smtp.gmail.com}
+      GMAIL_PORT: ${GMAIL_PORT:-465}
+      GMAIL_USERNAME: ${GMAIL_USERNAME:-}
+      GMAIL_APP_PASSWORD: ${GMAIL_APP_PASSWORD:-}
+      GMAIL_FROM: ${GMAIL_FROM:-}
+      # Empty keys keep the service up. The statement import then answers with an error.
+      STATEMENT_TEXT_SOURCE: ${STATEMENT_TEXT_SOURCE:-azure}
+      STATEMENT_LLM: ${STATEMENT_LLM:-openrouter}
+      AZURE_DI_ENDPOINT: ${AZURE_DI_ENDPOINT:-}
+      AZURE_DI_API_KEY: ${AZURE_DI_API_KEY:-}
+      AZURE_DI_PAGES_PER_REQUEST: ${AZURE_DI_PAGES_PER_REQUEST:-2}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      JEV_API_KEY: ${JEV_API_KEY:-}
+    ports:
+      - "7777:7777"
+    depends_on:
+      jbh-postgres:
+        condition: service_healthy
+      jbh-consul:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:7777/q/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+
+  jbh-gateway:
+    image: ghcr.io/kkpa-jbh/jbh-gateway:latest
+    pull_policy: always
+    <<: *app-host
+    environment:
+      JBH_JWT_SECRET: ${JBH_JWT_SECRET:?set JBH_JWT_SECRET in .env.local}
+      CONSUL_HOST: jbh-consul
+      CONSUL_DISCOVERY_HOSTNAME: host.docker.internal
+    ports:
+      - "8080:8080"
+    depends_on:
+      jbh-consul:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:8080/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+
+volumes:
+  jbh-local-pgdata:
+  jbh-local-consul-data:

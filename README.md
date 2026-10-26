@@ -77,7 +77,8 @@ The gateway also:
 - Consul host: env `CONSUL_HOST` in all three (default `localhost`).
 - The address the gateway uses to reach a service is the one it registered:
   `jbh-iam` and `jbh-gateway` register env `CONSUL_DISCOVERY_HOSTNAME` (default `localhost`; Docker: the service name),
-  `jbh-personal-finance` registers its container IP (`CONSUL_PREFER_IP=true`).
+  `jbh-personal-finance` registers `CONSUL_DISCOVERY_HOSTNAME` when it is set; otherwise its container IP (`CONSUL_PREFER_IP=true`).
+  The local Docker stack (`compose.local.yaml`) sets `host.docker.internal` for all three.
 - If a service is not registered, the gateway cannot route to it.
 
 ### 4. Service to service calls
@@ -183,6 +184,10 @@ No registry is needed, but every deploy is manual. Keep it as a fallback if GitH
 6. `jbh-app` → `ionic serve`.
 
 Check http://localhost:8500 : `jbh-iam-service`, `jbh-personal-finance` and the gateway (registered as `API Gateway`) must show as healthy.
+
+**One command instead:** `make local-up` in `jbh-deploy` starts Postgres, Consul, IAM, finance and the gateway in Docker
+(`compose.local.yaml`, images `latest` from `main`). Every service saves `host.docker.internal` in Consul, so you can stop one
+container (`make local-swap s=<service>`) and run it from the IDE. Steps: [`LOCAL.md`](LOCAL.md).
 
 ## Production (Hostinger VPS)
 

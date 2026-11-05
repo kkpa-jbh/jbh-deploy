@@ -104,7 +104,7 @@ services:
       GMAIL_APP_PASSWORD: ${GMAIL_APP_PASSWORD:-}
       GMAIL_FROM: ${GMAIL_FROM:-}
       # Empty keys keep the service up. The statement import then answers with an error.
-      STATEMENT_TEXT_SOURCE: ${STATEMENT_TEXT_SOURCE:-azure}
+      STATEMENT_TEXT_SOURCE: ${STATEMENT_TEXT_SOURCE:-pdfbox}
       STATEMENT_LLM: ${STATEMENT_LLM:-openrouter}
       AZURE_DI_ENDPOINT: ${AZURE_DI_ENDPOINT:-}
       AZURE_DI_API_KEY: ${AZURE_DI_API_KEY:-}

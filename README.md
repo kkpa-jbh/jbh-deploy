@@ -239,7 +239,7 @@ Rules:
   For an older version: set its SHA in `.env` (`JBH_<SERVICE>_TAG`), then `make deploy s=<service>`.
 - **Secrets** only in `.env` on the VPS. `JBH_JWT_SECRET` is set once and compose passes it to IAM and the gateway.
 - **Memory:** every service has a limit, and each JVM has `-Xmx` (defaults: about 2.9 GB total).
-- **External AI APIs:** `jbh-personal-finance` calls Azure AI Document Intelligence (OCR), OpenRouter (or Gemini, with `STATEMENT_LLM=gemini`) and Jev over HTTPS for the bank statement import, so `jbh-private` must keep internet access.
+- **External AI APIs:** `jbh-personal-finance` calls Azure AI Document Intelligence (OCR, only with `STATEMENT_TEXT_SOURCE=azure`; default `pdfbox` reads the PDF locally), OpenRouter (or Gemini, with `STATEMENT_LLM=gemini`) and Jev over HTTPS for the bank statement import, so `jbh-private` must keep internet access.
 - **Postgres:** own container, no host port (Magus already uses `127.0.0.1:5432`), volume `jbh-pgdata`.
   `initdb/` creates `jbh_finance`, its schemas (`finance`, `preferences`, `notifications`) and `pgcrypto` on the first start.
   Migrations run when each service starts (Liquibase). `backup-db.sh` dumps both DBs daily; copy `backups/` off the VPS.

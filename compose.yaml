@@ -169,7 +169,7 @@ services:
       GMAIL_FROM: ${GMAIL_FROM:?set GMAIL_FROM in .env}
       # Bank statement import. Empty keys keep the service up; the import endpoint then answers with an error.
       # Step 1 (PDF -> text): azure or pdfbox. Step 2 (text -> movements): openrouter or gemini.
-      STATEMENT_TEXT_SOURCE: ${STATEMENT_TEXT_SOURCE:-azure}
+      STATEMENT_TEXT_SOURCE: ${STATEMENT_TEXT_SOURCE:-pdfbox}
       STATEMENT_LLM: ${STATEMENT_LLM:-openrouter}
       AZURE_DI_ENDPOINT: ${AZURE_DI_ENDPOINT:-}
       AZURE_DI_API_KEY: ${AZURE_DI_API_KEY:-}

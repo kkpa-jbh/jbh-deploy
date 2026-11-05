@@ -37,7 +37,7 @@ Parameters:
     Description: Frontend URL used for links inside invitation emails.
   StatementTextSource:
     Type: String
-    Default: azure
+    Default: pdfbox
     AllowedValues: [azure, pdfbox]
   StatementLlm:
     Type: String

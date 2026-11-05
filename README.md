@@ -96,6 +96,13 @@ If you forget, they keep calling port 8080. On a server where another program us
 | `jbh-personal-finance` (team preferences) | `getUserClient().findUserGroup(...)` → `GET /jbh-api/user-groups/{id}` on `jbh-iam` | Check that the caller is a team member (`403`/`404` = not a member) |
 | `jbh-iam` (user groups) | `getNotificationClient().sendNotification(...)` → `POST /jbh-api/notifications/v1?type=EMAIL` on `jbh-personal-finance` | Send team invitation emails |
 
+**Circuit breaker.** Every domain client has one (Resilience4j), named `<sourceService>.<domain>`
+(`JBH_FINANCE_API.User`, `JBH_PREFERENCES_API.User`, `JBH_IAM_API.Notification`).
+After too many failures (no response, or `502`/`503`/`504`) it opens for 30 s: calls fail at once with error code
+`CIRCUIT_OPEN` and nothing is sent. State is per instance. Rules: `jbh-gateway-client/README.md`.
+Metrics: `resilience4j_circuitbreaker_*` on `/q/metrics` (finance) and `/actuator/prometheus` (IAM).
+Dashboard: `observability/grafana/jbh-circuit-breakers.json` (see `observability/README.md`).
+
 ### 5. Authentication
 
 - `jbh-iam` issues the JWT (`/jbh-api/auth/signin`). Access token: 15 minutes. Refresh token: 30 days (`/jbh-api/auth/refresh`).

@@ -39,3 +39,12 @@ It also holds `README.md`: the system map of all JBH services. The `kkpa-jbh/CLA
 Update `README.md` in the same task when a change touches: gateway routes or public paths, a port, a Consul name,
 a `/jbh-api/...` prefix, a call through `jbh-gateway-client`, shared contracts, the build order, the app's API base URL,
 or anything in this repo's compose, Caddy site or env vars.
+
+## Pipeline config (kkpa-orchestrate-change)
+
+- **Modules-Root:** `.` (one module: the whole repo, `jbh-deploy`)
+- **Doc-Pack:** `CLAUDE.md`, `README.md`
+- **Complexity-Check:** `docker compose --env-file .env.example -f compose.yaml config -q && docker compose --env-file .env.local.example -f compose.local.yaml config -q`
+  (static check only; this repo has no code with real complexity)
+- **Design-Gates:** `database`
+- **Git-Strategy:** `auto`

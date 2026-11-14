@@ -3,7 +3,7 @@
 
 LOCAL_COMPOSE = docker compose --env-file .env.local -f compose.local.yaml
 # Services you can swap for a copy that runs in your IDE.
-LOCAL_SWAPPABLE = jbh-iam jbh-personal-finance jbh-gateway
+LOCAL_SWAPPABLE = jbh-iam jbh-personal-finance jbh-notification jbh-gateway
 
 .PHONY: local-up local-down local-ps local-logs local-swap local-restore
 
@@ -36,6 +36,8 @@ local-swap:
 	  jbh-gateway) echo "  JBH_JWT_SECRET=<same value as in .env.local>" ;; \
 	  jbh-personal-finance) echo "  DATABASE_URL=jdbc:postgresql://localhost:5433/jbh_finance DATABASE_USERNAME=<POSTGRES_USER> DATABASE_PASSWORD=<POSTGRES_PASSWORD>"; \
 	           echo "  CONSUL_HEALTH_CHECK_HOST already defaults to host.docker.internal in Quarkus dev mode" ;; \
+		  jbh-notification) echo "  DATABASE_URL=jdbc:postgresql://localhost:5433/jbh_finance DATABASE_USERNAME=<POSTGRES_USER> DATABASE_PASSWORD=<POSTGRES_PASSWORD>"; \
+		           echo "  Optional: the GMAIL_* variables, and JBH_FRONTEND_URL=http://localhost:8100" ;; \
 	esac
 	@echo "Consul is at localhost:8500 (the default CONSUL_HOST). Undo with: make local-restore s=$(s)"
 

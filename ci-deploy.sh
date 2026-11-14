@@ -16,7 +16,7 @@ cd "$(dirname "$0")"
 cmd="${SSH_ORIGINAL_COMMAND:-$*}"
 
 refuse() {
-	echo "Refused: '$cmd'. Use: deploy|rollback jbh-web|jbh-gateway|jbh-iam|jbh-personal-finance, and for deploy an optional full git SHA" >&2
+	echo "Refused: '$cmd'. Use: deploy|rollback jbh-web|jbh-gateway|jbh-iam|jbh-personal-finance|jbh-notification, and for deploy an optional full git SHA" >&2
 	exit 2
 }
 
@@ -40,6 +40,7 @@ case "$service" in
 	jbh-gateway) tag_var=JBH_GATEWAY_TAG ;;
 	jbh-iam) tag_var=JBH_IAM_TAG ;;
 	jbh-personal-finance) tag_var=JBH_FINANCE_TAG ;;
+	jbh-notification) tag_var=JBH_NOTIFICATION_TAG ;;
 	*) refuse ;;
 esac
 

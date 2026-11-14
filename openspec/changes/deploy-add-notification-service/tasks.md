@@ -7,26 +7,26 @@ Verification is the static checks V1–V14 in design.md "Test contract".
 
 Depends on: nothing.
 
-- [ ] 1.1 `compose.yaml`: add service `jbh-notification` after `jbh-personal-finance` as in design.md D1. Remove `JBH_FRONTEND_URL` and `GMAIL_*` from `jbh-personal-finance`. Update the header comments (private network line, memory sum about 3.3 GB) and the `networks:` comment (D2).
-- [ ] 1.2 `compose.local.yaml`: add service `jbh-notification` (D3). Remove `JBH_FRONTEND_URL` and `GMAIL_*` from `jbh-personal-finance`.
-- [ ] 1.3 `.env.example`: add `JBH_NOTIFICATION_TAG=latest`, `NOTIFICATION_CPU_LIMIT=0.5`, `NOTIFICATION_MEM_LIMIT=384M`, `NOTIFICATION_XMX=192m`; relabel the Gmail block; update the total (D5). `.env.local.example`: relabel the Gmail block.
+- [x] 1.1 `compose.yaml`: add service `jbh-notification` after `jbh-personal-finance` as in design.md D1. Remove `JBH_FRONTEND_URL` and `GMAIL_*` from `jbh-personal-finance`. Update the header comments (private network line, memory sum about 3.3 GB) and the `networks:` comment (D2).
+- [x] 1.2 `compose.local.yaml`: add service `jbh-notification` (D3). Remove `JBH_FRONTEND_URL` and `GMAIL_*` from `jbh-personal-finance`.
+- [x] 1.3 `.env.example`: add `JBH_NOTIFICATION_TAG=latest`, `NOTIFICATION_CPU_LIMIT=0.5`, `NOTIFICATION_MEM_LIMIT=384M`, `NOTIFICATION_XMX=192m`; relabel the Gmail block; update the total (D5). `.env.local.example`: relabel the Gmail block.
 
 ## 2. Deploy lists (ci-deploy.sh, workflow, Makefile, local.mk)
 
 Depends on: nothing. Keep the step comments in `.github/workflows/deploy.yml` (commit `7aa7041`); add only the option line.
 
-- [ ] 2.1 `ci-deploy.sh`: add the `jbh-notification) tag_var=JBH_NOTIFICATION_TAG ;;` branch; update the `refuse` message. Keep the rest unchanged (40-character SHA check, no `eval`).
-- [ ] 2.2 `.github/workflows/deploy.yml`: add `jbh-notification` to the `service` options. The list must equal the one in `ci-deploy.sh`.
-- [ ] 2.3 `Makefile`: change the comment "Only the 4 app services" to 5.
-- [ ] 2.4 `local.mk`: add `jbh-notification` to `LOCAL_SWAPPABLE` and a `jbh-notification)` branch to the IDE env `case` (D4).
+- [x] 2.1 `ci-deploy.sh`: add the `jbh-notification) tag_var=JBH_NOTIFICATION_TAG ;;` branch; update the `refuse` message. Keep the rest unchanged (40-character SHA check, no `eval`).
+- [x] 2.2 `.github/workflows/deploy.yml`: add `jbh-notification` to the `service` options. The list must equal the one in `ci-deploy.sh`.
+- [x] 2.3 `Makefile`: change the comment "Only the 4 app services" to 5.
+- [x] 2.4 `local.mk`: add `jbh-notification` to `LOCAL_SWAPPABLE` and a `jbh-notification)` branch to the IDE env `case` (D4).
 
 ## 3. AWS and observability
 
 Depends on: nothing.
 
-- [ ] 3.1 `aws/finance-fargate.yaml`: remove the three `GMAIL_*` secrets, `JBH_FRONTEND_URL`, parameter `FrontendUrl`, the `GMAIL_*` mention in `AppSecretArn`; reword the comment on line 12 (D7). Keep the ALB rules unchanged.
-- [ ] 3.2 `aws/README.md`: remove `GMAIL_*` from the secret JSON; add the line "This stack sends no email"; reword the `/jbh-api/notifications/*` note (D7).
-- [ ] 3.3 `observability/README.md`: add the `jbh-notification` row (`:7778/q/metrics`).
+- [x] 3.1 `aws/finance-fargate.yaml`: remove the three `GMAIL_*` secrets, `JBH_FRONTEND_URL`, parameter `FrontendUrl`, the `GMAIL_*` mention in `AppSecretArn`; reword the comment on line 12 (D7). Keep the ALB rules unchanged.
+- [x] 3.2 `aws/README.md`: remove `GMAIL_*` from the secret JSON; add the line "This stack sends no email"; reword the `/jbh-api/notifications/*` note (D7).
+- [x] 3.3 `observability/README.md`: add the `jbh-notification` row (`:7778/q/metrics`).
 
 ## 4. System map
 

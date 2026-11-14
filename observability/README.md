@@ -11,6 +11,7 @@ Grafana dashboards for the JBH services. Each JSON file here is one dashboard.
 | Service | Endpoint (private, never public) | Tags |
 |---------|----------------------------------|------|
 | `jbh-personal-finance` | `:7777/q/metrics` | `service=jbh-personal-finance`, `env` |
+| `jbh-notification` | `:7778/q/metrics` | `service=jbh-notification`, `env` |
 | `jbh-iam` | `:9999/actuator/prometheus` | `service=jbh-iam`, `env` |
 
 Caddy and the gateway forward only `/jbh-api/...`, so these endpoints are reachable only on `jbh-private`.

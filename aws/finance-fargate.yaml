@@ -9,7 +9,7 @@ Description: >-
 # Rules this file follows (see README.md):
 #   - Only the ALB is public. Tasks and the database have no public IP.
 #   - The ALB forwards only /jbh-api/finance/* and /jbh-api/preferences/*. Everything else answers 404,
-#     /jbh-api/notifications/* included (it sends email, so it must never be public).
+#     /jbh-api/notifications/* included (finance has no notification endpoint any more).
 #   - Consul is off. The ALB finds the tasks itself (target type "ip").
 #   - The service still asks jbh-iam for the user id through the VPS gateway (JBH_GATEWAY_URL).
 #   - Secrets come from Secrets Manager, never from parameters or plain env vars.
@@ -26,15 +26,11 @@ Parameters:
     Description: 'Secrets Manager ARN with {"username": "...", "password": "<read:packages token>"}.'
   AppSecretArn:
     Type: String
-    Description: Secrets Manager ARN with the app keys (GMAIL_*, AZURE_DI_*, OPENROUTER_API_KEY, GEMINI_API_KEY, JEV_API_KEY).
+    Description: Secrets Manager ARN with the app keys (AZURE_DI_*, OPENROUTER_API_KEY, GEMINI_API_KEY, JEV_API_KEY).
   GatewayUrl:
     Type: String
     Default: https://jbh.usemagus.cloud
     Description: jbh-gateway base URL, without /jbh-api. The service calls it to find the user id.
-  FrontendUrl:
-    Type: String
-    Default: https://jbh.usemagus.cloud
-    Description: Frontend URL used for links inside invitation emails.
   StatementTextSource:
     Type: String
     Default: pdfbox
@@ -489,8 +485,6 @@ Resources:
               Value: "false"
             - Name: JBH_GATEWAY_URL
               Value: !Ref GatewayUrl
-            - Name: JBH_FRONTEND_URL
-              Value: !Ref FrontendUrl
             - Name: STATEMENT_TEXT_SOURCE
               Value: !Ref StatementTextSource
             - Name: STATEMENT_LLM
@@ -504,12 +498,6 @@ Resources:
               ValueFrom: !Sub "${DatabaseSecret}:username::"
             - Name: DATABASE_PASSWORD
               ValueFrom: !Sub "${DatabaseSecret}:password::"
-            - Name: GMAIL_USERNAME
-              ValueFrom: !Sub "${AppSecretArn}:GMAIL_USERNAME::"
-            - Name: GMAIL_APP_PASSWORD
-              ValueFrom: !Sub "${AppSecretArn}:GMAIL_APP_PASSWORD::"
-            - Name: GMAIL_FROM
-              ValueFrom: !Sub "${AppSecretArn}:GMAIL_FROM::"
             - Name: AZURE_DI_ENDPOINT
               ValueFrom: !Sub "${AppSecretArn}:AZURE_DI_ENDPOINT::"
             - Name: AZURE_DI_API_KEY

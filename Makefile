@@ -46,7 +46,7 @@ ps:
 logs:
 	$(COMPOSE) logs -f --tail=200 $(s)
 
-# Same script as the Deploy button, so both keep <service>:previous right. Only the 4 app services.
+# Same script as the Deploy button, so both keep <service>:previous right. Only the 5 app services.
 deploy:
 	@test -n "$(s)" || (echo "usage: make deploy s=<service>" && exit 1)
 	./ci-deploy.sh deploy $(s)

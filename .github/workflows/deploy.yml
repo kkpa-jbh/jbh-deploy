@@ -32,6 +32,7 @@ on:
           - jbh-gateway
           - jbh-iam
           - jbh-personal-finance
+          - jbh-notification
       # Which image version. ci-deploy.sh accepts only a full 40-character git SHA.
       tag:
         description: Optional, deploy only. Full git SHA of the image. Empty = the tag in .env on the VPS (latest).

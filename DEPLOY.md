@@ -45,7 +45,7 @@ browser ── <Magus domain> ──────┘   (same IP)             └�
 
 **Why one shared Caddy:** only one program can listen on port 443 of a machine, and Magus's Caddy has it. So jbh adds
 a site file instead of its own proxy. The Docker network `edge` lets that Caddy reach `jbh-web` and `jbh-gateway`.
-IAM, finance, Consul and Postgres stay on the private network `jbh-private`.
+IAM, finance, notification, Consul and Postgres stay on the private network `jbh-private`.
 
 **Why three containers can all use port 8080:** `jbh-gateway`, `jbh-web` and Magus's `web` all listen on 8080.
 That is fine: each container has its own network space and its own IP, so their ports never clash. Caddy calls them
@@ -57,10 +57,10 @@ by name (`jbh-gateway:8080`, `web:8080`), and Docker's DNS gives the right IP. P
 
 ## 0. What you need first
 
-- [ ] The 4 images exist in GHCR (GitHub → org `kkpa-jbh` → Packages): `jbh-gateway`, `jbh-iam`,
-      `jbh-personal-finance`, `jbh-web`. Each repo's `Image` workflow builds one on every push to `main`.
+- [ ] The 5 images exist in GHCR (GitHub → org `kkpa-jbh` → Packages): `jbh-gateway`, `jbh-iam`,
+      `jbh-personal-finance`, `jbh-notification`, `jbh-web`. Each repo's `Image` workflow builds one on every push to `main`.
 - [ ] A GitHub **classic token** with only `read:packages` (the same one stored as the `PACKAGES_READ_TOKEN`
-      secret in `jbh-gateway-client`, `jbh-iam`, `jbh-personal-finance`).
+      secret in `jbh-gateway-client`, `jbh-iam`, `jbh-personal-finance`, `jbh-notification`).
 - [ ] The Magus changes are pushed (Caddyfile `import`, `edge` network in `compose.yaml`).
 - [ ] The values for `.env`: a Postgres password, a `JBH_JWT_SECRET`, the Gmail account and app password.
 
@@ -94,8 +94,8 @@ by name (`jbh-gateway:8080`, `web:8080`), and Docker's DNS gives the right IP. P
 - [ ] The Magus site still works.
 - [ ] From your laptop: `nmap -p- <vps-ip>` shows only 22, 80, 443.
 - [ ] Consul: `make consul-tunnel` (VPS, `/home/magus/jbh-deploy`) prints an `ssh -L ...` command.
-      Run it **on your laptop**, open http://localhost:8500 — `jbh-iam-service`, `jbh-personal-finance`
-      and `API Gateway` are green.
+      Run it **on your laptop**, open http://localhost:8500 — `jbh-iam-service`, `jbh-personal-finance`,
+      `jbh-notification` and `API Gateway` are green.
 - [ ] VPS: `docker stats --no-stream` — total memory well under 7.7 GB.
 
 ### 1.1 Set up the Deploy button (one time)
@@ -137,9 +137,9 @@ Why the key is safe:
 
 - `command="…/ci-deploy.sh"`: the key runs only this script, whatever the runner asks for.
 - `restrict`: no shell, no terminal, no port forwarding.
-- The script accepts only `deploy` or `rollback`, only `jbh-web`, `jbh-gateway`, `jbh-iam` and `jbh-personal-finance`,
+- The script accepts only `deploy` or `rollback`, only `jbh-web`, `jbh-gateway`, `jbh-iam`, `jbh-personal-finance` and `jbh-notification`,
   and for `deploy` an optional full git SHA (40 characters `0-9a-f`). Anything else ends with `Refused`.
-- If the key leaks, it can only deploy or roll back one of these 4 services, with images that are already in GHCR or on the VPS.
+- If the key leaks, it can only deploy or roll back one of these 5 services, with images that are already in GHCR or on the VPS.
 
 Two more facts:
 
@@ -274,7 +274,9 @@ Full details (steps, pull requests, secrets, image retention): [`CI.md`](CI.md).
 | `jbh-gateway` | `Image` | image `ghcr.io/kkpa-jbh/jbh-gateway` |
 | `jbh-iam` | `Image` | image `ghcr.io/kkpa-jbh/jbh-iam` |
 | `jbh-personal-finance` | `Image` | image `ghcr.io/kkpa-jbh/jbh-personal-finance` |
-| `jbh-personal-finance` | `Publish notification contracts` (only when the contracts change) | Maven `jbh-notification-contracts` |
+| `jbh-notification` | `Image` | image `ghcr.io/kkpa-jbh/jbh-notification` |
+| `jbh-notification` | `Publish notification contracts` (only when the contracts change) | Maven `jbh-notification-contracts` |
+| `jbh-commons-lib` | `Publish` | Maven `jbh-commons-lib` |
 | `jbh-app` | `Image` | image `ghcr.io/kkpa-jbh/jbh-web`, then deploys it by itself when `AUTO_DEPLOY` is on (§1.2) |
 | `jbh-gateway-client` | `Publish` | Maven `jbh-gateway-client` |
 | `jbh-deploy` | `Deploy` (by hand, or from `jbh-app`'s `Image`) | nothing — deploys one service to the VPS (§2.2) |
@@ -285,11 +287,11 @@ Each workflow can also be started by hand: Actions → the workflow → **Run wo
 ### 2.2 Deploy one service (the normal case)
 
 1. **Laptop, the service repo:** push a branch and merge it with a pull request (`gh pr create`, then `gh pr merge`).
-   `main` accepts no direct push in `jbh-app`, `jbh-gateway`, `jbh-iam`, `jbh-personal-finance` (`CI.md`, "Pull requests").
+   `main` accepts no direct push in any JBH repo (`CI.md`, "Pull requests").
 2. **Browser or laptop:** wait until the `Image` workflow is green.
    GitHub → repo → Actions, or `gh run list -R kkpa-jbh/<repo> -w Image -L 1`. Takes 2–4 minutes.
 3. **Browser:** GitHub → `jbh-deploy` → Actions → `Deploy` → **Run workflow**, pick `deploy` and the service
-   (`jbh-gateway`, `jbh-iam`, `jbh-personal-finance` or `jbh-web`).
+   (`jbh-gateway`, `jbh-iam`, `jbh-personal-finance`, `jbh-notification` or `jbh-web`).
    It pulls the new image and restarts only that service. The others keep running.
    - Green = the service is healthy (JVMs: 1–2 minutes).
    - Red = it is not. The VPS then starts the image from before by itself. The run log shows the service's
@@ -301,22 +303,23 @@ Each workflow can also be started by hand: Actions → the workflow → **Run wo
 With auto-deploy on (§1.2), steps 2 and 3 happen by themselves for `jbh-web`. Check the result in
 `jbh-deploy` → Actions → `Deploy`.
 
-### 2.3 A shared library changed (contracts or gateway-client)
+### 2.3 A shared library changed (commons-lib, contracts or gateway-client)
 
 The services include the library at build time, so the order matters:
 
-1. **`jbh-personal-finance`** (only if `jbh-notification-contracts` changed): merge a PR → wait for
+1. **`jbh-commons-lib`**: merge a PR → wait for `Publish`.
+2. **`jbh-notification`** (only if `jbh-notification-contracts` changed): merge a PR → wait for
    `Publish notification contracts`.
-2. **`jbh-gateway-client`**: push (or Run workflow) → wait for `Publish`.
-3. **`jbh-iam`** and **`jbh-personal-finance`**: merge a PR, or **Run workflow** on `Image` when nothing else changed →
-   wait for both.
-4. **Deploy** `jbh-iam`, then `jbh-personal-finance` (the `Deploy` button, or `make deploy` on the VPS).
+3. **`jbh-gateway-client`**: push (or Run workflow) → wait for `Publish`.
+4. **`jbh-iam`**, **`jbh-personal-finance`** and **`jbh-notification`**: merge a PR, or **Run workflow** on `Image` when nothing else changed →
+   wait for all of them.
+5. **Deploy** `jbh-notification`, `jbh-iam`, then `jbh-personal-finance` (the `Deploy` button, or `make deploy` on the VPS).
 
 Skipping a step means an image is built with the old library.
 
 ### 2.4 Several services at once
 
-Deploy them one by one, back end first: `jbh-iam` → `jbh-personal-finance` → `jbh-gateway` → `jbh-web`.
+Deploy them one by one, back end first: `jbh-notification` → `jbh-iam` → `jbh-personal-finance` → `jbh-gateway` → `jbh-web`.
 Wait until each one is healthy (a green `Deploy` run, or `make ps`) before the next.
 
 ### 2.5 A change in this repo (`jbh-deploy`)
@@ -329,7 +332,22 @@ Wait until each one is healthy (a green `Deploy` run, or `make ps`) before the n
    - A new variable in `.env.example` → add it to `.env` on the VPS first, then `make up`.
    - `ci-deploy.sh` → nothing more. The next `Deploy` run uses the new file.
 
-### 2.6 Pin a version
+### 2.6 Release order: `jbh-notification` leaves `jbh-personal-finance`
+
+Do this once, when `jbh-notification` goes live. A wrong order gives `503` on `/jbh-api/notifications/**`
+for a short time (invitation emails fail, nothing is lost).
+
+1. **VPS, `/home/magus/jbh-deploy`:** `git pull`, then put `JBH_NOTIFICATION_TAG` in `.env` (copy it from `.env.example`).
+   Without it, every `make` command that reads `compose.yaml` fails.
+   Deploy `jbh-notification` first: `make deploy s=jbh-notification`.
+   Wait until it is healthy in Consul (`make ps`, or the Consul UI through `make consul-tunnel`).
+   Before that, the new gateway route answers `503`.
+2. Then deploy `jbh-gateway` (route to `jbh-notification`) and `jbh-personal-finance` (no notification module), in any order.
+   The gateway routes to one service at a time, so no email is sent twice.
+3. Until finance is deployed without its notification module, both services run the same Liquibase changelog
+   on schema `notifications`. Do not change that changelog before then.
+
+### 2.7 Pin a version
 
 With `JBH_<SERVICE>_TAG=latest` in `.env`, `make deploy` takes the newest image. To pin one version, put the full
 40-character git SHA instead (`JBH_IAM_TAG=0a40993c82b3...`). Section 3 uses this for rollback.
@@ -406,7 +424,7 @@ This is production and `jbh_admin` can change everything. Tick **Read-only** in 
 | `401` on every API call | `JBH_JWT_SECRET` differs between IAM and gateway? It is one value in `.env`; restart both with `make deploy`. |
 | API returns `503` / "no instances" | The gateway cannot find a service in Consul. Check the Consul UI (tunnel above) and `make logs s=jbh-iam`. |
 | `network edge ... could not be found` | VPS, `/home/magus/jbh-deploy`: `make network` (`make up` now runs it first). Then recreate Magus's Caddy (§1 step 7) so it joins `edge`. |
-| `docker pull` → `denied` / `unauthorized` | The token expired. Create a new one, `docker login ghcr.io` again, and update `PACKAGES_READ_TOKEN` in the 3 repos. |
+| `docker pull` → `denied` / `unauthorized` | The token expired. Create a new one, `docker login ghcr.io` again, and update `PACKAGES_READ_TOKEN` in the 4 repos. |
 | CI: `Could not find artifact com.jbh:...` | `PACKAGES_READ_TOKEN` is missing or expired in that repo. |
 | `make caddy-install`: `cp: ... Permission denied` | Docker created `/home/magus/caddy-sites` as `root` (it did not exist when Magus's Caddy started). VPS: `sudo chown magus:magus /home/magus/caddy-sites`, then retry. |
 | `Deploy`: `Permission denied (publickey)` | The key line is missing in `~/.ssh/authorized_keys`, or `VPS_SSH_KEY` is wrong. Redo §1.1. |
@@ -415,7 +433,7 @@ This is production and `jbh_admin` can change everything. Tick **Read-only** in 
 | `Deploy`: `Unknown service` or `Refused` | `ci-deploy.sh` on the VPS does not match the workflow. VPS, `/home/magus/jbh-deploy`: `git pull`. |
 | `jbh-app` `Image`, job `deploy`: `Bad credentials` (401), or 403 / 404 | `DEPLOY_DISPATCH_TOKEN` expired, is missing, or lacks "Actions: Read and write" on `jbh-deploy`. Redo §1.2 steps 2–3. |
 | `rollback`: `No previous image` | No healthy deploy has run with the current `ci-deploy.sh` yet, or the image was pruned. Use §3 "A chosen version, by commit SHA". |
-| Invitation emails do not arrive | `make logs s=jbh-personal-finance`; check `GMAIL_*` in `.env` (Gmail needs an app password). |
+| Invitation emails do not arrive | `make logs s=jbh-notification`; check `GMAIL_*` in `.env` (Gmail needs an app password). |
 
 ## 7. Limits and cost
 

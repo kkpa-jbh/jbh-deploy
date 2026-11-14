@@ -17,6 +17,7 @@ So the gateway reaches a service at the same address when it runs in Docker or i
 | `jbh-gateway` | 8080 |
 | `jbh-iam` | 9999 |
 | `jbh-personal-finance` | 7777 |
+| `jbh-notification` | 7778 |
 | Consul (UI) | 8500 |
 | Postgres | 5433 |
 
@@ -33,7 +34,7 @@ Postgres is a container with its own empty data. It is not the Postgres on your 
 ## Daily use
 
 1. `make local-up`
-2. Open http://localhost:8500. `jbh-iam-service`, `jbh-personal-finance` and `API Gateway` must be healthy.
+2. Open http://localhost:8500. `jbh-iam-service`, `jbh-personal-finance`, `jbh-notification` and `API Gateway` must be healthy.
    Each one must show the address `host.docker.internal`.
 3. In `jbh-app`: `ionic serve`, then sign in.
 4. `make local-ps` shows the containers. `make local-logs s=<service>` follows one log. `make local-down` stops all.
@@ -42,7 +43,7 @@ The first start creates the databases. The services run their Liquibase migratio
 
 ## Swap one service for your IDE
 
-1. `make local-swap s=jbh-iam` (also `jbh-personal-finance` or `jbh-gateway`). It stops that container and prints the env vars.
+1. `make local-swap s=jbh-iam` (also `jbh-personal-finance`, `jbh-notification` or `jbh-gateway`). It stops that container and prints the env vars.
 2. Run the same service from your IDE with those env vars.
 3. When you finish: stop it in the IDE, then `make local-restore s=jbh-iam`.
 
@@ -50,10 +51,11 @@ Env vars for a service you run from the IDE:
 
 | Service | Env vars |
 |---------|----------|
-| all three | `CONSUL_DISCOVERY_HOSTNAME=host.docker.internal` |
+| all four | `CONSUL_DISCOVERY_HOSTNAME=host.docker.internal` |
 | `jbh-iam`, `jbh-gateway` | `JBH_JWT_SECRET` = the same value as in `.env.local`. If it differs, every call gets a 401. |
 | `jbh-iam` | Profile `local`. Database: `DB_HOST=localhost`, `DB_PORT=5433`, `DB_NAME=jbh`, `DB_USERNAME`, `JBH_ADMIN_PASS` (the Postgres values from `.env.local`). |
 | `jbh-personal-finance` | `DATABASE_URL=jdbc:postgresql://localhost:5433/jbh_finance`, `DATABASE_USERNAME`, `DATABASE_PASSWORD`. Quarkus dev mode already sets `CONSUL_HEALTH_CHECK_HOST=host.docker.internal`. |
+| `jbh-notification` | `DATABASE_URL=jdbc:postgresql://localhost:5433/jbh_finance`, `DATABASE_USERNAME`, `DATABASE_PASSWORD`. Optional: the `GMAIL_*` keys and `JBH_FRONTEND_URL=http://localhost:8100`. |
 
 ## Catches
 

@@ -7,14 +7,7 @@
   "request": "JBH-74 section 7: add service jbh-notification to compose.yaml and compose.local.yaml (image ghcr.io/kkpa-jbh/jbh-notification, port 7778, jbh-private only, memory limit 384M, -Xmx192m, healthcheck /q/health, DATABASE_URL on jbh_finance). Move GMAIL_* and JBH_FRONTEND_URL from jbh-personal-finance to it. Update .env.example, ci-deploy.sh, Makefile and the Deploy workflow (fifth app service, JBH_NOTIFICATION_TAG). jbh.caddy keeps the 404 block. Update README.md (system map, remove the 'Build cycle' known gap, add jbh-commons-lib and jbh-notification), CI.md (remove publish-contracts, add commons-lib publish and notification publish + image) and LOCAL.md.",
   "status": "in-progress",
   "rollup": {
-    "current": [
-      "4.1",
-      "5.1",
-      "5.2",
-      "5.3",
-      "5.4",
-      "5.5"
-    ],
+    "current": [],
     "pending": [
       "6.1"
     ],
@@ -29,11 +22,17 @@
       "2.4",
       "3.1",
       "3.2",
-      "3.3"
+      "3.3",
+      "4.1",
+      "5.1",
+      "5.2",
+      "5.3",
+      "5.4",
+      "5.5"
     ]
   },
   "created_at": "2026-11-14T22:00:17Z",
-  "updated_at": "2026-11-14T22:02:47Z",
+  "updated_at": "2026-11-14T22:05:28Z",
   "leader": {
     "assistant": "Claude Code",
     "model": "claude-opus-5-5"
@@ -208,13 +207,13 @@
         "1.3"
       ],
       "parallel_ok": false,
-      "status": "in-progress",
+      "status": "done",
       "agent": "jbh-deploy",
       "model": "sonnet",
       "started_at": "2026-11-14T22:02:47Z",
-      "completed_at": null,
-      "duration_seconds": null,
-      "notes": null,
+      "completed_at": "2026-11-14T22:05:28Z",
+      "duration_seconds": 161,
+      "notes": "System map: new rows, mermaid, routes, Consul, calls, DB, build and CI order, token list; Build cycle gap removed; release-order pointer.",
       "budget": null
     },
     {
@@ -228,13 +227,13 @@
         "2.4"
       ],
       "parallel_ok": false,
-      "status": "in-progress",
+      "status": "done",
       "agent": "jbh-deploy",
       "model": "sonnet",
       "started_at": "2026-11-14T22:02:47Z",
-      "completed_at": null,
-      "duration_seconds": null,
-      "notes": null,
+      "completed_at": "2026-11-14T22:05:28Z",
+      "duration_seconds": 161,
+      "notes": "CI.md D8 items from the real workflow files; publish-contracts removed.",
       "budget": null
     },
     {
@@ -248,13 +247,13 @@
         "2.4"
       ],
       "parallel_ok": false,
-      "status": "in-progress",
+      "status": "done",
       "agent": "jbh-deploy",
       "model": "sonnet",
       "started_at": "2026-11-14T22:02:47Z",
-      "completed_at": null,
-      "duration_seconds": null,
-      "notes": null,
+      "completed_at": "2026-11-14T22:05:28Z",
+      "duration_seconds": 161,
+      "notes": "LOCAL.md: port 7778, health list, swap list, IDE env row.",
       "budget": null
     },
     {
@@ -268,13 +267,13 @@
         "2.4"
       ],
       "parallel_ok": false,
-      "status": "in-progress",
+      "status": "done",
       "agent": "jbh-deploy",
       "model": "sonnet",
       "started_at": "2026-11-14T22:02:47Z",
-      "completed_at": null,
-      "duration_seconds": null,
-      "notes": null,
+      "completed_at": "2026-11-14T22:05:28Z",
+      "duration_seconds": 161,
+      "notes": "DEPLOY.md D8 items; new 2.6 release order; old 2.6 renumbered 2.7.",
       "budget": null
     },
     {
@@ -288,13 +287,13 @@
         "2.4"
       ],
       "parallel_ok": false,
-      "status": "in-progress",
+      "status": "done",
       "agent": "jbh-deploy",
       "model": "sonnet",
       "started_at": "2026-11-14T22:02:47Z",
-      "completed_at": null,
-      "duration_seconds": null,
-      "notes": null,
+      "completed_at": "2026-11-14T22:05:28Z",
+      "duration_seconds": 161,
+      "notes": "CI.md: All JBH repos have the ruleset protect-main. No exception.",
       "budget": null
     },
     {
@@ -308,13 +307,13 @@
         "2.4"
       ],
       "parallel_ok": false,
-      "status": "in-progress",
+      "status": "done",
       "agent": "jbh-deploy",
       "model": "sonnet",
       "started_at": "2026-11-14T22:02:47Z",
-      "completed_at": null,
-      "duration_seconds": null,
-      "notes": null,
+      "completed_at": "2026-11-14T22:05:28Z",
+      "duration_seconds": 161,
+      "notes": "CI.md: jbh-notification CI workflow; verify required in jbh-notification and jbh-commons-lib.",
       "budget": null
     },
     {
@@ -416,6 +415,15 @@
       "decision": "Implementation waits for jbh-leader 'go section 7'; JBH-74 not moved in Linear",
       "why": "sections 2-6 must land first; jbh-leader owns ticket status",
       "covered_by": "jbh-leader dispatch message"
+    },
+    {
+      "scope": "task:5.1",
+      "made_by": "leader",
+      "decision": "Accept CI.md text that jbh-notification runs its tests on PRs (ci.yml verify), not the design.md line saying it runs none",
+      "why": "real ci.yml runs clean verify with all tests; docs must match the code",
+      "covered_by": "repo rule: trust the code",
+      "id": "D7",
+      "at": "2026-11-14T22:05:28Z"
     }
   ],
   "events": [
@@ -443,6 +451,11 @@
       "at": "2026-11-14T22:02:47Z",
       "agent": "leader",
       "event": "dispatched worker jbh-deploy (sonnet) for wave 2 (tasks 4.1, 5.1-5.5)"
+    },
+    {
+      "at": "2026-11-14T22:05:28Z",
+      "agent": "leader",
+      "event": "wave 2 reconciled; verified by the leader: V1 V2 exit 0, V12 no match, V13 empty, V14 exit 0"
     }
   ]
 }

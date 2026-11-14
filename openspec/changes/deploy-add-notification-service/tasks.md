@@ -32,17 +32,17 @@ Depends on: nothing.
 
 Depends on: 1 (for the env table values).
 
-- [ ] 4.1 `README.md`: every item listed under "README.md" in design.md D8. Remove the "Build cycle" known gap. Add the release-order pointer to `DEPLOY.md` in "Production".
+- [x] 4.1 `README.md`: every item listed under "README.md" in design.md D8. Remove the "Build cycle" known gap. Add the release-order pointer to `DEPLOY.md` in "Production".
 
 ## 5. CI and operator docs
 
 Depends on: 2 (service names). Reads the real workflow files in `../jbh-commons-lib/.github/workflows/` and `../jbh-notification/.github/workflows/`.
 
-- [ ] 5.1 `CI.md`: every item listed under "CI.md" in design.md D8.
-- [ ] 5.2 `LOCAL.md`: port table, health list, swap list, IDE env row (D8).
-- [ ] 5.3 `DEPLOY.md`: every item listed under "DEPLOY.md" in design.md D8, including new §2.6 with the release order (D6).
-- [ ] 5.4 `CI.md` "Pull requests": replace the "`main` is protected in ..." sentence and the "no protection" line with "All JBH repos have the ruleset `protect-main`." No exception, no `jbh-discovery-nexus` (D8, branch protection).
-- [ ] 5.5 `CI.md`: add the `jbh-notification` `CI` workflow (`ci.yml`, job `verify`, pull requests into `main` + by hand) next to its other rows, and state that `verify` is a required status check in `protect-main` of `jbh-notification` and `jbh-commons-lib`; reword "No check is required yet" (D8).
+- [x] 5.1 `CI.md`: every item listed under "CI.md" in design.md D8.
+- [x] 5.2 `LOCAL.md`: port table, health list, swap list, IDE env row (D8).
+- [x] 5.3 `DEPLOY.md`: every item listed under "DEPLOY.md" in design.md D8, including new §2.6 with the release order (D6).
+- [x] 5.4 `CI.md` "Pull requests": replace the "`main` is protected in ..." sentence and the "no protection" line with "All JBH repos have the ruleset `protect-main`." No exception, no `jbh-discovery-nexus` (D8, branch protection).
+- [x] 5.5 `CI.md`: add the `jbh-notification` `CI` workflow (`ci.yml`, job `verify`, pull requests into `main` + by hand) next to its other rows, and state that `verify` is a required status check in `protect-main` of `jbh-notification` and `jbh-commons-lib`; reword "No check is required yet" (D8).
 
 ## 6. Static verification (leader runs)
 

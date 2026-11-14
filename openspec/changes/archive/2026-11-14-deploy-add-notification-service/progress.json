@@ -5,7 +5,7 @@
   "module": "jbh-deploy",
   "roadmap": null,
   "request": "JBH-74 section 7: add service jbh-notification to compose.yaml and compose.local.yaml (image ghcr.io/kkpa-jbh/jbh-notification, port 7778, jbh-private only, memory limit 384M, -Xmx192m, healthcheck /q/health, DATABASE_URL on jbh_finance). Move GMAIL_* and JBH_FRONTEND_URL from jbh-personal-finance to it. Update .env.example, ci-deploy.sh, Makefile and the Deploy workflow (fifth app service, JBH_NOTIFICATION_TAG). jbh.caddy keeps the 404 block. Update README.md (system map, remove the 'Build cycle' known gap, add jbh-commons-lib and jbh-notification), CI.md (remove publish-contracts, add commons-lib publish and notification publish + image) and LOCAL.md.",
-  "status": "verified",
+  "status": "archived",
   "rollup": {
     "current": [],
     "pending": [],
@@ -31,7 +31,7 @@
     ]
   },
   "created_at": "2026-11-14T22:00:17Z",
-  "updated_at": "2026-11-14T22:05:50Z",
+  "updated_at": "2026-11-14T22:27:17Z",
   "leader": {
     "assistant": "Claude Code",
     "model": "claude-opus-5-5"
@@ -349,10 +349,25 @@
     }
   ],
   "review": {
-    "status": "pending",
-    "agent": null,
-    "brief": null,
-    "rounds": []
+    "status": "reviewer-approved",
+    "agent": "jbh-deploy-reviewer",
+    "brief": "Scope: git diff 97afc12...HEAD (change commits 2e09cea cdbc7dc 303ffb1 9292853 661293b). 7aa7041 and 97afc12 are not this change. User decisions: aws/ loses GMAIL_* and JBH_FRONTEND_URL (no email on AWS); Complexity-Check = compose config -q; briefing accepted; security-review skipped by user (Security-Gate: skip). No DB object changes (no gate). test_first skipped: no unit tests; verification is static V1-V14, all run by the leader (assistantRunsTests), none user-reported. Check: ci-deploy.sh list == deploy.yml options, strict, 40-hex SHA, no eval; jbh-notification only on jbh-private, no ports in compose.yaml; finance has no GMAIL_*/JBH_FRONTEND_URL; docs match code and real workflow files (../jbh-commons-lib, ../jbh-notification); CI.md says all JBH repos have protect-main, verify required in two repos; DEPLOY.md 2.6 release order; jbh.caddy and initdb unchanged; Build cycle gap removed.",
+    "rounds": [
+      {
+        "round": 1,
+        "verdict": "approved",
+        "at": "2026-11-14T22:26:57Z",
+        "findings": [],
+        "security": {
+          "status": "skipped",
+          "ran_at": null,
+          "scope": null,
+          "findings": [],
+          "note": "Skipped: the user chose to skip /security-review at the Step 7 gate (decisions[] scope review:security-gate, made_by user)."
+        },
+        "note": "All brief checks pass by reading. Static checks V1-V14 were run by the leader (not re-run)."
+      }
+    ]
   },
   "test_first": {
     "status": "skipped",
@@ -423,6 +438,15 @@
       "covered_by": "repo rule: trust the code",
       "id": "D7",
       "at": "2026-11-14T22:05:28Z"
+    },
+    {
+      "scope": "review:security-gate",
+      "made_by": "user",
+      "decision": "Skip /security-review for this change",
+      "why": "user choice at the Step 7 security gate; diff touches ci-deploy.sh, Deploy workflow, secret env",
+      "covered_by": null,
+      "id": "D8",
+      "at": "2026-11-14T22:26:19Z"
     }
   ],
   "events": [
@@ -470,6 +494,11 @@
       "at": "2026-11-14T22:05:50Z",
       "agent": "leader",
       "event": "Step 6: openspec validate --strict valid; all tasks.md boxes ticked. Real size (git diff --shortstat 1a371e3...HEAD, without openspec/): 15 files, 290+/140- = 430 lines; estimate was 15 files, ~450"
+    },
+    {
+      "at": "2026-11-14T22:27:17Z",
+      "agent": "leader",
+      "event": "reviewer jbh-deploy-reviewer approved round 1, no findings, security skipped (user); archiving"
     }
   ]
 }

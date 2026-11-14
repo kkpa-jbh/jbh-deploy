@@ -45,7 +45,7 @@ services:
     command: "agent -server -ui -node=jbh-consul -bootstrap-expect=1 -client=0.0.0.0"
     volumes:
       - jbh-local-consul-data:/consul/data
-    # Port 8500 is also used by jbh-discovery-nexus. Stop it before make local-up.
+    # Port 8500 is also used by kkpa-docker-lab/consul. Stop it (make consul down) before make local-up.
     ports:
       - "8500:8500"
 

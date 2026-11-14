@@ -13,7 +13,7 @@ For details on one project, read the `README.md` inside its folder.
 | `jbh-gateway` | Single entry point for all API calls | Kotlin, Spring Cloud Gateway | 8080 (env `JBH_GATEWAY_SERVER_PORT`) |
 | `jbh-iam` | Login, users, user groups, JWT | Kotlin, Spring Boot (Gradle) | 9999 |
 | `jbh-personal-finance` | Finance, products, preferences, notifications | Java, Quarkus modular monolith (Maven) | 7777 |
-| `jbh-discovery-nexus` | Service discovery (Consul in Docker) | Consul 1.16 | 8500 |
+| `kkpa-docker-lab/consul` | Service discovery (Consul in Docker, local). Lives outside this org, in `../kkpa-docker-lab` | Consul 1.16 | 8500 |
 | `jbh-gateway-client` | Java library to call other services through the gateway | Java 21 library (Maven) | - |
 | `jbh-deploy` | Production deploy (compose, Caddy site, env) and this system map | Docker Compose | - |
 | `logs` | Local log files (not a project) | - | - |
@@ -25,7 +25,7 @@ flowchart LR
     app[jbh-app] -->|/jbh-api/**| gw[jbh-gateway :8080]
     gw -->|lb://jbh-iam-service| iam[jbh-iam :9999]
     gw -->|lb://jbh-personal-finance| pf[jbh-personal-finance :7777]
-    gw -. find services .-> consul[(Consul :8500<br/>jbh-discovery-nexus)]
+    gw -. find services .-> consul[(Consul :8500<br/>kkpa-docker-lab/consul)]
     iam -. register .-> consul
     pf -. register .-> consul
     pf -->|gateway-client: find user id| gw
@@ -72,7 +72,8 @@ The gateway also:
 
 ### 3. Service discovery
 
-- `jbh-discovery-nexus` runs Consul in Docker. UI: http://localhost:8500
+- Locally, Consul runs from `kkpa-docker-lab/consul` (`make consul up`, memory limit 500 MB). UI: http://localhost:8500
+  The old `jbh-discovery-nexus` repo is archived.
 - `jbh-gateway`, `jbh-iam` and `jbh-personal-finance` register in Consul at start.
 - Consul host: env `CONSUL_HOST` in all three (default `localhost`).
 - The address the gateway uses to reach a service is the one it registered:
@@ -155,7 +156,7 @@ Maven uses `-s .github/maven-settings.xml -Pgithub` in CI; Gradle (`jbh-iam`) ad
 its own repo's packages. There is no "Manage Actions access" for Maven. So every repo that reads another repo's package
 has a repo secret `PACKAGES_READ_TOKEN`: a classic personal access token with only `read:packages`.
 It is a repo secret in each repo. On GitHub Free, an org secret reaches only public repos, and until 2026-10-10 most repos were private.
-Visibility now: all repos are public except `jbh-discovery-nexus`.
+Visibility now: all repos are public. The only private one, `jbh-discovery-nexus`, is archived.
 Repos that need it: `jbh-gateway-client`, `jbh-iam`, `jbh-personal-finance`. When the token expires, renew it in all three.
 
 ### Why packages (and not a build on the VPS)
@@ -184,7 +185,7 @@ No registry is needed, but every deploy is manual. Keep it as a fallback if GitH
 ## Start order (local)
 
 1. Postgres on `localhost:5432`.
-2. `jbh-discovery-nexus` → `docker compose up` (Consul).
+2. Consul → `make consul up` in `kkpa-docker-lab` (sibling folder of `kkpa-jbh/`).
 3. `jbh-iam` → port 9999.
 4. `jbh-personal-finance` (`jbh-z-assembly`) → port 7777.
 5. `jbh-gateway` → port 8080.

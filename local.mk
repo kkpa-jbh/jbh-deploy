@@ -7,7 +7,7 @@ LOCAL_SWAPPABLE = jbh-iam jbh-personal-finance jbh-gateway
 
 .PHONY: local-up local-down local-ps local-logs local-swap local-restore
 
-# Port 8500 is also used by jbh-discovery-nexus. Compose fails with "port is already allocated" if it still runs.
+# Port 8500 is also used by kkpa-docker-lab/consul. Compose fails with "port is already allocated" if it still runs.
 local-up:
 	@test -f .env.local || (echo "Missing .env.local. Run: cp .env.local.example .env.local" && exit 1)
 	$(LOCAL_COMPOSE) up -d

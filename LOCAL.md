@@ -28,7 +28,7 @@ Postgres is a container with its own empty data. It is not the Postgres on your 
 2. Log in to GHCR if the packages are not public: `docker login ghcr.io` (token with `read:packages`).
 3. `cp .env.local.example .env.local`, then fill it. Set `POSTGRES_PASSWORD` and `JBH_JWT_SECRET` (`openssl rand -base64 32`).
    Mail and AI keys can stay empty.
-4. Stop `jbh-discovery-nexus` (it also uses port 8500): run `docker compose down` in that folder.
+4. Stop the standalone Consul (it also uses port 8500): run `make consul down` in `kkpa-docker-lab`.
 
 ## Daily use
 

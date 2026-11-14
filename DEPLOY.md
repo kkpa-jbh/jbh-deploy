@@ -420,7 +420,7 @@ This is production and `jbh_admin` can change everything. Tick **Read-only** in 
 ## 7. Limits and cost
 
 - The VPS is already paid. DNS, the HTTPS certificate (Let's Encrypt) and Gmail SMTP are free.
-- GitHub Free: Actions minutes are free in public repos (all repos except `jbh-discovery-nexus`).
+- GitHub Free: Actions minutes are free in public repos (all JBH repos are public).
   Private packages share **500 MB storage + 1 GB download per month**; public packages do not count.
   CI keeps only 2 images per service. With the default $0 spending limit, going over makes pushes or pulls fail;
   it does not create a bill. Check usage in GitHub → org settings → Billing.

@@ -26,7 +26,6 @@ For the deploy commands on the VPS, read [`DEPLOY.md`](DEPLOY.md).
 | `jbh-personal-finance` | `Publish notification contracts` (`publish-contracts.yml`) | only if the contracts or a parent `pom.xml` changed | no | yes | Maven `jbh-notification-contracts` |
 | `jbh-gateway-client` | `Publish` (`publish.yml`) | yes | no | yes | Maven `jbh-gateway-client` |
 | `jbh-deploy` | `Deploy` (`deploy.yml`) | no | no | yes, or from `jbh-app`'s `Image` | nothing. Deploys one service to the VPS. For this repo's own files, the VPS runs `git pull` |
-| `jbh-discovery-nexus` | none | — | — | — | nothing. Production uses the official Consul image |
 
 "By hand": GitHub → the repo → Actions → the workflow → **Run workflow**.
 
@@ -155,7 +154,7 @@ Each has the ruleset `protect-main` (repo → Settings → Rules → Rulesets):
 - Nobody can bypass it, also not an org admin. To change it, edit the ruleset.
 - No check is required yet, so a red `CI Pipeline` does not block a merge.
 
-`jbh-deploy`, `jbh-gateway-client` and `jbh-discovery-nexus` have no protection: you still push to `main` there.
+`jbh-deploy` and `jbh-gateway-client` have no protection: you still push to `main` there.
 After the merge, the push to `main` starts the normal workflows above.
 
 ## Order for shared libraries

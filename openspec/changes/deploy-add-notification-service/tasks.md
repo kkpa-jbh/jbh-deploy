@@ -48,6 +48,6 @@ Depends on: 2 (service names). Reads the real workflow files in `../jbh-commons-
 
 Depends on: 1–5.
 
-- [ ] 6.1 Run `docker compose --env-file .env.example -f compose.yaml config -q` and `docker compose --env-file .env.local.example -f compose.local.yaml config -q`; check V3–V14 from design.md.
+- [x] 6.1 Run `docker compose --env-file .env.example -f compose.yaml config -q` and `docker compose --env-file .env.local.example -f compose.local.yaml config -q`; check V3–V14 from design.md.
 
 Size estimate: 15 files, ~450 changed lines (tests and docs included)

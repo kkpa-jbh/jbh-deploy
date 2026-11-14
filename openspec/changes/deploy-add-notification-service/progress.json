@@ -5,12 +5,10 @@
   "module": "jbh-deploy",
   "roadmap": null,
   "request": "JBH-74 section 7: add service jbh-notification to compose.yaml and compose.local.yaml (image ghcr.io/kkpa-jbh/jbh-notification, port 7778, jbh-private only, memory limit 384M, -Xmx192m, healthcheck /q/health, DATABASE_URL on jbh_finance). Move GMAIL_* and JBH_FRONTEND_URL from jbh-personal-finance to it. Update .env.example, ci-deploy.sh, Makefile and the Deploy workflow (fifth app service, JBH_NOTIFICATION_TAG). jbh.caddy keeps the 404 block. Update README.md (system map, remove the 'Build cycle' known gap, add jbh-commons-lib and jbh-notification), CI.md (remove publish-contracts, add commons-lib publish and notification publish + image) and LOCAL.md.",
-  "status": "in-progress",
+  "status": "verified",
   "rollup": {
     "current": [],
-    "pending": [
-      "6.1"
-    ],
+    "pending": [],
     "blocked": [],
     "done": [
       "1.1",
@@ -28,11 +26,12 @@
       "5.2",
       "5.3",
       "5.4",
-      "5.5"
+      "5.5",
+      "6.1"
     ]
   },
   "created_at": "2026-11-14T22:00:17Z",
-  "updated_at": "2026-11-14T22:05:28Z",
+  "updated_at": "2026-11-14T22:05:50Z",
   "leader": {
     "assistant": "Claude Code",
     "model": "claude-opus-5-5"
@@ -339,13 +338,13 @@
         "5.5"
       ],
       "parallel_ok": false,
-      "status": "pending",
-      "agent": null,
-      "model": null,
-      "started_at": null,
-      "completed_at": null,
-      "duration_seconds": null,
-      "notes": null,
+      "status": "done",
+      "agent": "leader",
+      "model": "claude-opus-5-5",
+      "started_at": "2026-11-14T22:05:50Z",
+      "completed_at": "2026-11-14T22:05:50Z",
+      "duration_seconds": 0,
+      "notes": "V1-V14 all pass. V10 run: deploy jbh-postgres, deploy jbh-consul, bad tag, rollback with tag all exit 2 before any docker command.",
       "budget": null
     }
   ],
@@ -456,6 +455,21 @@
       "at": "2026-11-14T22:05:28Z",
       "agent": "leader",
       "event": "wave 2 reconciled; verified by the leader: V1 V2 exit 0, V12 no match, V13 empty, V14 exit 0"
+    },
+    {
+      "at": "2026-11-14T22:05:50Z",
+      "agent": "leader",
+      "event": "leader runs task 6.1 (static verification)"
+    },
+    {
+      "at": "2026-11-14T22:05:50Z",
+      "agent": "leader",
+      "event": "wave 3 (6.1) verified by the leader (assistantRunsTests): V1 V2 exit 0, V3-V9 V11-V13 as expected, V10 four refusals exit 2, V14 sh -n exit 0"
+    },
+    {
+      "at": "2026-11-14T22:05:50Z",
+      "agent": "leader",
+      "event": "Step 6: openspec validate --strict valid; all tasks.md boxes ticked. Real size (git diff --shortstat 1a371e3...HEAD, without openspec/): 15 files, 290+/140- = 430 lines; estimate was 15 files, ~450"
     }
   ]
 }

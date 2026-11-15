@@ -696,6 +696,11 @@
       "at": "2026-11-15T18:55:00Z",
       "agent": "leader",
       "event": "archived as 2026-11-15-deploy-add-grafana-alloy; main specs synced (alloy-deploy create, postgres-monitoring create, deploy-docs update); tasks.md 9.1 ticked (leader run recorded at 16:50)"
+    },
+    {
+      "at": "2026-11-15T18:58:00Z",
+      "agent": "leader",
+      "event": "pushed origin/ft/CH2-JBH-56-deploy-add-grafana-alloy; draft PR #2 https://github.com/kkpa-jbh/jbh-deploy/pull/2 (base main). Linear not moved: the JBH-55 leader owns JBH-56."
     }
   ]
 }

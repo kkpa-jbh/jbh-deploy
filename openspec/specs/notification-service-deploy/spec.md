@@ -44,7 +44,7 @@ and a healthcheck on `http://localhost:7778/q/health`.
 
 #### Scenario: Swap for the IDE
 - **WHEN** a developer runs `make local-swap s=jbh-notification`
-- **THEN** the container stops and the target prints `DATABASE_URL`, `DATABASE_USERNAME`, `DATABASE_PASSWORD` for port 5433
+- **THEN** the container stops and the target prints, among others, `DATABASE_URL=jdbc:postgresql://localhost:5433/jbh_finance`, `DATABASE_USERNAME` and `DATABASE_PASSWORD=<from .env.local>`
 
 ### Requirement: jbh-notification is the fifth app service for deploys
 `ci-deploy.sh` SHALL accept `jbh-notification` and map it to `JBH_NOTIFICATION_TAG`. The service list in `ci-deploy.sh` and the `options` list in

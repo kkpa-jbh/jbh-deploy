@@ -5,7 +5,7 @@
   "module": "jbh-deploy",
   "roadmap": null,
   "request": "New change `deploy-derive-ide-env` in jbh-deploy, on the existing branch ft/CH3-JBH-56-deploy-add-local-pg-monitor (same draft PR #3; do not bump the work counter, do not create a branch). Ticket JBH-56. Unit tests: excluded. Goal (one source): compose.local.yaml is the only place where a backend's env vars are written; new local-swap-env.sh <service> renders compose config JSON with jq as IDE values; make local-swap calls it; LOCAL.md drops the env var tables. Translation map and per-key overrides in the script; secrets masked by key pattern SECRET|PASSWORD|PASS|API_KEY|TOKEN plus an empty explicit list; never print a real secret. SRP only. Replaces D10 of deploy-add-local-pg-monitor. Checks: sh -n, make -n local-swap, docker compose config only. Never start containers. Tell jbh-leader when committed.",
-  "status": "applied",
+  "status": "archived",
   "rollup": {
     "current": [],
     "pending": [],
@@ -19,7 +19,7 @@
     ]
   },
   "created_at": "2026-11-15T23:16:29Z",
-  "updated_at": "2026-11-15T23:19:49Z",
+  "updated_at": "2026-11-15T23:21:33Z",
   "leader": {
     "assistant": "Claude Code",
     "model": "claude-opus-5-5"
@@ -164,10 +164,25 @@
     }
   ],
   "review": {
-    "status": "pending",
-    "agent": null,
-    "brief": null,
-    "rounds": []
+    "status": "reviewer-approved",
+    "agent": "jbh-deploy-reviewer",
+    "brief": "Review deploy-derive-ide-env: diff 10f6880...HEAD (CH3 branch also holds the archived deploy-add-local-pg-monitor; review only commits 64ef5a5 and 7529124). User decisions: one source (compose.local.yaml); translation map + per-key overrides in the script; mask keys matching SECRET|PASSWORD|PASS|API_KEY|TOKEN plus empty explicit list; empty values print empty; SRP only; unit tests excluded; keep CLAUDE.md files-table row; security-review skipped by user. Binding D4: raw compose JSON never output. Signals: V1-V15 assistant-run by the leader (all pass). Do NOT run the script or docker compose config without masking/-q: the shell exports real secrets.",
+    "rounds": [
+      {
+        "round": 1,
+        "at": "2026-11-15T23:30:00Z",
+        "verdict": "approved",
+        "security": {
+          "status": "skipped",
+          "ran_at": null,
+          "scope": null,
+          "findings": [],
+          "note": "User chose to skip /security-review (D8, scope review:security-gate). Risk lens read the script: masking is inside jq, JSON stays in a variable, stderr dropped."
+        },
+        "findings": [],
+        "note": "All lenses clean. Observation: tasks.md 4.1 is still unchecked while progress.json has it done; leader should tick it before archive."
+      }
+    ]
   },
   "decisions": [
     {
@@ -232,6 +247,15 @@
       "decision": "no counter bump, reuse branch CH3 and PR #3",
       "why": "user instruction",
       "covered_by": "user request"
+    },
+    {
+      "id": "D8",
+      "at": "2026-11-15T23:20:29Z",
+      "scope": "review:security-gate",
+      "made_by": "user",
+      "decision": "skip /security-review",
+      "why": "user chose Skip; leader checks V8, V9, V13 found no secret leak",
+      "covered_by": null
     }
   ],
   "events": [
@@ -254,6 +278,21 @@
       "at": "2026-11-15T23:19:49Z",
       "agent": "leader (assistantRunsTests)",
       "event": "ran V1-V15 from design.md: sh -n exit 0; make -n local-swap exit 0; both compose config -q exit 0 (Complexity-Check); masked runs V4-V7 exact; V8-V14 pass; V15 empty vs 10f6880"
+    },
+    {
+      "at": "2026-11-15T23:20:29Z",
+      "agent": "leader",
+      "event": "verified: recorded pass V1-V15. Real size 10f6880..HEAD: 12 files, +689/-38 (estimate 10 files ~400 lines; openspec artifacts count most)"
+    },
+    {
+      "at": "2026-11-15T23:20:29Z",
+      "agent": "leader",
+      "event": "dispatched reviewer round 1 (Security-Gate: skip); budget start five_hour_pct 38"
+    },
+    {
+      "at": "2026-11-15T23:21:33Z",
+      "agent": "leader",
+      "event": "archived as 2026-11-15-deploy-derive-ide-env; specs synced (deploy-docs ~1, notification-service-deploy ~1, local-swap-env +3); KB sync skipped: no kkpa/context"
     }
   ]
 }

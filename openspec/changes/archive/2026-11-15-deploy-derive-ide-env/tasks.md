@@ -25,6 +25,6 @@ Depends on: 1 (the output the docs describe). Independent of 2 (separate files).
 
 Depends on: 1, 2, 3.
 
-- [ ] 4.1 Run V1 to V15 from design.md. Never start a container.
+- [x] 4.1 Run V1 to V15 from design.md. Never start a container.
 
 Size estimate: 10 files, ~400 changed lines (tests and docs included)

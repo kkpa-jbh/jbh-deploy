@@ -1,0 +1,69 @@
+// What: entry file for the local stack (compose.local.yaml, make local-up / make local-alloy).
+//   OTLP intake, scrape of the four backends, Postgres metrics and a Faro receiver for the browser app.
+//   Everything goes to the local LGTM (kkpa-docker-lab/lgtm). No host module: a laptop is not the VPS.
+// Imports: modules/ (jbh.otlp, jbh.jbh_scrape, jbh.postgres).
+// Env vars read: JBH_PG_MONITOR_DSN.
+// Backends are reached at host.docker.internal: the same published ports serve a service that runs
+// in Docker and one that runs from the IDE.
+import.file "jbh" {
+  filename = "/etc/alloy/modules"
+}
+
+// Traces and logs: OTLP gRPC to the local LGTM. No auth.
+otelcol.exporter.otlp "lgtm" {
+  client {
+    endpoint = "host.docker.internal:4317"
+
+    tls {
+      insecure = true
+    }
+  }
+}
+
+// Metrics: remote write keeps metric names as the services expose them.
+prometheus.remote_write "lgtm" {
+  endpoint {
+    url = "http://host.docker.internal:9090/api/v1/write"
+  }
+}
+
+jbh.otlp "intake" {
+  environment = "local"
+  output      = otelcol.exporter.otlp.lgtm.input
+}
+
+jbh.jbh_scrape "backends" {
+  hosts = {
+    "jbh-iam"              = "host.docker.internal",
+    "jbh-gateway"          = "host.docker.internal",
+    "jbh-personal-finance" = "host.docker.internal",
+    "jbh-notification"     = "host.docker.internal",
+  }
+  forward_to = [prometheus.remote_write.lgtm.receiver]
+}
+
+jbh.postgres "db" {
+  dsn        = sys.env("JBH_PG_MONITOR_DSN")
+  forward_to = [prometheus.remote_write.lgtm.receiver]
+}
+
+// Browser telemetry. Listens on all interfaces inside the container; the host side is published
+// on 127.0.0.1 only. Loki's own port is not published by the local LGTM, so Faro logs go as OTLP.
+faro.receiver "app" {
+  server {
+    listen_address       = "0.0.0.0"
+    listen_port          = 12347
+    cors_allowed_origins = ["http://localhost:8100"]
+  }
+
+  output {
+    logs   = [otelcol.receiver.loki.faro.receiver]
+    traces = [otelcol.exporter.otlp.lgtm.input]
+  }
+}
+
+otelcol.receiver.loki "faro" {
+  output {
+    logs = [otelcol.exporter.otlp.lgtm.input]
+  }
+}

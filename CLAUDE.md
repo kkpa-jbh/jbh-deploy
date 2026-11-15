@@ -15,7 +15,8 @@ It also holds `README.md`: the system map of all JBH services. The `kkpa-jbh/CLA
 | `jbh.caddy` | Site file Magus's Caddy imports from `/etc/caddy/sites/`. |
 | `.env.example` | Every variable, with placeholders. The real `.env` exists only on the VPS. |
 | `Makefile` | `network`, `up`, `deploy s=<svc>`, `rollback s=<svc>`, `caddy-install`, `consul-tunnel`, `db-tunnel`, `backup`, `config`. |
-| `initdb/` | First-start SQL: `jbh_finance`, its schemas, `pgcrypto`, time zone. |
+| `initdb/` | First-start SQL: `jbh_finance`, its schemas, `pgcrypto`, time zone. `02-create-monitor-role.sh` creates the `jbh_monitor` role and `pg_stat_statements`; it skips itself when `JBH_PG_MONITOR_PASSWORD` is empty (the VPS does not pass it). |
+| `observability/alloy/` | Grafana Alloy config: `local.alloy` (entry file for the local stack) and `modules/` (`otlp`, `jbh-scrape`, `postgres`). Local only for now; no secret in a file. |
 | `backup-db.sh` | Daily `pg_dump` of both databases. |
 | `ci-deploy.sh` | Deploy or roll back one app service, wait until healthy, roll back by itself on failure. Forced command of the CI deploy key; `make deploy` / `make rollback` call it too. |
 | `.github/workflows/deploy.yml` | `Deploy` workflow: SSH to the VPS, runs `ci-deploy.sh`. By hand, or from `jbh-app`'s `Image` (auto-deploy of `jbh-web`). |

@@ -1,0 +1,706 @@
+{
+  "schema_version": 1,
+  "kind": "change",
+  "change": "deploy-add-grafana-alloy",
+  "module": ".",
+  "roadmap": null,
+  "request": "Section 1 of plan /Users/cristianpena/cpena/sw/github/kkpa-jbh/kkpa/tickets/JBH-55/JBH-55.md (jbh-deploy — Grafana Alloy locally and in prod, Postgres and VPS metrics). Ticket: JBH-56 (Linear). Do not move JBH-55 or JBH-56 in Linear (leader owns it). Unit tests: excluded. Start the change branch from the current branch docs/JBH-55-observability-tech-stack (keep unpushed commit 4231964). Check Grafana Alloy docs with Context7.",
+  "status": "archived",
+  "rollup": {
+    "current": [],
+    "pending": [],
+    "blocked": [],
+    "done": [
+      "1.1",
+      "1.2",
+      "1.3",
+      "2.1",
+      "2.3",
+      "3.1",
+      "3.2",
+      "5.1",
+      "5.2",
+      "6.2",
+      "6.3",
+      "7.2",
+      "7.3",
+      "8.1",
+      "8.2",
+      "8.4",
+      "8.5",
+      "9.1"
+    ]
+  },
+  "created_at": "2026-11-15T15:58:32Z",
+  "updated_at": "2026-11-15T18:55:00Z",
+  "leader": {
+    "assistant": "Claude Code",
+    "model": "claude-opus-5-5"
+  },
+  "git": {
+    "strategy": "auto",
+    "branch": "ft/CH2-JBH-56-deploy-add-grafana-alloy",
+    "base": "docs/JBH-55-observability-tech-stack",
+    "ticket": "JBH-56",
+    "ticket_url": "https://linear.app/kkpa/issue/JBH-56/jbh-deploy-grafana-alloy-locally-and-in-prod-postgres-and-vps-metrics",
+    "ticket_tracker": "linear",
+    "created_at": "2026-11-15T15:45:00Z"
+  },
+  "test_first": {
+    "status": "skipped",
+    "commit": null,
+    "tests": [],
+    "approved_at": null
+  },
+  "tasks": [
+    {
+      "id": "1.1",
+      "title": "modules/otlp.alloy",
+      "module": ".",
+      "depends_on": [],
+      "parallel_ok": true,
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "claude-sonnet-5-5",
+      "started_at": "2026-11-15T15:59:30Z",
+      "completed_at": "2026-11-15T16:09:00Z",
+      "duration_seconds": 570,
+      "notes": "Written in wave 1. Leader static checks pass: local compose config -q exit 0, V9 ports, V10 env, V14 sh -n. Follow-up fixes are tasks 2.3, 3.2, 5.2.",
+      "budget": {
+        "five_hour_pct_start": 56,
+        "five_hour_pct_end": null,
+        "five_hour_pct_delta": null,
+        "cost_usd_delta": null,
+        "context_pct_end": null,
+        "source": "statusline-cache",
+        "approx": true,
+        "note": "wave 1 shared; end reading taken after scope cut"
+      }
+    },
+    {
+      "id": "1.2",
+      "title": "modules/jbh-scrape.alloy",
+      "module": ".",
+      "depends_on": [],
+      "parallel_ok": true,
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "claude-sonnet-5-5",
+      "started_at": "2026-11-15T15:59:30Z",
+      "completed_at": "2026-11-15T16:09:00Z",
+      "duration_seconds": 570,
+      "notes": "Written in wave 1. Leader static checks pass: local compose config -q exit 0, V9 ports, V10 env, V14 sh -n. Follow-up fixes are tasks 2.3, 3.2, 5.2.",
+      "budget": {
+        "five_hour_pct_start": 56,
+        "five_hour_pct_end": null,
+        "five_hour_pct_delta": null,
+        "cost_usd_delta": null,
+        "context_pct_end": null,
+        "source": "statusline-cache",
+        "approx": true,
+        "note": "wave 1 shared; end reading taken after scope cut"
+      }
+    },
+    {
+      "id": "1.3",
+      "title": "modules/postgres.alloy",
+      "module": ".",
+      "depends_on": [],
+      "parallel_ok": true,
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "claude-sonnet-5-5",
+      "started_at": "2026-11-15T15:59:30Z",
+      "completed_at": "2026-11-15T16:09:00Z",
+      "duration_seconds": 570,
+      "notes": "Written in wave 1. Leader static checks pass: local compose config -q exit 0, V9 ports, V10 env, V14 sh -n. Follow-up fixes are tasks 2.3, 3.2, 5.2.",
+      "budget": {
+        "five_hour_pct_start": 56,
+        "five_hour_pct_end": null,
+        "five_hour_pct_delta": null,
+        "cost_usd_delta": null,
+        "context_pct_end": null,
+        "source": "statusline-cache",
+        "approx": true,
+        "note": "wave 1 shared; end reading taken after scope cut"
+      }
+    },
+    {
+      "id": "2.1",
+      "title": "local.alloy",
+      "module": ".",
+      "depends_on": [
+        "1.1",
+        "1.2",
+        "1.3"
+      ],
+      "parallel_ok": true,
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "claude-sonnet-5-5",
+      "started_at": "2026-11-15T15:59:30Z",
+      "completed_at": "2026-11-15T16:09:00Z",
+      "duration_seconds": 570,
+      "notes": "Written in wave 1. Leader static checks pass: local compose config -q exit 0, V9 ports, V10 env, V14 sh -n. Follow-up fixes are tasks 2.3, 3.2, 5.2.",
+      "budget": {
+        "five_hour_pct_start": 56,
+        "five_hour_pct_end": null,
+        "five_hour_pct_delta": null,
+        "cost_usd_delta": null,
+        "context_pct_end": null,
+        "source": "statusline-cache",
+        "approx": true,
+        "note": "wave 1 shared; end reading taken after scope cut"
+      }
+    },
+    {
+      "id": "2.3",
+      "title": "headers and comments: no prod/host/DEPLOY.md references",
+      "module": ".",
+      "depends_on": [
+        "2.1"
+      ],
+      "parallel_ok": true,
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "claude-sonnet-5-5",
+      "started_at": "2026-11-15T16:42:30Z",
+      "completed_at": "2026-11-15T16:48:00Z",
+      "duration_seconds": 330,
+      "notes": "Headers and comments cleaned: no prod.alloy, jbh.host or DEPLOY.md refs (V11 grep clean).",
+      "budget": null
+    },
+    {
+      "id": "3.1",
+      "title": "initdb/02-create-monitor-role.sh",
+      "module": ".",
+      "depends_on": [],
+      "parallel_ok": true,
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "claude-sonnet-5-5",
+      "started_at": "2026-11-15T15:59:30Z",
+      "completed_at": "2026-11-15T16:09:00Z",
+      "duration_seconds": 570,
+      "notes": "Written in wave 1. Leader static checks pass: local compose config -q exit 0, V9 ports, V10 env, V14 sh -n. Follow-up fixes are tasks 2.3, 3.2, 5.2.",
+      "budget": {
+        "five_hour_pct_start": 56,
+        "five_hour_pct_end": null,
+        "five_hour_pct_delta": null,
+        "cost_usd_delta": null,
+        "context_pct_end": null,
+        "source": "statusline-cache",
+        "approx": true,
+        "note": "wave 1 shared; end reading taken after scope cut"
+      }
+    },
+    {
+      "id": "3.2",
+      "title": "initdb/02 skip guard when JBH_PG_MONITOR_PASSWORD is empty",
+      "module": ".",
+      "depends_on": [
+        "3.1"
+      ],
+      "parallel_ok": true,
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "claude-sonnet-5-5",
+      "started_at": "2026-11-15T16:42:30Z",
+      "completed_at": "2026-11-15T16:48:00Z",
+      "duration_seconds": 330,
+      "notes": "Skip guard before psql: one log line, exit 0. Leader ran it with the variable unset: exit 0.",
+      "budget": null
+    },
+    {
+      "id": "5.1",
+      "title": "compose.local.yaml: jbh-alloy, OTLP vars, Postgres options",
+      "module": ".",
+      "depends_on": [
+        "2.1",
+        "3.1"
+      ],
+      "parallel_ok": true,
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "claude-sonnet-5-5",
+      "started_at": "2026-11-15T15:59:30Z",
+      "completed_at": "2026-11-15T16:09:00Z",
+      "duration_seconds": 570,
+      "notes": "Written in wave 1. Leader static checks pass: local compose config -q exit 0, V9 ports, V10 env, V14 sh -n. Follow-up fixes are tasks 2.3, 3.2, 5.2.",
+      "budget": {
+        "five_hour_pct_start": 56,
+        "five_hour_pct_end": null,
+        "five_hour_pct_delta": null,
+        "cost_usd_delta": null,
+        "context_pct_end": null,
+        "source": "statusline-cache",
+        "approx": true,
+        "note": "wave 1 shared; end reading taken after scope cut"
+      }
+    },
+    {
+      "id": "5.2",
+      "title": "compose.local.yaml: JBH_PG_MONITOR_DSN default + override",
+      "module": ".",
+      "depends_on": [
+        "5.1"
+      ],
+      "parallel_ok": true,
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "claude-sonnet-5-5",
+      "started_at": "2026-11-15T16:42:30Z",
+      "completed_at": "2026-11-15T16:48:00Z",
+      "duration_seconds": 330,
+      "notes": "Nested DSN default + override. V17: default and override render as designed.",
+      "budget": null
+    },
+    {
+      "id": "6.2",
+      "title": ".env.local.example JBH_PG_MONITOR_PASSWORD",
+      "module": ".",
+      "depends_on": [
+        "5.1"
+      ],
+      "parallel_ok": true,
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "claude-sonnet-5-5",
+      "started_at": "2026-11-15T15:59:30Z",
+      "completed_at": "2026-11-15T16:09:00Z",
+      "duration_seconds": 570,
+      "notes": "Written in wave 1. Leader static checks pass: local compose config -q exit 0, V9 ports, V10 env, V14 sh -n. Follow-up fixes are tasks 2.3, 3.2, 5.2.",
+      "budget": {
+        "five_hour_pct_start": 56,
+        "five_hour_pct_end": null,
+        "five_hour_pct_delta": null,
+        "cost_usd_delta": null,
+        "context_pct_end": null,
+        "source": "statusline-cache",
+        "approx": true,
+        "note": "wave 1 shared; end reading taken after scope cut"
+      }
+    },
+    {
+      "id": "6.3",
+      "title": "commented JBH_PG_MONITOR_DSN in .env.local.example",
+      "module": ".",
+      "depends_on": [
+        "6.2"
+      ],
+      "parallel_ok": true,
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "claude-sonnet-5-5",
+      "started_at": "2026-11-15T16:42:30Z",
+      "completed_at": "2026-11-15T16:48:00Z",
+      "duration_seconds": 330,
+      "notes": "Commented JBH_PG_MONITOR_DSN override with the Mac example.",
+      "budget": null
+    },
+    {
+      "id": "7.2",
+      "title": "local.mk: local-alloy",
+      "module": ".",
+      "depends_on": [
+        "5.1"
+      ],
+      "parallel_ok": true,
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "claude-sonnet-5-5",
+      "started_at": "2026-11-15T15:59:30Z",
+      "completed_at": "2026-11-15T16:09:00Z",
+      "duration_seconds": 570,
+      "notes": "Written in wave 1. Leader static checks pass: local compose config -q exit 0, V9 ports, V10 env, V14 sh -n. Follow-up fixes are tasks 2.3, 3.2, 5.2.",
+      "budget": {
+        "five_hour_pct_start": 56,
+        "five_hour_pct_end": null,
+        "five_hour_pct_delta": null,
+        "cost_usd_delta": null,
+        "context_pct_end": null,
+        "source": "statusline-cache",
+        "approx": true,
+        "note": "wave 1 shared; end reading taken after scope cut"
+      }
+    },
+    {
+      "id": "7.3",
+      "title": "local.mk: local-alloy-logs",
+      "module": ".",
+      "depends_on": [
+        "7.2"
+      ],
+      "parallel_ok": true,
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "claude-sonnet-5-5",
+      "started_at": "2026-11-15T16:42:30Z",
+      "completed_at": "2026-11-15T16:48:00Z",
+      "duration_seconds": 330,
+      "notes": "local-alloy-logs target and .PHONY.",
+      "budget": null
+    },
+    {
+      "id": "8.1",
+      "title": "README.md system map",
+      "module": ".",
+      "depends_on": [
+        "2.3",
+        "3.2",
+        "5.2",
+        "6.2",
+        "6.3",
+        "7.2",
+        "7.3"
+      ],
+      "parallel_ok": true,
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "claude-sonnet-5-5",
+      "started_at": "2026-11-15T16:42:30Z",
+      "completed_at": "2026-11-15T16:48:00Z",
+      "duration_seconds": 330,
+      "notes": "README: 'Observability (local)' section, port 14317, links; prod facts unchanged.",
+      "budget": null
+    },
+    {
+      "id": "8.2",
+      "title": "LOCAL.md",
+      "module": ".",
+      "depends_on": [
+        "2.3",
+        "3.2",
+        "5.2",
+        "6.2",
+        "6.3",
+        "7.2",
+        "7.3"
+      ],
+      "parallel_ok": true,
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "claude-sonnet-5-5",
+      "started_at": "2026-11-15T16:42:30Z",
+      "completed_at": "2026-11-15T16:48:00Z",
+      "duration_seconds": 330,
+      "notes": "LOCAL.md: LGTM + Alloy start, ports, Grafana, SQL for existing volume, Mac Postgres, IDE settings, double-storage note.",
+      "budget": null
+    },
+    {
+      "id": "8.4",
+      "title": "observability/README.md series budget",
+      "module": ".",
+      "depends_on": [
+        "2.3",
+        "3.2",
+        "5.2",
+        "6.2",
+        "6.3",
+        "7.2",
+        "7.3"
+      ],
+      "parallel_ok": true,
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "claude-sonnet-5-5",
+      "started_at": "2026-11-15T16:42:30Z",
+      "completed_at": "2026-11-15T16:48:00Z",
+      "duration_seconds": 330,
+      "notes": "observability/README: Tech stack kept; metrics sources rewritten; local series budget 4,350.",
+      "budget": null
+    },
+    {
+      "id": "8.5",
+      "title": "CLAUDE.md files table",
+      "module": ".",
+      "depends_on": [
+        "2.3",
+        "3.2",
+        "5.2",
+        "6.2",
+        "6.3",
+        "7.2",
+        "7.3"
+      ],
+      "parallel_ok": true,
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "claude-sonnet-5-5",
+      "started_at": "2026-11-15T16:42:30Z",
+      "completed_at": "2026-11-15T16:48:00Z",
+      "duration_seconds": 330,
+      "notes": "CLAUDE.md files table: observability/alloy and initdb rows.",
+      "budget": null
+    },
+    {
+      "id": "9.1",
+      "title": "Static verification (leader runs)",
+      "module": ".",
+      "depends_on": [
+        "8.1",
+        "8.2",
+        "8.4",
+        "8.5"
+      ],
+      "parallel_ok": false,
+      "status": "done",
+      "agent": "leader",
+      "model": "claude-opus-5-5",
+      "started_at": "2026-11-15T16:48:30Z",
+      "completed_at": "2026-11-15T16:50:00Z",
+      "duration_seconds": 90,
+      "notes": "Leader ran V1, V2, V9-V14, V17: all pass. V16 (alloy validate) not run: needs docker run.",
+      "budget": null
+    }
+  ],
+  "review": {
+    "status": "approved",
+    "agent": "jbh-deploy-reviewer",
+    "brief": "Change deploy-add-grafana-alloy (JBH-56), LOCAL ONLY; prod moved to JBH-84 (user, D6). Diff base 4231964 (leader commit 'Tech stack', keep). Check: (1) compose.yaml, .env.example, DEPLOY.md, Makefile, ci-deploy.sh, .github, jbh.caddy unchanged vs 4231964. (2) User-confirmed DB design (D2 + D7): role jbh_monitor LOGIN, GRANT pg_monitor, pg_stat_statements in db postgres, -c shared_preload_libraries=pg_stat_statements -c pg_stat_statements.track=top in compose.local.yaml only; initdb/02 skips with exit 0 when JBH_PG_MONITOR_PASSWORD empty, password passed via psql :'pw'. (3) compose.local.yaml jbh-alloy: grafana/alloy:v1.22.0, user 473:473, ports only on 127.0.0.1 (14317,14318,12347,12345), no Docker socket, healthcheck /-/ready, DSN nested default+override. OTEL_EXPORTER_OTLP_ENDPOINT/OTEL_SDK_DISABLED/JBH_ENV names exact on 4 Docker backends. (4) Alloy: header comment in every file (what, who imports, env vars); no secret in a file; D3 remote_write, D5 transform, D6 honor_labels, D15 faro.receiver; module args reusable by a later prod.alloy. (5) Docs: LOCAL.md SQL for existing volume, Mac Postgres, IDE settings; README local paragraph only; observability/README Tech stack kept; design.md 'Moved to JBH-84' section kept in full. Signals: all assistant-run by the leader (assistantRunsTests): compose config -q both files exit 0, V9-V14, V17, guard run exit 0, alloy validate local + modules + combined wiring exit 0 with failing negative controls. No unit or integration tests (excluded by plan, test_first skipped). Values: Performance-Profile none; Test-Execution-Policy default (assistant runs nothing; leader runs build/suite); Language English (B2). Security-Gate: skip — user decision D11.",
+    "rounds": [
+      {
+        "round": 1,
+        "at": "2026-11-15T17:10:00Z",
+        "verdict": "changes-requested",
+        "security": {
+          "status": "skipped",
+          "ran_at": null,
+          "scope": null,
+          "findings": [],
+          "note": "Skipped by user decision D11 (review:security-gate): local-only config, ports bound to 127.0.0.1."
+        },
+        "findings": [
+          {
+            "id": "R1",
+            "lens": "intent",
+            "severity": "major",
+            "note": "compose.local.yaml:204-227 (service jbh-alloy): no healthcheck. Spec alloy-deploy 'Local Alloy publishes on loopback only' requires a healthcheck on /-/ready; design.md D2 gives the bash /dev/tcp healthcheck text; V9 and the brief expect it. Leader's V9 pass claim does not match the committed file (grep '/-/ready' compose.local.yaml finds nothing). Add the D2 healthcheck block (or the spec and design must be changed with a user-visible decision).",
+            "status": "fixed",
+            "triage": "accepted"
+          },
+          {
+            "id": "R2",
+            "lens": "risk",
+            "severity": "minor",
+            "note": "compose.local.yaml jbh-alloy: no memory limit. otlp.alloy memory_limiter uses limit_percentage (percent of the container limit), so with no limit it has no useful ceiling. JBH-55 plan section 1 asks for a memory limit; design D11 says no hardening block. Add a mem_limit/deploy limit (for example 256M) or state in the otlp.alloy comment that the percentage is of host memory locally.",
+            "status": "fixed",
+            "triage": "accepted"
+          }
+        ]
+      },
+      {
+        "round": 2,
+        "at": "2026-11-15T17:25:00Z",
+        "verdict": "approved",
+        "security": {
+          "status": "skipped",
+          "ran_at": null,
+          "scope": null,
+          "findings": [],
+          "note": "Skipped by user decision D11 (review:security-gate): local-only config, ports bound to 127.0.0.1."
+        },
+        "findings": [],
+        "note": "R1 and R2 fixed in e615b64 (healthcheck and 256M limit match design D2/D11). Prod files still unchanged."
+      }
+    ]
+  },
+  "decisions": [
+    {
+      "id": "D1",
+      "at": "2026-11-15T15:56:00Z",
+      "scope": "change",
+      "made_by": "user",
+      "decision": "accept size over cap (~800 lines, 18 files vs 500/15)",
+      "why": "config and its docs belong together; plan has one sub-issue",
+      "covered_by": null
+    },
+    {
+      "id": "D2",
+      "at": "2026-11-15T15:56:00Z",
+      "scope": "change",
+      "made_by": "user",
+      "decision": "database design gate confirmed: role jbh_monitor + pg_monitor, pg_stat_statements in db postgres, preload and track=top options, one-time VPS SQL + planned restart",
+      "why": "least-privilege role; one database gives cluster-wide stats; index plan none",
+      "covered_by": "design.md Database"
+    },
+    {
+      "id": "D3",
+      "at": "2026-11-15T15:56:00Z",
+      "scope": "concurrency",
+      "made_by": "leader",
+      "decision": "no new concurrency risk; restart and double-storage items already decided in the JBH-55 plan",
+      "why": "config only, no read-modify-write or async code; plan schedules the restart and the docker-lab report item",
+      "covered_by": "JBH-55 plan section 1"
+    },
+    {
+      "id": "D4",
+      "at": "2026-11-15T15:56:00Z",
+      "scope": "change",
+      "made_by": "leader",
+      "decision": "test_first skipped",
+      "why": "config and docs only; plan excludes unit tests",
+      "covered_by": "JBH-55 plan header"
+    },
+    {
+      "id": "D5",
+      "at": "2026-11-15T15:58:32Z",
+      "scope": "change",
+      "made_by": "leader",
+      "decision": "two dispatch waves: tasks 1-7 (config, one serial worker in dependency order), then 8.x (docs); 9.1 by the leader",
+      "why": "dependencies are only names inside one repo; five dispatches would re-read the doc pack five times",
+      "covered_by": null
+    },
+    {
+      "id": "D6",
+      "at": "2026-11-15T16:14:00Z",
+      "scope": "change",
+      "made_by": "user",
+      "decision": "scope cut to local only; tasks 1.4, 2.2, 4.1, 6.1, 7.1, 8.3 removed (prod.alloy, host.alloy, compose.yaml, .env.example, Makefile, DEPLOY.md) and move to a new prod ticket",
+      "why": "user decision 2026-11-15, relayed by the jbh-leader session; JBH-55 is now local-first",
+      "covered_by": "jbh-leader message 2026-11-15"
+    },
+    {
+      "id": "D7",
+      "at": "2026-11-15T16:14:00Z",
+      "scope": "task:3.1",
+      "made_by": "leader",
+      "decision": "initdb/02 script must skip (exit 0, one log line) when JBH_PG_MONITOR_PASSWORD is empty",
+      "why": "prod compose.yaml mounts the same initdb/ but no longer passes the variable; with set -u a fresh prod volume would fail to init",
+      "covered_by": "D6"
+    },
+    {
+      "id": "D8",
+      "at": "2026-11-15T16:31:00Z",
+      "scope": "change",
+      "made_by": "leader",
+      "decision": "no new size-cap question at ~520 lines / 12 files; no new DB gate",
+      "why": "user already accepted ~800 lines (D1); local DB design is a subset of the confirmed D2 plus the D7 skip guard",
+      "covered_by": "D1, D2"
+    },
+    {
+      "id": "D9",
+      "at": "2026-11-15T16:40:00Z",
+      "scope": "change",
+      "made_by": "user",
+      "decision": "revised local-only design briefing approved",
+      "why": "user answered 'yes OK, continue'",
+      "covered_by": null
+    },
+    {
+      "id": "D10",
+      "at": "2026-11-15T16:58:00Z",
+      "scope": "change",
+      "made_by": "user",
+      "decision": "run alloy validate (V16) in a throwaway container",
+      "why": "user chose 'Run it'; only check that proves Alloy syntax and module wiring",
+      "covered_by": null
+    },
+    {
+      "id": "D11",
+      "at": "2026-11-15T17:01:00Z",
+      "scope": "review:security-gate",
+      "made_by": "user",
+      "decision": "skip /security-review for this change",
+      "why": "user chose 'Skip it'; local-only config, ports bound to 127.0.0.1; leader recommended run",
+      "covered_by": null
+    }
+  ],
+  "events": [
+    {
+      "at": "2026-11-15T15:45:00Z",
+      "agent": "leader",
+      "event": "branch ft/CH2-JBH-56-deploy-add-grafana-alloy created from docs/JBH-55-observability-tech-stack @ 4231964"
+    },
+    {
+      "at": "2026-11-15T15:56:00Z",
+      "agent": "leader",
+      "event": "artifacts validated (openspec --strict); briefing, size cap and DB gate answered by the user; artifacts commit fa7de2b"
+    },
+    {
+      "at": "2026-11-15T15:59:30Z",
+      "agent": "leader",
+      "event": "dispatched wave 1 (tasks 1.1-7.2, one serial worker, sonnet); budget start 5h 56%, cost $2.82"
+    },
+    {
+      "at": "2026-11-15T16:09:17Z",
+      "agent": "leader",
+      "event": "wave 1 returned. Leader ran V1-V15 (assistantRunsTests): docker compose config -q both files exit 0; V3-V15 as expected. Not committed."
+    },
+    {
+      "at": "2026-11-15T16:14:00Z",
+      "agent": "leader",
+      "event": "scope change from jbh-leader (local only): reverted compose.yaml, .env.example, Makefile; deleted prod.alloy, modules/host.alloy (uncommitted). Artifacts to be revised."
+    },
+    {
+      "at": "2026-11-15T16:31:00Z",
+      "agent": "leader",
+      "event": "artifacts revised to local-only scope (JBH-84 holds prod); validate --strict ok; nested DSN default tested with compose 5.0.2 (default, override, missing-password error all ok)"
+    },
+    {
+      "at": "2026-11-15T16:40:00Z",
+      "agent": "leader",
+      "event": "wave 1 (local tasks) verified by the leader (assistantRunsTests): docker compose --env-file .env.local.example -f compose.local.yaml config -q exit 0; V9, V10, V14 ok"
+    },
+    {
+      "at": "2026-11-15T16:41:00Z",
+      "agent": "leader",
+      "event": "resume-armed — budget checkpoint before wave 2: five_hour_pct 88 (limit 90, projected to cross), context_pct 21; five_hour_resets_at 1794760800, wake epoch 1794760920. Next: wave 2 (2.3, 3.2, 5.2, 6.3, 7.3, 8.1, 8.2, 8.4, 8.5)."
+    },
+    {
+      "at": "2026-11-15T16:42:08Z",
+      "agent": "leader",
+      "event": "resume-auto — bucket reset (five_hour_pct null = new window, available true), context_pct 22"
+    },
+    {
+      "at": "2026-11-15T16:42:30Z",
+      "agent": "leader",
+      "event": "dispatched wave 2 (2.3, 3.2, 5.2, 6.3, 7.3, 8.1, 8.2, 8.4, 8.5; one serial worker, sonnet); cost start $6.35"
+    },
+    {
+      "at": "2026-11-15T16:50:00Z",
+      "agent": "leader",
+      "event": "wave 2 verified by the leader (assistantRunsTests): docker compose config -q for compose.yaml and compose.local.yaml exit 0; V9-V14, V17 ok; guard run exit 0. Complexity-Check = same compose commands, exit 0."
+    },
+    {
+      "at": "2026-11-15T16:58:00Z",
+      "agent": "leader",
+      "event": "V16 by the leader: docker run grafana/alloy:v1.22.0 validate — local.alloy exit 0; each module exit 0; combined file (modules inline + local wiring) exit 0. Negative controls (bad module arg, bad custom-component arg, bad syntax) exit 1. Note: validate does not load import.file modules."
+    },
+    {
+      "at": "2026-11-15T16:58:00Z",
+      "agent": "leader",
+      "event": "size: git diff --shortstat 4231964...HEAD = see commit; estimate was 12 files ~520 lines (code+docs). Status verified."
+    },
+    {
+      "at": "2026-11-15T16:58:30Z",
+      "agent": "leader",
+      "event": "real size 4231964...HEAD without openspec/: 12 files, +483 / -9 (estimate 12 files, ~520 lines). With artifacts: 21 files, +1735."
+    },
+    {
+      "at": "2026-11-15T17:01:00Z",
+      "agent": "leader",
+      "event": "review round 1 dispatched to jbh-deploy-reviewer (sonnet), Security-Gate: skip (D11)"
+    },
+    {
+      "at": "2026-11-15T18:45:00Z",
+      "agent": "leader",
+      "event": "round 1 triage: R1 accepted (V9 checked ports and command only, not the healthcheck), R2 accepted. Leader fix: memory limit 256M + D2 healthcheck in compose.local.yaml; design.md D11 line updated."
+    },
+    {
+      "at": "2026-11-15T18:45:00Z",
+      "agent": "leader",
+      "event": "fix verified by the leader: compose.local.yaml and compose.yaml config -q exit 0; rendered jbh-alloy memory 268435456, healthcheck has /-/ready; bash/head/grep exist in grafana/alloy:v1.22.0."
+    },
+    {
+      "at": "2026-11-15T18:55:00Z",
+      "agent": "leader",
+      "event": "archived as 2026-11-15-deploy-add-grafana-alloy; main specs synced (alloy-deploy create, postgres-monitoring create, deploy-docs update); tasks.md 9.1 ticked (leader run recorded at 16:50)"
+    },
+    {
+      "at": "2026-11-15T18:58:00Z",
+      "agent": "leader",
+      "event": "pushed origin/ft/CH2-JBH-56-deploy-add-grafana-alloy; draft PR #2 https://github.com/kkpa-jbh/jbh-deploy/pull/2 (base main). Linear not moved: the JBH-55 leader owns JBH-56."
+    }
+  ]
+}

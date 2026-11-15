@@ -210,6 +210,14 @@ Check http://localhost:8500 : `jbh-iam-service`, `jbh-personal-finance`, `jbh-no
 (`compose.local.yaml`, images `latest` from `main`). Every service saves `host.docker.internal` in Consul, so you can stop one
 container (`make local-swap s=<service>`) and run it from the IDE. Steps: [`LOCAL.md`](LOCAL.md).
 
+## Observability (local)
+
+Locally, Grafana Alloy (`jbh-alloy`, started by `make local-up` or `make local-alloy`) is the one collector.
+Services send traces and logs over OTLP to Alloy. Alloy scrapes their metrics and Postgres, then sends everything to the local
+LGTM from `kkpa-docker-lab` (`make lgtm up`, Grafana at http://localhost:3000). A service run from the IDE sends OTLP to `http://localhost:14317`
+(Alloy's dev port; the LGTM keeps `4317`). Details: [`observability/README.md`](observability/README.md) and [`LOCAL.md`](LOCAL.md).
+Production: JBH-84.
+
 ## Production (Hostinger VPS)
 
 Status: code ready (JBH-40). The first deploy on the VPS is still to do.

@@ -1,0 +1,54 @@
+// What: custom component "postgres". Reads Postgres statistics with prometheus.exporter.postgres
+//   (default collectors plus stat_statements) and scrapes them every 30s.
+// Imported by: local.alloy and prod.alloy (import.file "jbh"), used as jbh.postgres.
+// Env vars read: none here. The caller passes the DSN, which comes from JBH_PG_MONITOR_DSN
+//   (postgresql://jbh_monitor:<password>@jbh-postgres:5432/postgres?sslmode=disable).
+// Arguments:
+//   dsn         string  connection string of the least-privilege role jbh_monitor.
+//   forward_to  list(MetricsReceiver)
+// The exporter connects to database "postgres" only. Query text is never exported.
+declare "postgres" {
+  argument "dsn" {
+    comment = "Postgres connection string for the jbh_monitor role."
+  }
+
+  argument "forward_to" {
+    comment = "Metrics receivers that get the scraped samples."
+  }
+
+  // The list is explicit: the Alloy defaults plus stat_statements.
+  prometheus.exporter.postgres "db" {
+    data_source_names  = [argument.dsn.value]
+    enabled_collectors = [
+      "database",
+      "locks",
+      "replication",
+      "replication_slot",
+      "roles",
+      "stat_bgwriter",
+      "stat_database",
+      "stat_progress_vacuum",
+      "stat_user_tables",
+      "statio_user_tables",
+      "wal",
+      "stat_statements",
+    ]
+  }
+
+  discovery.relabel "db" {
+    targets = prometheus.exporter.postgres.db.targets
+
+    rule {
+      target_label = "service"
+      replacement  = "jbh-postgres"
+    }
+  }
+
+  prometheus.scrape "db" {
+    job_name        = "jbh-postgres"
+    scrape_interval = "30s"
+    scrape_timeout  = "10s"
+    targets         = discovery.relabel.db.output
+    forward_to      = argument.forward_to.value
+  }
+}

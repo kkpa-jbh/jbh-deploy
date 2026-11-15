@@ -1,0 +1,87 @@
+// What: custom component "otlp". Receives OTLP (gRPC 4317, HTTP 4318) from the JBH services,
+//   limits memory, sets resource attribute deployment.environment.name when the service did not set it,
+//   batches, and forwards traces, metrics and logs to the consumer given in "output".
+// Imported by: local.alloy and prod.alloy (import.file "jbh"), used as jbh.otlp.
+// Env vars read: none. The environment name and the exporter come in as arguments.
+// Arguments:
+//   environment  string          "local" or "prod".
+//   output       otelcol.Consumer  for example otelcol.exporter.otlp.lgtm.input
+declare "otlp" {
+  argument "environment" {
+    comment = "Value for deployment.environment.name when a service did not set it."
+  }
+
+  argument "output" {
+    comment = "otelcol consumer that receives traces, metrics and logs."
+  }
+
+  otelcol.receiver.otlp "intake" {
+    grpc {
+      endpoint = "0.0.0.0:4317"
+    }
+
+    http {
+      endpoint = "0.0.0.0:4318"
+    }
+
+    output {
+      metrics = [otelcol.processor.memory_limiter.guard.input]
+      logs    = [otelcol.processor.memory_limiter.guard.input]
+      traces  = [otelcol.processor.memory_limiter.guard.input]
+    }
+  }
+
+  // Percent of the container memory limit, so ALLOY_MEM_LIMIT can change without a config edit.
+  otelcol.processor.memory_limiter "guard" {
+    check_interval         = "1s"
+    limit_percentage       = 75
+    spike_limit_percentage = 15
+
+    output {
+      metrics = [otelcol.processor.transform.environment.input]
+      logs    = [otelcol.processor.transform.environment.input]
+      traces  = [otelcol.processor.transform.environment.input]
+    }
+  }
+
+  // Resource context: deployment.environment.name is a resource attribute.
+  // error_mode "ignore": a bad statement never drops data.
+  otelcol.processor.transform "environment" {
+    error_mode = "ignore"
+
+    trace_statements {
+      context    = "resource"
+      statements = [
+        "set(attributes[\"deployment.environment.name\"], \"" + argument.environment.value + "\") where attributes[\"deployment.environment.name\"] == nil",
+      ]
+    }
+
+    metric_statements {
+      context    = "resource"
+      statements = [
+        "set(attributes[\"deployment.environment.name\"], \"" + argument.environment.value + "\") where attributes[\"deployment.environment.name\"] == nil",
+      ]
+    }
+
+    log_statements {
+      context    = "resource"
+      statements = [
+        "set(attributes[\"deployment.environment.name\"], \"" + argument.environment.value + "\") where attributes[\"deployment.environment.name\"] == nil",
+      ]
+    }
+
+    output {
+      metrics = [otelcol.processor.batch.out.input]
+      logs    = [otelcol.processor.batch.out.input]
+      traces  = [otelcol.processor.batch.out.input]
+    }
+  }
+
+  otelcol.processor.batch "out" {
+    output {
+      metrics = [argument.output.value]
+      logs    = [argument.output.value]
+      traces  = [argument.output.value]
+    }
+  }
+}

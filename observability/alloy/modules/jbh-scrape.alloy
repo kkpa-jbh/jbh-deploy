@@ -1,0 +1,70 @@
+// What: custom component "jbh_scrape". Scrapes the Prometheus endpoint of the four JBH backends
+//   every 30s and forwards the samples. Ports and paths belong to the services and are fixed here.
+// Imported by: local.alloy and prod.alloy (import.file "jbh"), used as jbh.jbh_scrape.
+// Env vars read: none. Only the hosts differ between local and prod, so they are an argument.
+// Arguments:
+//   hosts       object  service name -> host, keys: jbh-iam, jbh-gateway, jbh-personal-finance, jbh-notification.
+//   forward_to  list(MetricsReceiver)  for example [prometheus.remote_write.cloud.receiver]
+// honor_labels = true: finance, notification and IAM already expose a "service" label. The label
+// from the exposed metric wins; the target label fills the gap (the gateway has none).
+declare "jbh_scrape" {
+  argument "hosts" {
+    comment = "Object: service name -> host name or IP."
+  }
+
+  argument "forward_to" {
+    comment = "Metrics receivers that get the scraped samples."
+  }
+
+  prometheus.scrape "jbh_iam" {
+    job_name        = "jbh-iam"
+    metrics_path    = "/actuator/prometheus"
+    scrape_interval = "30s"
+    scrape_timeout  = "10s"
+    honor_labels    = true
+    targets         = [{
+      "__address__" = argument.hosts.value["jbh-iam"] + ":9999",
+      "service"     = "jbh-iam",
+    }]
+    forward_to = argument.forward_to.value
+  }
+
+  prometheus.scrape "jbh_gateway" {
+    job_name        = "jbh-gateway"
+    metrics_path    = "/actuator/prometheus"
+    scrape_interval = "30s"
+    scrape_timeout  = "10s"
+    honor_labels    = true
+    targets         = [{
+      "__address__" = argument.hosts.value["jbh-gateway"] + ":8080",
+      "service"     = "jbh-gateway",
+    }]
+    forward_to = argument.forward_to.value
+  }
+
+  prometheus.scrape "jbh_personal_finance" {
+    job_name        = "jbh-personal-finance"
+    metrics_path    = "/q/metrics"
+    scrape_interval = "30s"
+    scrape_timeout  = "10s"
+    honor_labels    = true
+    targets         = [{
+      "__address__" = argument.hosts.value["jbh-personal-finance"] + ":7777",
+      "service"     = "jbh-personal-finance",
+    }]
+    forward_to = argument.forward_to.value
+  }
+
+  prometheus.scrape "jbh_notification" {
+    job_name        = "jbh-notification"
+    metrics_path    = "/q/metrics"
+    scrape_interval = "30s"
+    scrape_timeout  = "10s"
+    honor_labels    = true
+    targets         = [{
+      "__address__" = argument.hosts.value["jbh-notification"] + ":7778",
+      "service"     = "jbh-notification",
+    }]
+    forward_to = argument.forward_to.value
+  }
+}

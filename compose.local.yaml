@@ -10,6 +10,8 @@
 # So the gateway reaches a service at the same address when it runs in Docker or in the IDE.
 #
 # Images are "latest", built by CI from main. Only the service you swap runs your local code.
+# jbh-alloy (Grafana Alloy, observability/alloy/local.alloy) also runs here. Start the local LGTM
+# (kkpa-docker-lab/lgtm) first: Alloy sends traces, logs and metrics to it at host.docker.internal.
 # Run it through the Makefile (make local-up), which passes --env-file .env.local.
 
 name: jbh-local
@@ -21,11 +23,20 @@ x-app-host: &app-host
 services:
   jbh-postgres:
     image: postgres:16-alpine
+    # pg_stat_statements: Alloy reads query statistics.
+    command:
+      - postgres
+      - -c
+      - shared_preload_libraries=pg_stat_statements
+      - -c
+      - pg_stat_statements.track=top
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-jbh_admin}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env.local}
       # IAM database. initdb/ creates jbh_finance on the first start.
       POSTGRES_DB: jbh
+      # Read by initdb/02-create-monitor-role.sh (first start only). URL-safe value: openssl rand -hex 24
+      JBH_PG_MONITOR_PASSWORD: ${JBH_PG_MONITOR_PASSWORD:?set JBH_PG_MONITOR_PASSWORD in .env.local}
     volumes:
       - jbh-local-pgdata:/var/lib/postgresql/data
       # Runs only when the volume is empty (first start).
@@ -67,6 +78,10 @@ services:
       GOOGLE_CLIENT_IDS: ${GOOGLE_CLIENT_IDS:-}
       CORS_ALLOWED_ORIGINS: http://localhost:8100
       JBH_GATEWAY_URL: http://host.docker.internal:8080
+      # Telemetry goes to jbh-alloy. A missing collector never stops this service.
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jbh-alloy:4317
+      OTEL_SDK_DISABLED: "false"
+      JBH_ENV: local
     ports:
       - "9999:9999"
     depends_on:
@@ -106,6 +121,10 @@ services:
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       JEV_API_KEY: ${JEV_API_KEY:-}
+      # Telemetry goes to jbh-alloy. A missing collector never stops this service.
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jbh-alloy:4317
+      OTEL_SDK_DISABLED: "false"
+      JBH_ENV: local
     ports:
       - "7777:7777"
     depends_on:
@@ -140,6 +159,10 @@ services:
       GMAIL_USERNAME: ${GMAIL_USERNAME:-}
       GMAIL_APP_PASSWORD: ${GMAIL_APP_PASSWORD:-}
       GMAIL_FROM: ${GMAIL_FROM:-}
+      # Telemetry goes to jbh-alloy. A missing collector never stops this service.
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jbh-alloy:4317
+      OTEL_SDK_DISABLED: "false"
+      JBH_ENV: local
     ports:
       - "7778:7778"
     depends_on:
@@ -162,6 +185,10 @@ services:
       JBH_JWT_SECRET: ${JBH_JWT_SECRET:?set JBH_JWT_SECRET in .env.local}
       CONSUL_HOST: jbh-consul
       CONSUL_DISCOVERY_HOSTNAME: host.docker.internal
+      # Telemetry goes to jbh-alloy. A missing collector never stops this service.
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jbh-alloy:4317
+      OTEL_SDK_DISABLED: "false"
+      JBH_ENV: local
     ports:
       - "8080:8080"
     depends_on:
@@ -174,6 +201,30 @@ services:
       retries: 5
       start_period: 60s
 
+  jbh-alloy:
+    image: grafana/alloy:v1.22.0
+    # uid 473 owns /var/lib/alloy/data in the image.
+    user: "473:473"
+    <<: *app-host
+    command:
+      - run
+      - --server.http.listen-addr=0.0.0.0:12345
+      - --storage.path=/var/lib/alloy/data
+      - /etc/alloy/local.alloy
+    environment:
+      JBH_PG_MONITOR_DSN: postgresql://jbh_monitor:${JBH_PG_MONITOR_PASSWORD:?set JBH_PG_MONITOR_PASSWORD in .env.local}@jbh-postgres:5432/postgres?sslmode=disable
+    volumes:
+      - ./observability/alloy:/etc/alloy:ro
+      - jbh-local-alloy-data:/var/lib/alloy/data
+    # Host side on 127.0.0.1 only. 14317/14318 because the local LGTM owns 4317/4318.
+    # 12347 = Faro (browser), 12345 = Alloy UI. A service in the IDE sends OTLP to http://localhost:14317.
+    ports:
+      - "127.0.0.1:14317:4317"
+      - "127.0.0.1:14318:4318"
+      - "127.0.0.1:12347:12347"
+      - "127.0.0.1:12345:12345"
+
 volumes:
   jbh-local-pgdata:
   jbh-local-consul-data:
+  jbh-local-alloy-data:

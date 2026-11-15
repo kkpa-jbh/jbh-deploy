@@ -1,0 +1,256 @@
+{
+  "schema_version": 1,
+  "kind": "change",
+  "change": "deploy-add-local-pg-monitor",
+  "module": ".",
+  "roadmap": null,
+  "request": "jbh-leader (user decision): option (a), the idempotent make local-pg-monitor target. New branch and new PR, not PR #2. Not Liquibase. Keep initdb for new Docker volumes. JBH-84 reuses the same SQL file for the VPS. Start from an up-to-date main. No Postgres restart by the assistant: print the message for the user.",
+  "status": "verified",
+  "rollup": {
+    "current": [],
+    "pending": [],
+    "blocked": [],
+    "done": [
+      "1.1",
+      "2.1",
+      "3.1",
+      "4.1",
+      "5.1",
+      "5.2"
+    ]
+  },
+  "created_at": "2026-11-15T19:50:00Z",
+  "updated_at": "2026-11-15T19:58:00Z",
+  "leader": {
+    "assistant": "Claude Code",
+    "model": "claude-opus-5-5"
+  },
+  "git": {
+    "strategy": "auto",
+    "branch": "ft/CH3-JBH-56-deploy-add-local-pg-monitor",
+    "base": "main",
+    "ticket": "JBH-56",
+    "ticket_url": "https://linear.app/kkpa/issue/JBH-56/jbh-deploy-grafana-alloy-locally-and-in-prod-postgres-and-vps-metrics",
+    "ticket_tracker": "linear",
+    "created_at": "2026-11-15T19:32:00Z"
+  },
+  "test_first": {
+    "status": "skipped",
+    "commit": null,
+    "tests": [],
+    "approved_at": null
+  },
+  "tasks": [
+    {
+      "id": "1.1",
+      "title": "initdb/sql/pg-monitor.sql (shared, re-runnable)",
+      "module": ".",
+      "depends_on": [],
+      "parallel_ok": true,
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "claude-sonnet-5-5",
+      "started_at": "2026-11-15T19:51:00Z",
+      "completed_at": "2026-11-15T19:56:00Z",
+      "duration_seconds": 300,
+      "notes": "Shared SQL: role via \\gexec when missing, ALTER ROLE password :'pw', grant, extension. No ALTER SYSTEM.",
+      "budget": null
+    },
+    {
+      "id": "2.1",
+      "title": "local-pg-monitor.sh",
+      "module": ".",
+      "depends_on": [
+        "1.1"
+      ],
+      "parallel_ok": true,
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "claude-sonnet-5-5",
+      "started_at": "2026-11-15T19:51:00Z",
+      "completed_at": "2026-11-15T19:56:00Z",
+      "duration_seconds": 300,
+      "notes": "Script: psql/password checks, safe preload check (only shared_preload_libraries), || exit 1 on each psql. Negative tests by leader: exit 1 x3.",
+      "budget": null
+    },
+    {
+      "id": "3.1",
+      "title": "initdb/02 runs the shared SQL file",
+      "module": ".",
+      "depends_on": [
+        "1.1"
+      ],
+      "parallel_ok": true,
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "claude-sonnet-5-5",
+      "started_at": "2026-11-15T19:51:00Z",
+      "completed_at": "2026-11-15T19:56:00Z",
+      "duration_seconds": 300,
+      "notes": "initdb/02 runs psql -f the shared file; skip guard kept.",
+      "budget": null
+    },
+    {
+      "id": "4.1",
+      "title": "local.mk local-pg-monitor + local-alloy comment fix",
+      "module": ".",
+      "depends_on": [
+        "2.1"
+      ],
+      "parallel_ok": true,
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "claude-sonnet-5-5",
+      "started_at": "2026-11-15T19:51:00Z",
+      "completed_at": "2026-11-15T19:56:00Z",
+      "duration_seconds": 300,
+      "notes": "local-pg-monitor target (@, sed one key); local-alloy comment fixed.",
+      "budget": null
+    },
+    {
+      "id": "5.1",
+      "title": "LOCAL.md",
+      "module": ".",
+      "depends_on": [
+        "4.1"
+      ],
+      "parallel_ok": true,
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "claude-sonnet-5-5",
+      "started_at": "2026-11-15T19:51:00Z",
+      "completed_at": "2026-11-15T19:56:00Z",
+      "duration_seconds": 300,
+      "notes": "LOCAL.md (a) and (b) rewritten around make local-pg-monitor.",
+      "budget": null
+    },
+    {
+      "id": "5.2",
+      "title": "CLAUDE.md files table, .env.local.example comment",
+      "module": ".",
+      "depends_on": [
+        "4.1"
+      ],
+      "parallel_ok": true,
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "claude-sonnet-5-5",
+      "started_at": "2026-11-15T19:51:00Z",
+      "completed_at": "2026-11-15T19:56:00Z",
+      "duration_seconds": 300,
+      "notes": "CLAUDE.md rows; .env.local.example comment.",
+      "budget": null
+    }
+  ],
+  "review": {
+    "status": "pending",
+    "agent": null,
+    "brief": null,
+    "rounds": []
+  },
+  "decisions": [
+    {
+      "id": "D1",
+      "at": "2026-11-15T19:50:00Z",
+      "scope": "change",
+      "made_by": "user",
+      "decision": "ticket JBH-56",
+      "why": "follow-up of the same sub-issue",
+      "covered_by": null
+    },
+    {
+      "id": "D2",
+      "at": "2026-11-15T19:50:00Z",
+      "scope": "change",
+      "made_by": "user",
+      "decision": "one shared re-runnable SQL file initdb/sql/pg-monitor.sql",
+      "why": "copies would drift; JBH-84 reuses it",
+      "covered_by": null
+    },
+    {
+      "id": "D3",
+      "at": "2026-11-15T19:50:00Z",
+      "scope": "change",
+      "made_by": "user",
+      "decision": "preload: safe check (skip / ALTER SYSTEM when empty / stop when other libraries)",
+      "why": "a blind overwrite can break other extensions",
+      "covered_by": null
+    },
+    {
+      "id": "D4",
+      "at": "2026-11-15T19:50:00Z",
+      "scope": "change",
+      "made_by": "user",
+      "decision": "SOLID: SRP only, one job per file",
+      "why": "shell and SQL; OCP/DIP do not fit",
+      "covered_by": null
+    },
+    {
+      "id": "D5",
+      "at": "2026-11-15T19:50:00Z",
+      "scope": "change",
+      "made_by": "user",
+      "decision": "database gate confirmed without the pg_stat_statements.track ALTER SYSTEM line",
+      "why": "track default is top; the line was untested before library load",
+      "covered_by": null
+    },
+    {
+      "id": "D6",
+      "at": "2026-11-15T19:50:00Z",
+      "scope": "concurrency",
+      "made_by": "leader",
+      "decision": "no concurrency guard",
+      "why": "only a parallel CREATE ROLE race; one person runs it on a laptop",
+      "covered_by": null
+    },
+    {
+      "id": "D7",
+      "at": "2026-11-15T19:50:00Z",
+      "scope": "change",
+      "made_by": "leader",
+      "decision": "test_first skipped; one serial wave for all 6 tasks",
+      "why": "no unit tests (user excludes); 6 small files",
+      "covered_by": null
+    },
+    {
+      "id": "D8",
+      "at": "2026-11-15T19:50:00Z",
+      "scope": "change",
+      "made_by": "leader",
+      "decision": "leader edited design.md D2/Database/Risks and the spec line to drop the track line",
+      "why": "exact text edit of a gate answer; cheaper than a re-dispatch",
+      "covered_by": null
+    },
+    {
+      "id": "D9",
+      "at": "2026-11-15T19:58:00Z",
+      "scope": "task:2.1",
+      "made_by": "leader",
+      "decision": "accept worker deviation: || exit 1 after each psql call",
+      "why": "set -e is off inside a function called from if; without it a failed connection could reach ALTER SYSTEM",
+      "covered_by": null
+    }
+  ],
+  "events": [
+    {
+      "at": "2026-11-15T19:50:00Z",
+      "agent": "leader",
+      "event": "artifacts validated (--strict), briefing + DB gate answered by the user; artifacts commit 5a50b7b"
+    },
+    {
+      "at": "2026-11-15T19:51:00Z",
+      "agent": "leader",
+      "event": "dispatched wave 1 (1.1-5.2, one serial worker, sonnet)"
+    },
+    {
+      "at": "2026-11-15T19:58:00Z",
+      "agent": "leader",
+      "event": "wave 1 verified by the leader (assistantRunsTests): sh -n both scripts exit 0; make -n ok, no secret shown; no top-level initdb/*.sql; compose config -q both exit 0 (Complexity-Check); protected files unchanged; negative runs (no password, bad URL, no psql) exit 1. SQL not run against a DB: V9 is the user's."
+    },
+    {
+      "at": "2026-11-15T19:58:00Z",
+      "agent": "leader",
+      "event": "size: see git diff --shortstat main...HEAD in the wave commit"
+    }
+  ]
+}

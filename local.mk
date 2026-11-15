@@ -5,7 +5,7 @@ LOCAL_COMPOSE = docker compose --env-file .env.local -f compose.local.yaml
 # Services you can swap for a copy that runs in your IDE.
 LOCAL_SWAPPABLE = jbh-iam jbh-personal-finance jbh-notification jbh-gateway
 
-.PHONY: local-up local-down local-ps local-logs local-swap local-restore local-alloy local-alloy-logs
+.PHONY: local-up local-down local-ps local-logs local-swap local-restore local-alloy local-alloy-logs local-pg-monitor
 
 # Port 8500 is also used by kkpa-docker-lab/consul. Compose fails with "port is already allocated" if it still runs.
 local-up:
@@ -46,7 +46,7 @@ local-restore:
 	@echo "$(LOCAL_SWAPPABLE)" | tr ' ' '\n' | grep -qx "$(s)" || (echo "$(s) cannot be swapped. Use: $(LOCAL_SWAPPABLE)" && exit 1)
 	$(LOCAL_COMPOSE) up -d $(s)
 
-# Only Alloy, for work in the IDE (Postgres must run: make local-up). Start the local LGTM first.
+# Only Alloy, for work in the IDE (Postgres must run: make local-up, or Postgres on your Mac: make local-pg-monitor first). Start the local LGTM first.
 # A service in the IDE sends OTLP to http://localhost:14317.
 local-alloy:
 	@test -f .env.local || (echo "Missing .env.local. Run: cp .env.local.example .env.local" && exit 1)
@@ -54,3 +54,10 @@ local-alloy:
 
 local-alloy-logs:
 	$(LOCAL_COMPOSE) logs -f --tail=200 jbh-alloy
+
+# Prepares an existing Postgres for Alloy (LOCAL.md). Reads only JBH_PG_MONITOR_PASSWORD from .env.local:
+# the file is not sourced (other lines may hold spaces), and "@" keeps make from printing the value.
+# Docker volume: PG_ADMIN_URL=postgresql://jbh_admin@localhost:5433/postgres make local-pg-monitor
+local-pg-monitor:
+	@test -f .env.local || (echo "Missing .env.local. Run: cp .env.local.example .env.local" && exit 1)
+	@JBH_PG_MONITOR_PASSWORD="$$(sed -n 's/^JBH_PG_MONITOR_PASSWORD=//p' .env.local | tail -n 1)" sh ./local-pg-monitor.sh

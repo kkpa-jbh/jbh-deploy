@@ -71,41 +71,35 @@ so a service in the IDE needs no change for metrics.
 
 ### Existing Postgres volume (a)
 
-`initdb/` runs only on an empty volume. If your `jbh-local-pgdata` volume already exists, create the monitor role once by hand.
-Use a URL-safe password: the same value as `JBH_PG_MONITOR_PASSWORD` in `.env.local`.
+`initdb/` runs only on an empty volume. If your `jbh-local-pgdata` volume already exists, create the monitor role once.
+Set `JBH_PG_MONITOR_PASSWORD` in `.env.local` (a URL-safe value), then run:
 
 ```
-docker compose --env-file .env.local -f compose.local.yaml exec -T jbh-postgres \
-  psql -U jbh_admin -d postgres -v pw='change-me' <<'SQL'
-CREATE ROLE jbh_monitor LOGIN PASSWORD :'pw';
-GRANT pg_monitor TO jbh_monitor;
-CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
-SQL
+PG_ADMIN_URL=postgresql://jbh_admin@localhost:5433/postgres make local-pg-monitor
 ```
 
-Use your `POSTGRES_USER` instead of `jbh_admin` if you changed it. Then run `make local-up`: compose recreates `jbh-postgres`,
-because its command now loads `pg_stat_statements`. Until the role exists, Alloy logs an authentication error for Postgres. Other signals work.
+Use your `POSTGRES_USER` instead of `jbh_admin` if you changed it. If psql asks for the admin password, set `PGPASSWORD` or use `~/.pgpass`:
+no password is read from a file by the script. The container already loads `pg_stat_statements` in its command, so no restart is needed.
+Then run `make local-up`: compose recreates `jbh-postgres` if its command changed. Until the role exists, Alloy logs an authentication error for Postgres. Other signals work.
 
 ### Postgres installed on the Mac (b)
 
 If you scrape the Postgres on your Mac (port 5432) and not the container:
 
-1. In `postgresql.conf` set:
-
-   ```
-   shared_preload_libraries = 'pg_stat_statements'
-   pg_stat_statements.track = top
-   ```
-
-2. Restart that Postgres.
-3. Run the same SQL as above against it (`psql -h localhost -p 5432 -U <admin> -d postgres -v pw='change-me' ...`).
-4. In `.env.local` set the override, so Alloy reaches the Mac and not the container:
+1. Run `make local-pg-monitor` (it uses `postgresql://localhost:5432/postgres` and your current user, which must be a superuser).
+2. If `shared_preload_libraries` is empty, the script sets it to `pg_stat_statements` with `ALTER SYSTEM`, prints the restart command and stops without creating the role.
+   If it holds other libraries, the script prints them, changes nothing and exits 1: add `pg_stat_statements` by hand.
+3. Restart that Postgres (Homebrew: `brew services restart postgresql@16`). The script never restarts it.
+4. Run `make local-pg-monitor` again. It prints `jbh_monitor is ready`. You can run it as many times as you want.
+5. In `.env.local` set the override, so Alloy reaches the Mac and not the container:
 
    ```
    JBH_PG_MONITOR_DSN=postgresql://jbh_monitor:<password>@host.docker.internal:5432/postgres?sslmode=disable
    ```
 
 Then `make local-alloy` to restart Alloy with the new value.
+
+What the script runs: [`initdb/sql/pg-monitor.sql`](initdb/sql/pg-monitor.sql). A new Docker volume runs the same file from `initdb/02-create-monitor-role.sh`.
 
 ## Swap one service for your IDE
 

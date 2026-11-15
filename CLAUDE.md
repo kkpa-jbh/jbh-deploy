@@ -11,12 +11,14 @@ It also holds `README.md`: the system map of all JBH services. The `kkpa-jbh/CLA
 | `DEPLOY.md` | Operator runbook: every command with the folder to run it in. Update it when a step changes. |
 | `CI.md` | GitHub Actions in every repo: triggers, steps, image retention, secrets. Update it when a workflow changes. |
 | `compose.yaml` | All jbh services. No host ports. Only `jbh-gateway` and `jbh-web` join `edge`. |
-| `compose.local.yaml`, `local.mk`, `.env.local.example`, `LOCAL.md` | Local dev stack for a developer machine (`make local-up`). Publishes host ports. Never used on the VPS. |
+| `compose.local.yaml`, `local.mk`, `.env.local.example`, `LOCAL.md` | Local dev stack for a developer machine (`make local-up`; `make local-pg-monitor` prepares an existing Postgres for Alloy). Publishes host ports. Never used on the VPS. |
 | `jbh.caddy` | Site file Magus's Caddy imports from `/etc/caddy/sites/`. |
 | `.env.example` | Every variable, with placeholders. The real `.env` exists only on the VPS. |
 | `Makefile` | `network`, `up`, `deploy s=<svc>`, `rollback s=<svc>`, `caddy-install`, `consul-tunnel`, `db-tunnel`, `backup`, `config`. |
-| `initdb/` | First-start SQL: `jbh_finance`, its schemas, `pgcrypto`, time zone. `02-create-monitor-role.sh` creates the `jbh_monitor` role and `pg_stat_statements`; it skips itself when `JBH_PG_MONITOR_PASSWORD` is empty (the VPS does not pass it). |
+| `initdb/` | First-start SQL: `jbh_finance`, its schemas, `pgcrypto`, time zone. `02-create-monitor-role.sh` runs `initdb/sql/pg-monitor.sql` (the `jbh_monitor` role and `pg_stat_statements`); it skips itself when `JBH_PG_MONITOR_PASSWORD` is empty (the VPS does not pass it). |
 | `observability/alloy/` | Grafana Alloy config: `local.alloy` (entry file for the local stack) and `modules/` (`otlp`, `jbh-scrape`, `postgres`). Local only for now; no secret in a file. |
+| `initdb/sql/pg-monitor.sql` | Shared, re-runnable SQL for the monitor role. In a subfolder, so the Postgres entrypoint does not run it alone. Used by `02-create-monitor-role.sh` and `local-pg-monitor.sh`. |
+| `local-pg-monitor.sh` | Local only. Checks `shared_preload_libraries` of an existing Postgres, then runs the shared SQL. Called by `make local-pg-monitor`. Never restarts Postgres. |
 | `backup-db.sh` | Daily `pg_dump` of both databases. |
 | `ci-deploy.sh` | Deploy or roll back one app service, wait until healthy, roll back by itself on failure. Forced command of the CI deploy key; `make deploy` / `make rollback` call it too. |
 | `.github/workflows/deploy.yml` | `Deploy` workflow: SSH to the VPS, runs `ci-deploy.sh`. By hand, or from `jbh-app`'s `Image` (auto-deploy of `jbh-web`). |

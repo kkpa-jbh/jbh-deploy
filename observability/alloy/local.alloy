@@ -1,7 +1,7 @@
 // What: entry file for the local stack (compose.local.yaml, make local-up / make local-alloy).
 //   OTLP intake, scrape of the four backends, Postgres metrics and a Faro receiver for the browser app.
 //   Everything goes to the local LGTM (kkpa-docker-lab/lgtm). No host module: a laptop is not the VPS.
-// Imports: modules/ (jbh.otlp, jbh.jbh_scrape, jbh.postgres, jbh.host).
+// Imports: modules/ (jbh.otlp, jbh.jbh_scrape, jbh.postgres).
 // Env vars read: JBH_PG_MONITOR_DSN.
 // Backends are reached at host.docker.internal: the same published ports serve a service that runs
 // in Docker and one that runs from the IDE.

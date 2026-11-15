@@ -5,35 +5,34 @@
   "module": ".",
   "roadmap": null,
   "request": "Section 1 of plan /Users/cristianpena/cpena/sw/github/kkpa-jbh/kkpa/tickets/JBH-55/JBH-55.md (jbh-deploy — Grafana Alloy locally and in prod, Postgres and VPS metrics). Ticket: JBH-56 (Linear). Do not move JBH-55 or JBH-56 in Linear (leader owns it). Unit tests: excluded. Start the change branch from the current branch docs/JBH-55-observability-tech-stack (keep unpushed commit 4231964). Check Grafana Alloy docs with Context7.",
-  "status": "in-progress",
+  "status": "applied",
   "rollup": {
     "current": [],
-    "pending": [
-      "2.3",
-      "3.2",
-      "5.2",
-      "6.3",
-      "7.3",
-      "8.1",
-      "8.2",
-      "8.4",
-      "8.5",
-      "9.1"
-    ],
+    "pending": [],
     "blocked": [],
     "done": [
       "1.1",
       "1.2",
       "1.3",
       "2.1",
+      "2.3",
       "3.1",
+      "3.2",
       "5.1",
+      "5.2",
       "6.2",
-      "7.2"
+      "6.3",
+      "7.2",
+      "7.3",
+      "8.1",
+      "8.2",
+      "8.4",
+      "8.5",
+      "9.1"
     ]
   },
   "created_at": "2026-11-15T15:58:32Z",
-  "updated_at": "2026-11-15T16:41:00Z",
+  "updated_at": "2026-11-15T16:50:00Z",
   "leader": {
     "assistant": "Claude Code",
     "model": "claude-opus-5-5"
@@ -162,13 +161,13 @@
         "2.1"
       ],
       "parallel_ok": true,
-      "status": "pending",
-      "agent": null,
-      "model": null,
-      "started_at": null,
-      "completed_at": null,
-      "duration_seconds": null,
-      "notes": null,
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "claude-sonnet-5-5",
+      "started_at": "2026-11-15T16:42:30Z",
+      "completed_at": "2026-11-15T16:48:00Z",
+      "duration_seconds": 330,
+      "notes": "Headers and comments cleaned: no prod.alloy, jbh.host or DEPLOY.md refs (V11 grep clean).",
       "budget": null
     },
     {
@@ -203,13 +202,13 @@
         "3.1"
       ],
       "parallel_ok": true,
-      "status": "pending",
-      "agent": null,
-      "model": null,
-      "started_at": null,
-      "completed_at": null,
-      "duration_seconds": null,
-      "notes": null,
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "claude-sonnet-5-5",
+      "started_at": "2026-11-15T16:42:30Z",
+      "completed_at": "2026-11-15T16:48:00Z",
+      "duration_seconds": 330,
+      "notes": "Skip guard before psql: one log line, exit 0. Leader ran it with the variable unset: exit 0.",
       "budget": null
     },
     {
@@ -247,13 +246,13 @@
         "5.1"
       ],
       "parallel_ok": true,
-      "status": "pending",
-      "agent": null,
-      "model": null,
-      "started_at": null,
-      "completed_at": null,
-      "duration_seconds": null,
-      "notes": null,
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "claude-sonnet-5-5",
+      "started_at": "2026-11-15T16:42:30Z",
+      "completed_at": "2026-11-15T16:48:00Z",
+      "duration_seconds": 330,
+      "notes": "Nested DSN default + override. V17: default and override render as designed.",
       "budget": null
     },
     {
@@ -290,13 +289,13 @@
         "6.2"
       ],
       "parallel_ok": true,
-      "status": "pending",
-      "agent": null,
-      "model": null,
-      "started_at": null,
-      "completed_at": null,
-      "duration_seconds": null,
-      "notes": null,
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "claude-sonnet-5-5",
+      "started_at": "2026-11-15T16:42:30Z",
+      "completed_at": "2026-11-15T16:48:00Z",
+      "duration_seconds": 330,
+      "notes": "Commented JBH_PG_MONITOR_DSN override with the Mac example.",
       "budget": null
     },
     {
@@ -333,13 +332,13 @@
         "7.2"
       ],
       "parallel_ok": true,
-      "status": "pending",
-      "agent": null,
-      "model": null,
-      "started_at": null,
-      "completed_at": null,
-      "duration_seconds": null,
-      "notes": null,
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "claude-sonnet-5-5",
+      "started_at": "2026-11-15T16:42:30Z",
+      "completed_at": "2026-11-15T16:48:00Z",
+      "duration_seconds": 330,
+      "notes": "local-alloy-logs target and .PHONY.",
       "budget": null
     },
     {
@@ -356,13 +355,13 @@
         "7.3"
       ],
       "parallel_ok": true,
-      "status": "pending",
-      "agent": null,
-      "model": null,
-      "started_at": null,
-      "completed_at": null,
-      "duration_seconds": null,
-      "notes": null,
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "claude-sonnet-5-5",
+      "started_at": "2026-11-15T16:42:30Z",
+      "completed_at": "2026-11-15T16:48:00Z",
+      "duration_seconds": 330,
+      "notes": "README: 'Observability (local)' section, port 14317, links; prod facts unchanged.",
       "budget": null
     },
     {
@@ -379,13 +378,13 @@
         "7.3"
       ],
       "parallel_ok": true,
-      "status": "pending",
-      "agent": null,
-      "model": null,
-      "started_at": null,
-      "completed_at": null,
-      "duration_seconds": null,
-      "notes": null,
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "claude-sonnet-5-5",
+      "started_at": "2026-11-15T16:42:30Z",
+      "completed_at": "2026-11-15T16:48:00Z",
+      "duration_seconds": 330,
+      "notes": "LOCAL.md: LGTM + Alloy start, ports, Grafana, SQL for existing volume, Mac Postgres, IDE settings, double-storage note.",
       "budget": null
     },
     {
@@ -402,13 +401,13 @@
         "7.3"
       ],
       "parallel_ok": true,
-      "status": "pending",
-      "agent": null,
-      "model": null,
-      "started_at": null,
-      "completed_at": null,
-      "duration_seconds": null,
-      "notes": null,
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "claude-sonnet-5-5",
+      "started_at": "2026-11-15T16:42:30Z",
+      "completed_at": "2026-11-15T16:48:00Z",
+      "duration_seconds": 330,
+      "notes": "observability/README: Tech stack kept; metrics sources rewritten; local series budget 4,350.",
       "budget": null
     },
     {
@@ -425,13 +424,13 @@
         "7.3"
       ],
       "parallel_ok": true,
-      "status": "pending",
-      "agent": null,
-      "model": null,
-      "started_at": null,
-      "completed_at": null,
-      "duration_seconds": null,
-      "notes": null,
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "claude-sonnet-5-5",
+      "started_at": "2026-11-15T16:42:30Z",
+      "completed_at": "2026-11-15T16:48:00Z",
+      "duration_seconds": 330,
+      "notes": "CLAUDE.md files table: observability/alloy and initdb rows.",
       "budget": null
     },
     {
@@ -445,13 +444,13 @@
         "8.5"
       ],
       "parallel_ok": false,
-      "status": "pending",
-      "agent": null,
-      "model": null,
-      "started_at": null,
-      "completed_at": null,
-      "duration_seconds": null,
-      "notes": null,
+      "status": "done",
+      "agent": "leader",
+      "model": "claude-opus-5-5",
+      "started_at": "2026-11-15T16:48:30Z",
+      "completed_at": "2026-11-15T16:50:00Z",
+      "duration_seconds": 90,
+      "notes": "Leader ran V1, V2, V9-V14, V17: all pass. V16 (alloy validate) not run: needs docker run.",
       "budget": null
     }
   ],
@@ -584,6 +583,21 @@
       "at": "2026-11-15T16:41:00Z",
       "agent": "leader",
       "event": "resume-armed — budget checkpoint before wave 2: five_hour_pct 88 (limit 90, projected to cross), context_pct 21; five_hour_resets_at 1794760800, wake epoch 1794760920. Next: wave 2 (2.3, 3.2, 5.2, 6.3, 7.3, 8.1, 8.2, 8.4, 8.5)."
+    },
+    {
+      "at": "2026-11-15T16:42:08Z",
+      "agent": "leader",
+      "event": "resume-auto — bucket reset (five_hour_pct null = new window, available true), context_pct 22"
+    },
+    {
+      "at": "2026-11-15T16:42:30Z",
+      "agent": "leader",
+      "event": "dispatched wave 2 (2.3, 3.2, 5.2, 6.3, 7.3, 8.1, 8.2, 8.4, 8.5; one serial worker, sonnet); cost start $6.35"
+    },
+    {
+      "at": "2026-11-15T16:50:00Z",
+      "agent": "leader",
+      "event": "wave 2 verified by the leader (assistantRunsTests): docker compose config -q for compose.yaml and compose.local.yaml exit 0; V9-V14, V17 ok; guard run exit 0. Complexity-Check = same compose commands, exit 0."
     }
   ]
 }

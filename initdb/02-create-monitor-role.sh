@@ -5,8 +5,15 @@
 #   - GRANT pg_monitor: reads statistics only, no table data
 #   - pg_stat_statements in database "postgres" (the library is loaded by the compose command)
 # psql escapes the password with :'pw', so it is never glued into the SQL text.
-# On an existing volume this script does not run: see DEPLOY.md, "Observability".
+# The production compose.yaml mounts this same folder and does not pass the password. Without the
+# guard below, "set -u" would fail the first start of a fresh volume. So an empty password skips the script.
+# On an existing volume this script does not run: see LOCAL.md, "Existing Postgres volume".
 set -eu
+
+if [ -z "${JBH_PG_MONITOR_PASSWORD:-}" ]; then
+  echo "02-create-monitor-role: skip: JBH_PG_MONITOR_PASSWORD is not set"
+  exit 0
+fi
 
 psql -v ON_ERROR_STOP=1 -v pw="$JBH_PG_MONITOR_PASSWORD" --username "$POSTGRES_USER" --dbname postgres <<'SQL'
 CREATE ROLE jbh_monitor LOGIN PASSWORD :'pw';

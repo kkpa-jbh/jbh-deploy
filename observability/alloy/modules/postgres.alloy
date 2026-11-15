@@ -1,6 +1,6 @@
 // What: custom component "postgres". Reads Postgres statistics with prometheus.exporter.postgres
 //   (default collectors plus stat_statements) and scrapes them every 30s.
-// Imported by: local.alloy and prod.alloy (import.file "jbh"), used as jbh.postgres.
+// Imported by: local.alloy (import.file "jbh"), used as jbh.postgres. A prod entry file can reuse it later.
 // Env vars read: none here. The caller passes the DSN, which comes from JBH_PG_MONITOR_DSN
 //   (postgresql://jbh_monitor:<password>@jbh-postgres:5432/postgres?sslmode=disable).
 // Arguments:

@@ -1,10 +1,10 @@
 // What: custom component "otlp". Receives OTLP (gRPC 4317, HTTP 4318) from the JBH services,
 //   limits memory, sets resource attribute deployment.environment.name when the service did not set it,
 //   batches, and forwards traces, metrics and logs to the consumer given in "output".
-// Imported by: local.alloy and prod.alloy (import.file "jbh"), used as jbh.otlp.
+// Imported by: local.alloy (import.file "jbh"), used as jbh.otlp. A prod entry file can reuse it later.
 // Env vars read: none. The environment name and the exporter come in as arguments.
 // Arguments:
-//   environment  string          "local" or "prod".
+//   environment  string          for example "local".
 //   output       otelcol.Consumer  for example otelcol.exporter.otlp.lgtm.input
 declare "otlp" {
   argument "environment" {
@@ -31,7 +31,7 @@ declare "otlp" {
     }
   }
 
-  // Percent of the container memory limit, so ALLOY_MEM_LIMIT can change without a config edit.
+  // Percent of the container memory limit, so the limit can change without a config edit.
   otelcol.processor.memory_limiter "guard" {
     check_interval         = "1s"
     limit_percentage       = 75

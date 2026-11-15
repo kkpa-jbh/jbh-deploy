@@ -212,7 +212,8 @@ services:
       - --storage.path=/var/lib/alloy/data
       - /etc/alloy/local.alloy
     environment:
-      JBH_PG_MONITOR_DSN: postgresql://jbh_monitor:${JBH_PG_MONITOR_PASSWORD:?set JBH_PG_MONITOR_PASSWORD in .env.local}@jbh-postgres:5432/postgres?sslmode=disable
+      # Default: the Docker jbh-postgres. Set JBH_PG_MONITOR_DSN in .env.local to reach another Postgres.
+      JBH_PG_MONITOR_DSN: ${JBH_PG_MONITOR_DSN:-postgresql://jbh_monitor:${JBH_PG_MONITOR_PASSWORD:?set JBH_PG_MONITOR_PASSWORD in .env.local}@jbh-postgres:5432/postgres?sslmode=disable}
     volumes:
       - ./observability/alloy:/etc/alloy:ro
       - jbh-local-alloy-data:/var/lib/alloy/data

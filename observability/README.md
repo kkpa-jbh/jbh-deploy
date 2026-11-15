@@ -5,8 +5,8 @@ How JBH collects logs, metrics and traces, and the Grafana dashboards for the JB
 ## Tech stack
 
 **Status:** this is the target design of epic JBH-55. It is not all built yet.
-Today only finance, notification and iam expose metrics. Traces and logs reach the local LGTM only from finance and notification.
-The sub-issues JBH-56..59, 61 and 81..83 build the rest.
+Local Alloy is in place (JBH-56): it receives OTLP, scrapes the four backends and Postgres, and feeds the local LGTM.
+The services still need their own changes (JBH-57..59, 81..83), and production is JBH-84. Dashboards and alerts come with JBH-61.
 
 **OpenTelemetry does not store anything.** It is the standard that *creates* and *sends* data.
 Its protocol is **OTLP**. Storage happens in the LGTM stack.
@@ -72,14 +72,41 @@ Each JSON file in `grafana/` is one dashboard.
 
 ## Where the metrics come from
 
-| Service | Endpoint (private, never public) | Tags |
-|---------|----------------------------------|------|
+Locally, Grafana Alloy (`jbh-alloy`) scrapes every endpoint below every 30 seconds and sends the samples to the local Prometheus
+(remote write, so metric names stay as the services expose them). Its config is in `alloy/` (`local.alloy` and `modules/`).
+Production is not built yet.
+
+| Source | Endpoint (private, never public) | Tags |
+|--------|----------------------------------|------|
 | `jbh-personal-finance` | `:7777/q/metrics` | `service=jbh-personal-finance`, `env` |
 | `jbh-notification` | `:7778/q/metrics` | `service=jbh-notification`, `env` |
 | `jbh-iam` | `:9999/actuator/prometheus` | `service=jbh-iam`, `env` |
+| `jbh-gateway` | `:8080/actuator/prometheus` | `service=jbh-gateway` (added by Alloy) |
+| Postgres (`jbh-postgres`) | Alloy's built-in Postgres exporter, role `jbh_monitor`, with `pg_stat_statements` | `service=jbh-postgres` |
 
-Caddy and the gateway forward only `/jbh-api/...`, so these endpoints are reachable only on `jbh-private`.
-In production, Alloy scrapes them (JBH-56). Locally, the LGTM stack in `kkpa-docker-lab/lgtm` scrapes them.
+Caddy and the gateway forward only `/jbh-api/...`, so these endpoints are reachable only on a private network.
+Traces and logs do not come from a scrape: the services push them over OTLP to Alloy (`localhost:14317` from the IDE).
+How to run it on your machine: [`../LOCAL.md`](../LOCAL.md).
+
+## Series budget
+
+The free Grafana Cloud plan allows 10,000 active series for everything. The target is 6,000 or less.
+Locally the limit does not bind, but the same budget keeps the config honest. Numbers are estimates until you count them:
+`curl -s <metrics-url> | grep -vc '^#'`. Update the table when you do.
+
+| Source | Estimate | Note |
+|--------|---------:|------|
+| `jbh-iam` | 1,000 | JVM, Tomcat/Hikari, HTTP histograms |
+| `jbh-gateway` | 700 | JVM, Netty, route and HTTP metrics |
+| `jbh-personal-finance` | 1,200 | JVM, Agroal, HTTP histograms (11 buckets) per endpoint |
+| `jbh-notification` | 600 | JVM, Agroal, few endpoints |
+| Postgres, default collectors | 350 | database `postgres` only |
+| Postgres `stat_statements` | 500 | about 100 statements x 5 counters |
+| Alloy itself | 0 | its own metrics are not scraped |
+| **Total (local)** | **4,350** | 1,650 below the 6,000 target |
+
+If the real total passes 6,000, first lower the number of `pg_stat_statements` rows. Production adds VPS host metrics (JBH-84).
+Label rule: never put a user id, email, IP or raw path in a metric label.
 
 ## Import a dashboard
 

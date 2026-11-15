@@ -5,7 +5,7 @@ LOCAL_COMPOSE = docker compose --env-file .env.local -f compose.local.yaml
 # Services you can swap for a copy that runs in your IDE.
 LOCAL_SWAPPABLE = jbh-iam jbh-personal-finance jbh-notification jbh-gateway
 
-.PHONY: local-up local-down local-ps local-logs local-swap local-restore local-alloy
+.PHONY: local-up local-down local-ps local-logs local-swap local-restore local-alloy local-alloy-logs
 
 # Port 8500 is also used by kkpa-docker-lab/consul. Compose fails with "port is already allocated" if it still runs.
 local-up:
@@ -51,3 +51,6 @@ local-restore:
 local-alloy:
 	@test -f .env.local || (echo "Missing .env.local. Run: cp .env.local.example .env.local" && exit 1)
 	$(LOCAL_COMPOSE) up -d jbh-alloy
+
+local-alloy-logs:
+	$(LOCAL_COMPOSE) logs -f --tail=200 jbh-alloy

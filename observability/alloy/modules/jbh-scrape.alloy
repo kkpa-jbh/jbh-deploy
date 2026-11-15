@@ -1,10 +1,10 @@
 // What: custom component "jbh_scrape". Scrapes the Prometheus endpoint of the four JBH backends
 //   every 30s and forwards the samples. Ports and paths belong to the services and are fixed here.
-// Imported by: local.alloy and prod.alloy (import.file "jbh"), used as jbh.jbh_scrape.
-// Env vars read: none. Only the hosts differ between local and prod, so they are an argument.
+// Imported by: local.alloy (import.file "jbh"), used as jbh.jbh_scrape. A prod entry file can reuse it later.
+// Env vars read: none. Only the hosts can differ between environments, so they are an argument.
 // Arguments:
 //   hosts       object  service name -> host, keys: jbh-iam, jbh-gateway, jbh-personal-finance, jbh-notification.
-//   forward_to  list(MetricsReceiver)  for example [prometheus.remote_write.cloud.receiver]
+//   forward_to  list(MetricsReceiver)  for example [prometheus.remote_write.lgtm.receiver]
 // honor_labels = true: finance, notification and IAM already expose a "service" label. The label
 // from the exposed metric wins; the target label fills the gap (the gateway has none).
 declare "jbh_scrape" {

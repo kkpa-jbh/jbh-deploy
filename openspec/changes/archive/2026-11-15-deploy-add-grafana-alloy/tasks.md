@@ -60,6 +60,6 @@ Depends on: 1-7 (names and values). Four disjoint files; parallel. Follow design
 
 Depends on: 1-8.
 
-- [ ] 9.1 Run the `Complexity-Check` command from `CLAUDE.md` (both `docker compose ... config -q`), then V9-V14 and V17 from design.md. Check that `git diff --stat <base> -- compose.yaml .env.example Makefile DEPLOY.md ci-deploy.sh .github` is empty. Optional for the user: V16 (`alloy validate` of `local.alloy`).
+- [x] 9.1 Run the `Complexity-Check` command from `CLAUDE.md` (both `docker compose ... config -q`), then V9-V14 and V17 from design.md. Check that `git diff --stat <base> -- compose.yaml .env.example Makefile DEPLOY.md ci-deploy.sh .github` is empty. Optional for the user: V16 (`alloy validate` of `local.alloy`).
 
 Size estimate: 12 files, ~520 changed lines (tests and docs included)

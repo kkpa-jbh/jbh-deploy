@@ -5,7 +5,7 @@
   "module": ".",
   "roadmap": null,
   "request": "Section 1 of plan /Users/cristianpena/cpena/sw/github/kkpa-jbh/kkpa/tickets/JBH-55/JBH-55.md (jbh-deploy — Grafana Alloy locally and in prod, Postgres and VPS metrics). Ticket: JBH-56 (Linear). Do not move JBH-55 or JBH-56 in Linear (leader owns it). Unit tests: excluded. Start the change branch from the current branch docs/JBH-55-observability-tech-stack (keep unpushed commit 4231964). Check Grafana Alloy docs with Context7.",
-  "status": "applied",
+  "status": "in-review",
   "rollup": {
     "current": [],
     "pending": [],
@@ -32,7 +32,7 @@
     ]
   },
   "created_at": "2026-11-15T15:58:32Z",
-  "updated_at": "2026-11-15T16:50:00Z",
+  "updated_at": "2026-11-15T17:01:00Z",
   "leader": {
     "assistant": "Claude Code",
     "model": "claude-opus-5-5"
@@ -456,8 +456,8 @@
   ],
   "review": {
     "status": "pending",
-    "agent": null,
-    "brief": null,
+    "agent": "jbh-deploy-reviewer",
+    "brief": "Change deploy-add-grafana-alloy (JBH-56), LOCAL ONLY; prod moved to JBH-84 (user, D6). Diff base 4231964 (leader commit 'Tech stack', keep). Check: (1) compose.yaml, .env.example, DEPLOY.md, Makefile, ci-deploy.sh, .github, jbh.caddy unchanged vs 4231964. (2) User-confirmed DB design (D2 + D7): role jbh_monitor LOGIN, GRANT pg_monitor, pg_stat_statements in db postgres, -c shared_preload_libraries=pg_stat_statements -c pg_stat_statements.track=top in compose.local.yaml only; initdb/02 skips with exit 0 when JBH_PG_MONITOR_PASSWORD empty, password passed via psql :'pw'. (3) compose.local.yaml jbh-alloy: grafana/alloy:v1.22.0, user 473:473, ports only on 127.0.0.1 (14317,14318,12347,12345), no Docker socket, healthcheck /-/ready, DSN nested default+override. OTEL_EXPORTER_OTLP_ENDPOINT/OTEL_SDK_DISABLED/JBH_ENV names exact on 4 Docker backends. (4) Alloy: header comment in every file (what, who imports, env vars); no secret in a file; D3 remote_write, D5 transform, D6 honor_labels, D15 faro.receiver; module args reusable by a later prod.alloy. (5) Docs: LOCAL.md SQL for existing volume, Mac Postgres, IDE settings; README local paragraph only; observability/README Tech stack kept; design.md 'Moved to JBH-84' section kept in full. Signals: all assistant-run by the leader (assistantRunsTests): compose config -q both files exit 0, V9-V14, V17, guard run exit 0, alloy validate local + modules + combined wiring exit 0 with failing negative controls. No unit or integration tests (excluded by plan, test_first skipped). Values: Performance-Profile none; Test-Execution-Policy default (assistant runs nothing; leader runs build/suite); Language English (B2). Security-Gate: skip — user decision D11.",
     "rounds": []
   },
   "decisions": [
@@ -541,6 +541,24 @@
       "decision": "revised local-only design briefing approved",
       "why": "user answered 'yes OK, continue'",
       "covered_by": null
+    },
+    {
+      "id": "D10",
+      "at": "2026-11-15T16:58:00Z",
+      "scope": "change",
+      "made_by": "user",
+      "decision": "run alloy validate (V16) in a throwaway container",
+      "why": "user chose 'Run it'; only check that proves Alloy syntax and module wiring",
+      "covered_by": null
+    },
+    {
+      "id": "D11",
+      "at": "2026-11-15T17:01:00Z",
+      "scope": "review:security-gate",
+      "made_by": "user",
+      "decision": "skip /security-review for this change",
+      "why": "user chose 'Skip it'; local-only config, ports bound to 127.0.0.1; leader recommended run",
+      "covered_by": null
     }
   ],
   "events": [
@@ -598,6 +616,26 @@
       "at": "2026-11-15T16:50:00Z",
       "agent": "leader",
       "event": "wave 2 verified by the leader (assistantRunsTests): docker compose config -q for compose.yaml and compose.local.yaml exit 0; V9-V14, V17 ok; guard run exit 0. Complexity-Check = same compose commands, exit 0."
+    },
+    {
+      "at": "2026-11-15T16:58:00Z",
+      "agent": "leader",
+      "event": "V16 by the leader: docker run grafana/alloy:v1.22.0 validate — local.alloy exit 0; each module exit 0; combined file (modules inline + local wiring) exit 0. Negative controls (bad module arg, bad custom-component arg, bad syntax) exit 1. Note: validate does not load import.file modules."
+    },
+    {
+      "at": "2026-11-15T16:58:00Z",
+      "agent": "leader",
+      "event": "size: git diff --shortstat 4231964...HEAD = see commit; estimate was 12 files ~520 lines (code+docs). Status verified."
+    },
+    {
+      "at": "2026-11-15T16:58:30Z",
+      "agent": "leader",
+      "event": "real size 4231964...HEAD without openspec/: 12 files, +483 / -9 (estimate 12 files, ~520 lines). With artifacts: 21 files, +1735."
+    },
+    {
+      "at": "2026-11-15T17:01:00Z",
+      "agent": "leader",
+      "event": "review round 1 dispatched to jbh-deploy-reviewer (sonnet), Security-Gate: skip (D11)"
     }
   ]
 }

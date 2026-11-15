@@ -5,7 +5,7 @@
   "module": ".",
   "roadmap": null,
   "request": "jbh-leader (user decision): option (a), the idempotent make local-pg-monitor target. New branch and new PR, not PR #2. Not Liquibase. Keep initdb for new Docker volumes. JBH-84 reuses the same SQL file for the VPS. Start from an up-to-date main. No Postgres restart by the assistant: print the message for the user.",
-  "status": "in-review",
+  "status": "archived",
   "rollup": {
     "current": [],
     "pending": [],
@@ -21,7 +21,7 @@
     ]
   },
   "created_at": "2026-11-15T19:50:00Z",
-  "updated_at": "2026-11-15T20:08:00Z",
+  "updated_at": "2026-11-15T20:15:00Z",
   "leader": {
     "assistant": "Claude Code",
     "model": "claude-opus-5-5"
@@ -161,10 +161,24 @@
     }
   ],
   "review": {
-    "status": "pending",
+    "status": "approved",
     "agent": "jbh-deploy-reviewer",
     "brief": "Change deploy-add-local-pg-monitor (JBH-56), base main. User decisions: D1 ticket JBH-56; D2 one shared re-runnable SQL initdb/sql/pg-monitor.sql (subfolder, not auto-run by the entrypoint), used by initdb/02 and local-pg-monitor.sh, later JBH-84; D3 safe preload check: contains -> run SQL, empty -> only ALTER SYSTEM shared_preload_libraries (NO track line, D5), print restart, exit 0; other libs -> exit 1, no change; D4 SRP only; D5 DB gate confirmed. Script never restarts Postgres, never reads/writes an admin password file; make recipe never prints JBH_PG_MONITOR_PASSWORD. Also check task 5.3: env vars for an IDE service must match in 3 places: compose.local.yaml backend env (Docker value), LOCAL.md 'A service run from the IDE' + swap table, and local.mk local-swap output. Unchanged vs main: compose.yaml, compose.local.yaml, .env.example, DEPLOY.md, Makefile, README.md, ci-deploy.sh, .github. Signals, all leader-run: sh -n both scripts exit 0; make -n local-pg-monitor and local-swap ok, no secret shown; no top-level initdb/*.sql; compose config -q both exit 0; negative runs (no password, bad URL, no psql) exit 1. NOT run: the SQL against a real Postgres (V9 is the user's). No unit tests (excluded). Values: Performance-Profile none; Test-Execution-Policy default; Language English (B2). Security-Gate: run (D11).",
-    "rounds": []
+    "rounds": [
+      {
+        "round": 1,
+        "at": "2026-11-15T20:20:00Z",
+        "verdict": "approved",
+        "findings": [],
+        "security": {
+          "status": "passed",
+          "ran_at": "2026-11-15T20:20:00Z",
+          "scope": "origin/HEAD",
+          "findings": [],
+          "note": "No exploitable issue: password reaches SQL only via psql :'pw' literal; sed reads one key; no secret printed. Observation: -v pw is visible in process list (accepted in design)."
+        }
+      }
+    ]
   },
   "decisions": [
     {
@@ -297,6 +311,11 @@
       "at": "2026-11-15T20:08:00Z",
       "agent": "leader",
       "event": "review round 1 dispatched to jbh-deploy-reviewer (sonnet), Security-Gate: run"
+    },
+    {
+      "at": "2026-11-15T20:15:00Z",
+      "agent": "leader",
+      "event": "archived as 2026-11-15-deploy-add-local-pg-monitor; specs synced (postgres-monitoring +2 ~1, deploy-docs +1). Leader checked: kkpa-docker-lab/lgtm/prometheus.yaml has 0 job_name lines."
     }
   ]
 }

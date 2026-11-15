@@ -59,11 +59,13 @@ Design and tools: [`observability/README.md`](observability/README.md).
 
 ### A service run from the IDE (c)
 
-A service in the IDE sends OTLP to Alloy on the Mac port, and export is off by default. Set both:
+A service in the IDE sends OTLP to Alloy on the Mac port, and export is off by default. Set all three
+(the same values `compose.local.yaml` gives the Docker services, except the host and port):
 
 ```
 OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:14317
 OTEL_SDK_DISABLED=false
+JBH_ENV=local
 ```
 
 Put them in the IDE run configuration, or in the service's local profile. Alloy scrapes the metrics endpoints at `host.docker.internal`,
@@ -112,6 +114,7 @@ Env vars for a service you run from the IDE:
 | Service | Env vars |
 |---------|----------|
 | all four | `CONSUL_DISCOVERY_HOSTNAME=host.docker.internal` |
+| all four | `OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:14317`, `OTEL_SDK_DISABLED=false`, `JBH_ENV=local` (see "A service run from the IDE"). |
 | `jbh-iam`, `jbh-gateway` | `JBH_JWT_SECRET` = the same value as in `.env.local`. If it differs, every call gets a 401. |
 | `jbh-iam` | Profile `local`. Database: `DB_HOST=localhost`, `DB_PORT=5433`, `DB_NAME=jbh`, `DB_USERNAME`, `JBH_ADMIN_PASS` (the Postgres values from `.env.local`). |
 | `jbh-personal-finance` | `DATABASE_URL=jdbc:postgresql://localhost:5433/jbh_finance`, `DATABASE_USERNAME`, `DATABASE_PASSWORD`. Quarkus dev mode already sets `CONSUL_HEALTH_CHECK_HOST=host.docker.internal`. |
@@ -123,6 +126,6 @@ Env vars for a service you run from the IDE:
 - IAM runs with the `local` profile in Docker. The `prod` profile sets Secure cookies, and a browser drops them on `http://localhost`.
 - The finance image must include the `CONSUL_DISCOVERY_HOSTNAME` change (JBH-63). An older `latest` image saves its container ID in Consul, and the gateway returns 503.
 - `make local-up` does not start `jbh-web`. `ionic serve` stays the frontend.
-- Metrics can be stored twice. The local LGTM also scrapes `jbh-personal-finance` and `jbh-iam` itself, and Alloy sends the same series.
-  Ask the docker-lab owner to remove the `jbh-personal-finance` and `jbh-iam` jobs from `kkpa-docker-lab/lgtm/prometheus.yaml`.
+- The local LGTM does not scrape the JBH services: its old `jbh-personal-finance` and `jbh-iam` jobs were removed from
+  `kkpa-docker-lab/lgtm/prometheus.yaml`. Do not add scrape jobs there. Alloy already sends these series, so they would be stored twice.
 - Images are `latest`: a new `main` build changes what you test. `make local-up` pulls them each time.

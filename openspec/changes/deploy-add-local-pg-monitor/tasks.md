@@ -34,4 +34,6 @@ Depends on: 2, 4 (names and behavior).
 - [x] 5.1 `LOCAL.md`: rewrite "Existing Postgres volume (a)" and "Postgres installed on the Mac (b)" with `make local-pg-monitor`, the `PG_ADMIN_URL` example, the restart-then-run-again note, the `JBH_PG_MONITOR_DSN` line, and a pointer to `initdb/sql/pg-monitor.sql` (D6).
 - [x] 5.2 `CLAUDE.md`: files table rows (D6). `.env.local.example`: one comment line (D6). Disjoint from 5.1; can run in parallel.
 
+- [x] 5.3 `LOCAL.md` IDE env vars (user request via the JBH-55 leader): add `JBH_ENV=local` to "A service run from the IDE"; add the three OTel vars to the swap table for all four; rewrite the out-of-date docker-lab note in "Catches" as a past fact. `local.mk` `local-swap` prints the same OTel line, so both say the same.
+
 Size estimate: 12 files, ~330 changed lines (tests and docs included)

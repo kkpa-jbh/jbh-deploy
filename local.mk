@@ -29,6 +29,7 @@ local-swap:
 	@echo ""
 	@echo "$(s) is stopped. Start it from your IDE with these env vars:"
 	@echo "  CONSUL_DISCOVERY_HOSTNAME=host.docker.internal"
+	@echo "  OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:14317 OTEL_SDK_DISABLED=false JBH_ENV=local"
 	@case "$(s)" in \
 	  jbh-iam) echo "  JBH_JWT_SECRET=<same value as in .env.local>"; \
 	           echo "  DB_HOST=localhost DB_PORT=5433 DB_NAME=jbh DB_USERNAME=<POSTGRES_USER> JBH_ADMIN_PASS=<POSTGRES_PASSWORD>"; \

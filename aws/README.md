@@ -23,7 +23,8 @@ Internet :443 → ALB (public subnets) → Fargate tasks :7777 (private subnets)
 ### How a request flows
 
 1. The ALB accepts only `/jbh-api/finance/*` and `/jbh-api/preferences/*`. Every other path answers `404`.
-   `/jbh-api/notifications/*` is blocked on purpose: it sends email.
+   `/jbh-api/notifications/*` answers `404` because finance has no notification endpoint any more.
+   This stack sends no email: it runs no notification service.
 2. A task handles the request. To know the user, it calls `jbh-iam` through the gateway on the VPS
    (`GatewayUrl`, default `https://jbh.usemagus.cloud`). A missing or bad token gets `401` there.
 3. Consul is off (`CONSUL_ENABLED=false`). The ALB finds the tasks by IP.
@@ -87,9 +88,6 @@ such as `unused`. Without real AI keys the service still starts; only the bank s
 aws secretsmanager create-secret \
   --name jbh-finance/app \
   --secret-string '{
-    "GMAIL_USERNAME": "...",
-    "GMAIL_APP_PASSWORD": "...",
-    "GMAIL_FROM": "...",
     "AZURE_DI_ENDPOINT": "unused",
     "AZURE_DI_API_KEY": "unused",
     "OPENROUTER_API_KEY": "unused",

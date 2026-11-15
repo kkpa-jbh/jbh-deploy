@@ -1,0 +1,504 @@
+{
+  "schema_version": 1,
+  "kind": "change",
+  "change": "deploy-add-notification-service",
+  "module": "jbh-deploy",
+  "roadmap": null,
+  "request": "JBH-74 section 7: add service jbh-notification to compose.yaml and compose.local.yaml (image ghcr.io/kkpa-jbh/jbh-notification, port 7778, jbh-private only, memory limit 384M, -Xmx192m, healthcheck /q/health, DATABASE_URL on jbh_finance). Move GMAIL_* and JBH_FRONTEND_URL from jbh-personal-finance to it. Update .env.example, ci-deploy.sh, Makefile and the Deploy workflow (fifth app service, JBH_NOTIFICATION_TAG). jbh.caddy keeps the 404 block. Update README.md (system map, remove the 'Build cycle' known gap, add jbh-commons-lib and jbh-notification), CI.md (remove publish-contracts, add commons-lib publish and notification publish + image) and LOCAL.md.",
+  "status": "archived",
+  "rollup": {
+    "current": [],
+    "pending": [],
+    "blocked": [],
+    "done": [
+      "1.1",
+      "1.2",
+      "1.3",
+      "2.1",
+      "2.2",
+      "2.3",
+      "2.4",
+      "3.1",
+      "3.2",
+      "3.3",
+      "4.1",
+      "5.1",
+      "5.2",
+      "5.3",
+      "5.4",
+      "5.5",
+      "6.1"
+    ]
+  },
+  "created_at": "2026-11-14T22:00:17Z",
+  "updated_at": "2026-11-14T22:27:17Z",
+  "leader": {
+    "assistant": "Claude Code",
+    "model": "claude-opus-5-5"
+  },
+  "git": {
+    "strategy": "auto",
+    "branch": "ft/CH1-JBH-74-deploy-add-notification-service",
+    "base": "1a371e3210c035722aee71e8e27efe06df7d94be",
+    "ticket": "JBH-74",
+    "ticket_url": null,
+    "ticket_tracker": "linear",
+    "created_at": "2026-11-14T22:00:17Z"
+  },
+  "tasks": [
+    {
+      "id": "1.1",
+      "title": "compose.yaml: add jbh-notification, remove email env from finance",
+      "module": "jbh-deploy",
+      "depends_on": [],
+      "parallel_ok": true,
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "sonnet",
+      "started_at": "2026-11-14T22:00:49Z",
+      "completed_at": "2026-11-14T22:02:40Z",
+      "duration_seconds": 111,
+      "notes": "jbh-notification added (jbh-private, 384M, -Xmx192m, 0.5 CPU); finance lost GMAIL_* and JBH_FRONTEND_URL; header comments updated.",
+      "budget": null
+    },
+    {
+      "id": "1.2",
+      "title": "compose.local.yaml: add jbh-notification, remove email env from finance",
+      "module": "jbh-deploy",
+      "depends_on": [],
+      "parallel_ok": true,
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "sonnet",
+      "started_at": "2026-11-14T22:00:49Z",
+      "completed_at": "2026-11-14T22:02:40Z",
+      "duration_seconds": 111,
+      "notes": "Local service on 7778 with host.docker.internal; finance lost email env.",
+      "budget": null
+    },
+    {
+      "id": "1.3",
+      "title": ".env.example and .env.local.example: tag, limits, email block label",
+      "module": "jbh-deploy",
+      "depends_on": [],
+      "parallel_ok": true,
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "sonnet",
+      "started_at": "2026-11-14T22:00:49Z",
+      "completed_at": "2026-11-14T22:02:40Z",
+      "duration_seconds": 111,
+      "notes": "Tag, three NOTIFICATION_* limits, Gmail block relabelled, total about 3.3 GB.",
+      "budget": null
+    },
+    {
+      "id": "2.1",
+      "title": "ci-deploy.sh: fifth app service",
+      "module": "jbh-deploy",
+      "depends_on": [],
+      "parallel_ok": true,
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "sonnet",
+      "started_at": "2026-11-14T22:00:49Z",
+      "completed_at": "2026-11-14T22:02:40Z",
+      "duration_seconds": 111,
+      "notes": "Fifth case branch and refuse text; SHA check and no-eval untouched. Leader fixed one extra tab.",
+      "budget": null
+    },
+    {
+      "id": "2.2",
+      "title": "deploy.yml: add jbh-notification option",
+      "module": "jbh-deploy",
+      "depends_on": [],
+      "parallel_ok": true,
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "sonnet",
+      "started_at": "2026-11-14T22:00:49Z",
+      "completed_at": "2026-11-14T22:02:40Z",
+      "duration_seconds": 111,
+      "notes": "One option line added; step comments kept.",
+      "budget": null
+    },
+    {
+      "id": "2.3",
+      "title": "Makefile: comment says 5 app services",
+      "module": "jbh-deploy",
+      "depends_on": [],
+      "parallel_ok": true,
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "sonnet",
+      "started_at": "2026-11-14T22:00:49Z",
+      "completed_at": "2026-11-14T22:02:40Z",
+      "duration_seconds": 111,
+      "notes": "Makefile comment says 5 app services.",
+      "budget": null
+    },
+    {
+      "id": "2.4",
+      "title": "local.mk: swap list and IDE env branch",
+      "module": "jbh-deploy",
+      "depends_on": [],
+      "parallel_ok": true,
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "sonnet",
+      "started_at": "2026-11-14T22:00:49Z",
+      "completed_at": "2026-11-14T22:02:40Z",
+      "duration_seconds": 111,
+      "notes": "LOCAL_SWAPPABLE and IDE env case branch for jbh-notification.",
+      "budget": null
+    },
+    {
+      "id": "3.1",
+      "title": "aws/finance-fargate.yaml: remove GMAIL_* and JBH_FRONTEND_URL",
+      "module": "jbh-deploy",
+      "depends_on": [],
+      "parallel_ok": true,
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "sonnet",
+      "started_at": "2026-11-14T22:00:49Z",
+      "completed_at": "2026-11-14T22:02:40Z",
+      "duration_seconds": 111,
+      "notes": "GMAIL_* secrets, JBH_FRONTEND_URL, FrontendUrl removed; ALB rules unchanged.",
+      "budget": null
+    },
+    {
+      "id": "3.2",
+      "title": "aws/README.md: remove GMAIL_*, add no-email line",
+      "module": "jbh-deploy",
+      "depends_on": [],
+      "parallel_ok": true,
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "sonnet",
+      "started_at": "2026-11-14T22:00:49Z",
+      "completed_at": "2026-11-14T22:02:40Z",
+      "duration_seconds": 111,
+      "notes": "Secret JSON without GMAIL_*; no-email line; notifications note reworded.",
+      "budget": null
+    },
+    {
+      "id": "3.3",
+      "title": "observability/README.md: jbh-notification metrics row",
+      "module": "jbh-deploy",
+      "depends_on": [],
+      "parallel_ok": true,
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "sonnet",
+      "started_at": "2026-11-14T22:00:49Z",
+      "completed_at": "2026-11-14T22:02:40Z",
+      "duration_seconds": 111,
+      "notes": "jbh-notification metrics row added.",
+      "budget": null
+    },
+    {
+      "id": "4.1",
+      "title": "README.md: system map items of D8, remove Build cycle gap",
+      "module": "jbh-deploy",
+      "depends_on": [
+        "1.1",
+        "1.2",
+        "1.3"
+      ],
+      "parallel_ok": false,
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "sonnet",
+      "started_at": "2026-11-14T22:02:47Z",
+      "completed_at": "2026-11-14T22:05:28Z",
+      "duration_seconds": 161,
+      "notes": "System map: new rows, mermaid, routes, Consul, calls, DB, build and CI order, token list; Build cycle gap removed; release-order pointer.",
+      "budget": null
+    },
+    {
+      "id": "5.1",
+      "title": "CI.md: items of D8",
+      "module": "jbh-deploy",
+      "depends_on": [
+        "2.1",
+        "2.2",
+        "2.3",
+        "2.4"
+      ],
+      "parallel_ok": false,
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "sonnet",
+      "started_at": "2026-11-14T22:02:47Z",
+      "completed_at": "2026-11-14T22:05:28Z",
+      "duration_seconds": 161,
+      "notes": "CI.md D8 items from the real workflow files; publish-contracts removed.",
+      "budget": null
+    },
+    {
+      "id": "5.2",
+      "title": "LOCAL.md: port, health, swap, IDE env",
+      "module": "jbh-deploy",
+      "depends_on": [
+        "2.1",
+        "2.2",
+        "2.3",
+        "2.4"
+      ],
+      "parallel_ok": false,
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "sonnet",
+      "started_at": "2026-11-14T22:02:47Z",
+      "completed_at": "2026-11-14T22:05:28Z",
+      "duration_seconds": 161,
+      "notes": "LOCAL.md: port 7778, health list, swap list, IDE env row.",
+      "budget": null
+    },
+    {
+      "id": "5.3",
+      "title": "DEPLOY.md: items of D8 and new 2.6 release order",
+      "module": "jbh-deploy",
+      "depends_on": [
+        "2.1",
+        "2.2",
+        "2.3",
+        "2.4"
+      ],
+      "parallel_ok": false,
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "sonnet",
+      "started_at": "2026-11-14T22:02:47Z",
+      "completed_at": "2026-11-14T22:05:28Z",
+      "duration_seconds": 161,
+      "notes": "DEPLOY.md D8 items; new 2.6 release order; old 2.6 renumbered 2.7.",
+      "budget": null
+    },
+    {
+      "id": "5.4",
+      "title": "CI.md: all JBH repos have protect-main",
+      "module": "jbh-deploy",
+      "depends_on": [
+        "2.1",
+        "2.2",
+        "2.3",
+        "2.4"
+      ],
+      "parallel_ok": false,
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "sonnet",
+      "started_at": "2026-11-14T22:02:47Z",
+      "completed_at": "2026-11-14T22:05:28Z",
+      "duration_seconds": 161,
+      "notes": "CI.md: All JBH repos have the ruleset protect-main. No exception.",
+      "budget": null
+    },
+    {
+      "id": "5.5",
+      "title": "CI.md: jbh-notification CI workflow and required verify check",
+      "module": "jbh-deploy",
+      "depends_on": [
+        "2.1",
+        "2.2",
+        "2.3",
+        "2.4"
+      ],
+      "parallel_ok": false,
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "sonnet",
+      "started_at": "2026-11-14T22:02:47Z",
+      "completed_at": "2026-11-14T22:05:28Z",
+      "duration_seconds": 161,
+      "notes": "CI.md: jbh-notification CI workflow; verify required in jbh-notification and jbh-commons-lib.",
+      "budget": null
+    },
+    {
+      "id": "6.1",
+      "title": "Static verification V1-V14 (leader runs)",
+      "module": "jbh-deploy",
+      "depends_on": [
+        "1.1",
+        "1.2",
+        "1.3",
+        "2.1",
+        "2.2",
+        "2.3",
+        "2.4",
+        "3.1",
+        "3.2",
+        "3.3",
+        "4.1",
+        "5.1",
+        "5.2",
+        "5.3",
+        "5.4",
+        "5.5"
+      ],
+      "parallel_ok": false,
+      "status": "done",
+      "agent": "leader",
+      "model": "claude-opus-5-5",
+      "started_at": "2026-11-14T22:05:50Z",
+      "completed_at": "2026-11-14T22:05:50Z",
+      "duration_seconds": 0,
+      "notes": "V1-V14 all pass. V10 run: deploy jbh-postgres, deploy jbh-consul, bad tag, rollback with tag all exit 2 before any docker command.",
+      "budget": null
+    }
+  ],
+  "review": {
+    "status": "reviewer-approved",
+    "agent": "jbh-deploy-reviewer",
+    "brief": "Scope: git diff 97afc12...HEAD (change commits 2e09cea cdbc7dc 303ffb1 9292853 661293b). 7aa7041 and 97afc12 are not this change. User decisions: aws/ loses GMAIL_* and JBH_FRONTEND_URL (no email on AWS); Complexity-Check = compose config -q; briefing accepted; security-review skipped by user (Security-Gate: skip). No DB object changes (no gate). test_first skipped: no unit tests; verification is static V1-V14, all run by the leader (assistantRunsTests), none user-reported. Check: ci-deploy.sh list == deploy.yml options, strict, 40-hex SHA, no eval; jbh-notification only on jbh-private, no ports in compose.yaml; finance has no GMAIL_*/JBH_FRONTEND_URL; docs match code and real workflow files (../jbh-commons-lib, ../jbh-notification); CI.md says all JBH repos have protect-main, verify required in two repos; DEPLOY.md 2.6 release order; jbh.caddy and initdb unchanged; Build cycle gap removed.",
+    "rounds": [
+      {
+        "round": 1,
+        "verdict": "approved",
+        "at": "2026-11-14T22:26:57Z",
+        "findings": [],
+        "security": {
+          "status": "skipped",
+          "ran_at": null,
+          "scope": null,
+          "findings": [],
+          "note": "Skipped: the user chose to skip /security-review at the Step 7 gate (decisions[] scope review:security-gate, made_by user)."
+        },
+        "note": "All brief checks pass by reading. Static checks V1-V14 were run by the leader (not re-run)."
+      }
+    ]
+  },
+  "test_first": {
+    "status": "skipped",
+    "commit": null,
+    "tests": [],
+    "approved_at": null
+  },
+  "decisions": [
+    {
+      "id": "D1",
+      "at": "2026-11-14T22:00:17Z",
+      "scope": "change",
+      "made_by": "user",
+      "decision": "Complexity-Check = docker compose config -q on both compose files",
+      "why": "repo has no code with real complexity; no complexity tool installed",
+      "covered_by": null
+    },
+    {
+      "id": "D2",
+      "at": "2026-11-14T22:00:17Z",
+      "scope": "change",
+      "made_by": "user",
+      "decision": "Remove GMAIL_* and JBH_FRONTEND_URL from aws/ (Fargate stack sends no email)",
+      "why": "finance loses notification code; values would be dead; AWS notification service rejected as too large",
+      "covered_by": null
+    },
+    {
+      "id": "D3",
+      "at": "2026-11-14T22:00:17Z",
+      "scope": "change",
+      "made_by": "user",
+      "decision": "Design briefing (Step 3a) accepted, incl. CI.md protection and verify-check items",
+      "why": "size 15 files / ~450 lines, at but not over cap 500/15",
+      "covered_by": null
+    },
+    {
+      "id": "D4",
+      "at": "2026-11-14T22:00:17Z",
+      "scope": "concurrency",
+      "made_by": "leader",
+      "decision": "No new race risk; Liquibase shared changelog already accepted by user in plan",
+      "why": "tasks are static config/docs edits; per-service deploy concurrency is pre-existing",
+      "covered_by": "JBH-74 plan Release rules"
+    },
+    {
+      "id": "D5",
+      "at": "2026-11-14T22:00:17Z",
+      "scope": "change",
+      "made_by": "leader",
+      "decision": "test_first skipped; database design gate not triggered",
+      "why": "no unit-testable code, plan excludes unit tests; no DB object changes",
+      "covered_by": "JBH-74 plan Unit tests: excluded"
+    },
+    {
+      "id": "D6",
+      "at": "2026-11-14T22:00:17Z",
+      "scope": "change",
+      "made_by": "leader",
+      "decision": "Implementation waits for jbh-leader 'go section 7'; JBH-74 not moved in Linear",
+      "why": "sections 2-6 must land first; jbh-leader owns ticket status",
+      "covered_by": "jbh-leader dispatch message"
+    },
+    {
+      "scope": "task:5.1",
+      "made_by": "leader",
+      "decision": "Accept CI.md text that jbh-notification runs its tests on PRs (ci.yml verify), not the design.md line saying it runs none",
+      "why": "real ci.yml runs clean verify with all tests; docs must match the code",
+      "covered_by": "repo rule: trust the code",
+      "id": "D7",
+      "at": "2026-11-14T22:05:28Z"
+    },
+    {
+      "scope": "review:security-gate",
+      "made_by": "user",
+      "decision": "Skip /security-review for this change",
+      "why": "user choice at the Step 7 security gate; diff touches ci-deploy.sh, Deploy workflow, secret env",
+      "covered_by": null,
+      "id": "D8",
+      "at": "2026-11-14T22:26:19Z"
+    }
+  ],
+  "events": [
+    {
+      "at": "2026-11-14T22:00:17Z",
+      "agent": "leader",
+      "event": "artifacts written by worker jbh-deploy (sonnet), validated --strict, briefing accepted by user; progress.json created at proposal stage and committed with artifacts"
+    },
+    {
+      "at": "2026-11-14T22:00:49Z",
+      "agent": "leader",
+      "event": "go section 7 from jbh-leader; dispatched worker jbh-deploy (sonnet) for wave 1 (tasks 1.1-3.3)"
+    },
+    {
+      "at": "2026-11-14T22:02:40Z",
+      "agent": "leader",
+      "event": "wave 1 reconciled; verified by the leader (assistantRunsTests): V1 V2 exit 0, V3-V9 V11 V13 as expected, V7 fails with the guard message, sh -n/bash -n ci-deploy.sh exit 0; Complexity-Check (V1+V2) exit 0"
+    },
+    {
+      "at": "2026-11-14T22:02:47Z",
+      "agent": "leader",
+      "event": "wave 1 commit cdbc7dc"
+    },
+    {
+      "at": "2026-11-14T22:02:47Z",
+      "agent": "leader",
+      "event": "dispatched worker jbh-deploy (sonnet) for wave 2 (tasks 4.1, 5.1-5.5)"
+    },
+    {
+      "at": "2026-11-14T22:05:28Z",
+      "agent": "leader",
+      "event": "wave 2 reconciled; verified by the leader: V1 V2 exit 0, V12 no match, V13 empty, V14 exit 0"
+    },
+    {
+      "at": "2026-11-14T22:05:50Z",
+      "agent": "leader",
+      "event": "leader runs task 6.1 (static verification)"
+    },
+    {
+      "at": "2026-11-14T22:05:50Z",
+      "agent": "leader",
+      "event": "wave 3 (6.1) verified by the leader (assistantRunsTests): V1 V2 exit 0, V3-V9 V11-V13 as expected, V10 four refusals exit 2, V14 sh -n exit 0"
+    },
+    {
+      "at": "2026-11-14T22:05:50Z",
+      "agent": "leader",
+      "event": "Step 6: openspec validate --strict valid; all tasks.md boxes ticked. Real size (git diff --shortstat 1a371e3...HEAD, without openspec/): 15 files, 290+/140- = 430 lines; estimate was 15 files, ~450"
+    },
+    {
+      "at": "2026-11-14T22:27:17Z",
+      "agent": "leader",
+      "event": "reviewer jbh-deploy-reviewer approved round 1, no findings, security skipped (user); archiving"
+    }
+  ]
+}

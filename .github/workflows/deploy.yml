@@ -1,13 +1,20 @@
-# Deploys or rolls back one service on the VPS, then waits until it is healthy (ci-deploy.sh).
-# deploy: newest image; if it is not healthy, the VPS goes back to the image from before by itself.
-# rollback: the image that ran before the last deploy.
-# Started by hand (Actions → Deploy → Run workflow), or by jbh-app's Image workflow with a tag (CI.md, "Auto-deploy").
+# Deploy: deploys or rolls back one service on the VPS, then waits until it is healthy (ci-deploy.sh).
+# - deploy: the newest image. If it is not healthy, the VPS goes back to the image from before by itself.
+# - rollback: the image that ran before the last deploy.
+# When it runs: by hand (Actions → Deploy → Run workflow), or from jbh-app's Image workflow
+# with a tag (CI.md, "Auto-deploy"). It never runs on a push.
+
+# The name shown in the GitHub "Actions" tab.
 name: Deploy
+# The title of each run in the run list, e.g. "deploy jbh-iam <sha>".
 run-name: ${{ inputs.action }} ${{ inputs.service }} ${{ inputs.tag }}
 
 on:
+  # Only a manual start or an API call (another workflow) starts this workflow.
+  # The inputs below are the form fields of the "Run workflow" button.
   workflow_dispatch:
     inputs:
+      # What to do: a new image, or go back one image.
       action:
         description: deploy = newest image. rollback = the image from before the last deploy.
         type: choice
@@ -15,6 +22,7 @@ on:
         options:
           - deploy
           - rollback
+      # Which app service. Only these values are possible in the form.
       service:
         description: Service
         type: choice
@@ -24,11 +32,14 @@ on:
           - jbh-gateway
           - jbh-iam
           - jbh-personal-finance
+          - jbh-notification
+      # Which image version. ci-deploy.sh accepts only a full 40-character git SHA.
       tag:
         description: Optional, deploy only. Full git SHA of the image. Empty = the tag in .env on the VPS (latest).
         type: string
         default: ''
 
+# What the automatic GITHUB_TOKEN may do in this run: nothing.
 # The job only opens an SSH connection. It needs no access to the repo.
 permissions: {}
 
@@ -37,17 +48,25 @@ permissions: {}
 # One group per service, so a waiting deploy of one service never cancels another service's deploy.
 concurrency:
   group: deploy-${{ inputs.service }}
+  # false: a running deploy is never stopped halfway. The new run waits for it.
   cancel-in-progress: false
 
 jobs:
+  # "deploy" is the job id. It gets a fresh, empty Ubuntu VM that is deleted after the run.
   deploy:
     runs-on: ubuntu-latest
     # Pull + up to 3 minutes for health + up to 3 more for an automatic rollback.
     timeout-minutes: 15
     steps:
+      # The only step. There is no checkout: the job needs no file from this repo.
       # The key can run only ci-deploy.sh on the VPS (forced command), whatever command we send.
       # Plain ssh, no third-party action: the secrets go to no other code.
       - name: ${{ inputs.action }} ${{ inputs.service }}
+        # The inputs and secrets go in as env vars, never pasted into the script text.
+        # So a strange input value cannot change the shell command.
+        # - VPS_HOST: the VPS host name or IP (repo secret).
+        # - VPS_SSH_KEY: the private deploy key. Its public half on the VPS can run only ci-deploy.sh.
+        # - VPS_KNOWN_HOSTS: the VPS host key, so ssh can check it talks to the real VPS.
         env:
           ACTION: ${{ inputs.action }}
           SERVICE: ${{ inputs.service }}
@@ -55,6 +74,15 @@ jobs:
           VPS_HOST: ${{ secrets.VPS_HOST }}
           VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
           VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+        # 1. install -m 700 -d: create ~/.ssh, readable only by this user.
+        # 2. Write the key to a file; chmod 600, or ssh refuses to use it.
+        # 3. Write known_hosts from the secret.
+        # 4. ssh flags:
+        #    -i: use this key. IdentitiesOnly=yes: try no other key.
+        #    BatchMode=yes: never ask for a password; fail instead.
+        #    StrictHostKeyChecking=yes: stop if the VPS host key is not the known one.
+        #    The last argument is the command text. The forced command on the VPS reads it
+        #    as "<action> <service> [<tag>]". ${TAG:+ $TAG} adds the tag only when it is set.
         run: |
           install -m 700 -d ~/.ssh
           printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/deploy_key

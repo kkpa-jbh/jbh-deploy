@@ -12,9 +12,11 @@ For details on one project, read the `README.md` inside its folder.
 | `jbh-app` | Frontend (web + mobile) | Ionic / Angular | 8100 (`ionic serve`) |
 | `jbh-gateway` | Single entry point for all API calls | Kotlin, Spring Cloud Gateway | 8080 (env `JBH_GATEWAY_SERVER_PORT`) |
 | `jbh-iam` | Login, users, user groups, JWT | Kotlin, Spring Boot (Gradle) | 9999 |
-| `jbh-personal-finance` | Finance, products, preferences, notifications | Java, Quarkus modular monolith (Maven) | 7777 |
-| `jbh-discovery-nexus` | Service discovery (Consul in Docker) | Consul 1.16 | 8500 |
+| `jbh-personal-finance` | Finance, products, preferences | Java, Quarkus modular monolith (Maven) | 7777 |
+| `jbh-notification` | Notifications (invitation emails). Called only by `jbh-iam`, through the gateway | Java, Quarkus (Maven) | 7778 |
+| `kkpa-docker-lab/consul` | Service discovery (Consul in Docker, local). Lives outside this org, in `../kkpa-docker-lab` | Consul 1.16 | 8500 |
 | `jbh-gateway-client` | Java library to call other services through the gateway | Java 21 library (Maven) | - |
+| `jbh-commons-lib` | Shared Java code for the Quarkus services (`jbh-notification`, `jbh-personal-finance`) | Java 21 library (Maven) | - |
 | `jbh-deploy` | Production deploy (compose, Caddy site, env) and this system map | Docker Compose | - |
 | `logs` | Local log files (not a project) | - | - |
 
@@ -25,13 +27,16 @@ flowchart LR
     app[jbh-app] -->|/jbh-api/**| gw[jbh-gateway :8080]
     gw -->|lb://jbh-iam-service| iam[jbh-iam :9999]
     gw -->|lb://jbh-personal-finance| pf[jbh-personal-finance :7777]
-    gw -. find services .-> consul[(Consul :8500<br/>jbh-discovery-nexus)]
+    gw -->|lb://jbh-notification| nt[jbh-notification :7778]
+    gw -. find services .-> consul[(Consul :8500<br/>kkpa-docker-lab/consul)]
     iam -. register .-> consul
     pf -. register .-> consul
+    nt -. register .-> consul
     pf -->|gateway-client: find user id| gw
     iam -->|gateway-client: send notification| gw
     iam --> db1[(Postgres: jbh)]
     pf --> db2[(Postgres: jbh_finance)]
+    nt --> db2
 ```
 
 ### 1. Frontend to gateway
@@ -50,7 +55,7 @@ Routes live in `jbh-gateway/src/main/resources/application.yml`.
 | `/jbh-api/auth/**` | `jbh-iam-service` (public, no token) |
 | `/jbh-api/users/**`, `/jbh-api/user-groups/**` | `jbh-iam-service` |
 | `/jbh-api/finance/**`, `/jbh-api/preferences/**` | `jbh-personal-finance` |
-| `/jbh-api/notifications/**` | `jbh-personal-finance`. Internal only: in production Caddy answers `404` from the internet. `jbh-iam` still calls it through the gateway. |
+| `/jbh-api/notifications/**` | `jbh-notification`. Internal only: in production Caddy answers `404` from the internet. `jbh-iam` still calls it through the gateway. |
 | `/jbh-api/products/**` | `jbh-personal-finance`, but no endpoint uses it. Products live under `/jbh-api/finance/products`. |
 | `/jbh-api/admin/**` | no route. IAM admin endpoints work only on port 9999. |
 
@@ -61,7 +66,7 @@ Real endpoint prefixes in the services:
 | `jbh-iam` | `/jbh-api/auth`, `/jbh-api/users`, `/jbh-api/user-groups`, `/jbh-api/admin` | `Routes` + `ApiWebConfig` |
 | `jbh-personal-finance` (finance) | `/jbh-api/finance/...` | `ApiConstants`, `FinanceApiRoutes` |
 | `jbh-personal-finance` (preferences) | `/jbh-api/preferences/v1`, `/jbh-api/preferences/team-preferences/v1` | `PreferencesApiConstants`, `PreferencesApiRoutes` |
-| `jbh-personal-finance` (notifications) | `/jbh-api/notifications/v1` | `NotificationRoutes` |
+| `jbh-notification` | `/jbh-api/notifications/v1` | `NotificationRoutes` |
 
 The gateway also:
 
@@ -72,13 +77,14 @@ The gateway also:
 
 ### 3. Service discovery
 
-- `jbh-discovery-nexus` runs Consul in Docker. UI: http://localhost:8500
-- `jbh-gateway`, `jbh-iam` and `jbh-personal-finance` register in Consul at start.
-- Consul host: env `CONSUL_HOST` in all three (default `localhost`).
+- Locally, Consul runs from `kkpa-docker-lab/consul` (`make consul up`, memory limit 500 MB). UI: http://localhost:8500
+  The old `jbh-discovery-nexus` repo is archived.
+- `jbh-gateway`, `jbh-iam`, `jbh-personal-finance` and `jbh-notification` register in Consul at start.
+- Consul host: env `CONSUL_HOST` in all four (default `localhost`).
 - The address the gateway uses to reach a service is the one it registered:
   `jbh-iam` and `jbh-gateway` register env `CONSUL_DISCOVERY_HOSTNAME` (default `localhost`; Docker: the service name),
-  `jbh-personal-finance` registers `CONSUL_DISCOVERY_HOSTNAME` when it is set; otherwise its container IP (`CONSUL_PREFER_IP=true`).
-  The local Docker stack (`compose.local.yaml`) sets `host.docker.internal` for all three.
+  `jbh-personal-finance` and `jbh-notification` register `CONSUL_DISCOVERY_HOSTNAME` when it is set; otherwise its container IP (`CONSUL_PREFER_IP=true`).
+  The local Docker stack (`compose.local.yaml`) sets `host.docker.internal` for all four.
 - If a service is not registered, the gateway cannot route to it.
 
 ### 4. Service to service calls
@@ -94,13 +100,13 @@ If you forget, they keep calling port 8080. On a server where another program us
 |--------|------|-----|
 | `jbh-personal-finance` (finance, preferences) | `getUserClient().findUserId(...)` → `GET /jbh-api/users/find-user-id` on `jbh-iam` | Get the user id from the JWT |
 | `jbh-personal-finance` (team preferences) | `getUserClient().findUserGroup(...)` → `GET /jbh-api/user-groups/{id}` on `jbh-iam` | Check that the caller is a team member (`403`/`404` = not a member) |
-| `jbh-iam` (user groups) | `getNotificationClient().sendNotification(...)` → `POST /jbh-api/notifications/v1?type=EMAIL` on `jbh-personal-finance` | Send team invitation emails |
+| `jbh-iam` (user groups) | `getNotificationClient().sendNotification(...)` → `POST /jbh-api/notifications/v1?type=EMAIL` on `jbh-notification` | Send team invitation emails |
 
 **Circuit breaker.** Every domain client has one (Resilience4j), named `<sourceService>.<domain>`
 (`JBH_FINANCE_API.User`, `JBH_PREFERENCES_API.User`, `JBH_IAM_API.Notification`).
 After too many failures (no response, or `502`/`503`/`504`) it opens for 30 s: calls fail at once with error code
 `CIRCUIT_OPEN` and nothing is sent. State is per instance. Rules: `jbh-gateway-client/README.md`.
-Metrics: `resilience4j_circuitbreaker_*` on `/q/metrics` (finance) and `/actuator/prometheus` (IAM).
+Metrics: `resilience4j_circuitbreaker_*` on `/q/metrics` (finance, notification) and `/actuator/prometheus` (IAM).
 Dashboard: `observability/grafana/jbh-circuit-breakers.json` (see `observability/README.md`).
 
 ### 5. Authentication
@@ -114,12 +120,13 @@ Dashboard: `observability/grafana/jbh-circuit-breakers.json` (see `observability
 
 ### 6. Databases
 
-Both services use Postgres on `localhost:5432`.
+The services use Postgres on `localhost:5432`.
 
 | Service | Database | Env vars |
 |---------|----------|----------|
 | `jbh-iam` | `jbh` (default, and what `make db-create` creates) | `DB_HOST`, `DB_NAME`, `DB_USERNAME`, `JBH_ADMIN_PASS` |
 | `jbh-personal-finance` | `jbh_finance` | `DATABASE_URL`, `DATABASE_USERNAME`, `DATABASE_PASSWORD` |
+| `jbh-notification` | `jbh_finance`, schema `notifications` | `DATABASE_URL`, `DATABASE_USERNAME`, `DATABASE_PASSWORD` |
 
 ## Build dependencies between projects
 
@@ -127,26 +134,32 @@ The Java projects share code through the local Maven repository (`~/.m2`).
 The order matters:
 
 ```
-jbh-personal-finance / jbh-notification-contracts
+jbh-commons-lib
+        ↓  (used by)
+jbh-notification / jbh-notification-contracts
         ↓  (used by)
 jbh-gateway-client
         ↓  (used by)
 jbh-iam            jbh-personal-finance (finance-infra, preferences-infra)
 ```
 
-1. Install `jbh-notification-contracts` from `jbh-personal-finance`.
-2. Install `jbh-gateway-client`.
-3. Build `jbh-iam` and `jbh-personal-finance`.
+`jbh-notification` and `jbh-personal-finance` also use `jbh-commons-lib`.
 
-If you change a public class in `jbh-gateway-client` or in `jbh-notification-contracts`,
+1. Install `jbh-commons-lib`.
+2. Install `jbh-notification-contracts` from `jbh-notification`.
+3. Install `jbh-gateway-client`.
+4. Build `jbh-iam`, `jbh-personal-finance` and `jbh-notification`.
+
+If you change a public class in `jbh-commons-lib`, `jbh-gateway-client` or `jbh-notification-contracts`,
 reinstall it before you build the services that use it.
 
 **In CI** the same order runs through GitHub Packages (Maven), not `~/.m2`. All workflows, triggers and steps: [`CI.md`](CI.md).
 
-1. `jbh-personal-finance` → workflow `publish-contracts` (runs when the contracts change, or by hand).
-2. `jbh-gateway-client` → workflow `publish`.
-3. Each service repo → workflow `image`: builds the jar and pushes `ghcr.io/kkpa-jbh/<name>:<git-sha>`
-   (`jbh-iam`, `jbh-personal-finance`, `jbh-gateway`, `jbh-web` from `jbh-app`).
+1. `jbh-commons-lib` → workflow `publish`.
+2. `jbh-notification` → workflow `Publish notification contracts` (runs when the contracts change, or by hand).
+3. `jbh-gateway-client` → workflow `publish`.
+4. Each service repo → workflow `image`: builds the jar and pushes `ghcr.io/kkpa-jbh/<name>:<git-sha>`
+   (`jbh-iam`, `jbh-personal-finance`, `jbh-notification`, `jbh-gateway`, `jbh-web` from `jbh-app`).
 
 Maven uses `-s .github/maven-settings.xml -Pgithub` in CI; Gradle (`jbh-iam`) adds the GitHub repositories only when
 `PACKAGES_READ_TOKEN` is set.
@@ -155,14 +168,14 @@ Maven uses `-s .github/maven-settings.xml -Pgithub` in CI; Gradle (`jbh-iam`) ad
 its own repo's packages. There is no "Manage Actions access" for Maven. So every repo that reads another repo's package
 has a repo secret `PACKAGES_READ_TOKEN`: a classic personal access token with only `read:packages`.
 It is a repo secret in each repo. On GitHub Free, an org secret reaches only public repos, and until 2026-10-10 most repos were private.
-Visibility now: all repos are public except `jbh-discovery-nexus`.
-Repos that need it: `jbh-gateway-client`, `jbh-iam`, `jbh-personal-finance`. When the token expires, renew it in all three.
+Visibility now: all repos are public. The only private one, `jbh-discovery-nexus`, is archived.
+Repos that need it: `jbh-gateway-client`, `jbh-iam`, `jbh-personal-finance`, `jbh-notification`. When the token expires, renew it in all four.
 
 ### Why packages (and not a build on the VPS)
 
 Two kinds of packages, for two reasons:
 
-1. **Maven packages** (`jbh-notification-contracts`, `jbh-gateway-client`) are shared libraries. On a laptop they come
+1. **Maven packages** (`jbh-commons-lib`, `jbh-notification-contracts`, `jbh-gateway-client`) are shared libraries. On a laptop they come
    from `~/.m2` (`mvn install`). CI machines start empty, so CI downloads them from GitHub Packages.
 2. **Container images** (GHCR) are the finished services. CI builds each image once; the VPS only downloads it.
    That is why `make up` only pulls.
@@ -184,15 +197,16 @@ No registry is needed, but every deploy is manual. Keep it as a fallback if GitH
 ## Start order (local)
 
 1. Postgres on `localhost:5432`.
-2. `jbh-discovery-nexus` → `docker compose up` (Consul).
+2. Consul → `make consul up` in `kkpa-docker-lab` (sibling folder of `kkpa-jbh/`).
 3. `jbh-iam` → port 9999.
 4. `jbh-personal-finance` (`jbh-z-assembly`) → port 7777.
-5. `jbh-gateway` → port 8080.
-6. `jbh-app` → `ionic serve`.
+5. `jbh-notification` → port 7778.
+6. `jbh-gateway` → port 8080.
+7. `jbh-app` → `ionic serve`.
 
-Check http://localhost:8500 : `jbh-iam-service`, `jbh-personal-finance` and the gateway (registered as `API Gateway`) must show as healthy.
+Check http://localhost:8500 : `jbh-iam-service`, `jbh-personal-finance`, `jbh-notification` and the gateway (registered as `API Gateway`) must show as healthy.
 
-**One command instead:** `make local-up` in `jbh-deploy` starts Postgres, Consul, IAM, finance and the gateway in Docker
+**One command instead:** `make local-up` in `jbh-deploy` starts Postgres, Consul, IAM, finance, notification and the gateway in Docker
 (`compose.local.yaml`, images `latest` from `main`). Every service saves `host.docker.internal` in Consul, so you can stop one
 container (`make local-swap s=<service>`) and run it from the IDE. Steps: [`LOCAL.md`](LOCAL.md).
 
@@ -217,16 +231,16 @@ Internet ─:443─► Magus Caddy (Docker, owns ports 80/443, imports /etc/cadd
                    └─ /*          → jbh-web:8080
                                      │
                  network jbh-private (not on edge)
-                   jbh-gateway ─► jbh-iam, jbh-personal-finance, jbh-consul, jbh-postgres
+                   jbh-gateway ─► jbh-iam, jbh-personal-finance, jbh-notification, jbh-consul, jbh-postgres
 ```
 
 Rules:
 
 - **No Nginx and no host ports.** No jbh service has `ports:`. Docker-published ports bypass `ufw`.
   Reach Consul or Postgres with an SSH tunnel to the container IP (`make consul-tunnel`, `make db-tunnel`).
-- **Only `jbh-gateway` and `jbh-web` join `edge`.** IAM, finance, Consul and Postgres stay on `jbh-private`.
+- **Only `jbh-gateway` and `jbh-web` join `edge`.** IAM, finance, notification, Consul and Postgres stay on `jbh-private`.
 - **Service names are the Docker DNS names and the Consul hostnames:** `jbh-postgres`, `jbh-consul`,
-  `jbh-iam`, `jbh-personal-finance`, `jbh-gateway`, `jbh-web`. The `jbh-` prefix avoids clashes on `edge`.
+  `jbh-iam`, `jbh-personal-finance`, `jbh-notification`, `jbh-gateway`, `jbh-web`. The `jbh-` prefix avoids clashes on `edge`.
 - **`handle /jbh-api/*`, not `handle_path`** in `jbh.caddy`. `handle_path` removes the prefix, and the gateway routes need `/jbh-api`.
 - **Caddy changes: `make caddy-install`** (validate, then reload). Never restart Caddy: a bad file would stop Magus too.
 - **Rate limit:** Caddy replaces the client's `X-Forwarded-For` with the real client IP. The gateway trusts
@@ -240,12 +254,13 @@ Rules:
   `read:packages` token). No Gradle/Maven build on the VPS: it would fight Magus for 2 vCPU.
 - **Deploys are by hand, except `jbh-web`.** You start a deploy with the `Deploy` workflow in `jbh-deploy`, or `make deploy`
   on the VPS. `jbh-web` deploys by itself after a merge into `jbh-app` (repo variable `AUTO_DEPLOY`; `CI.md`, "Auto-deploy").
-  The workflow's SSH key can run only `ci-deploy.sh` (a forced command), and that script accepts only the 4 app services.
+  The workflow's SSH key can run only `ci-deploy.sh` (a forced command), and that script accepts only the 5 app services.
 - **Rollback:** a deploy that is not healthy goes back by itself. `make rollback s=<service>` (or `Deploy` → `rollback`)
   starts the image from before the last deploy, kept on the VPS as `<service>:previous`.
   For an older version: set its SHA in `.env` (`JBH_<SERVICE>_TAG`), then `make deploy s=<service>`.
+- **Release order** for the move of the notification module out of finance: deploy `jbh-notification` first, then `jbh-gateway` and `jbh-personal-finance`. Steps: `DEPLOY.md` §2.6.
 - **Secrets** only in `.env` on the VPS. `JBH_JWT_SECRET` is set once and compose passes it to IAM and the gateway.
-- **Memory:** every service has a limit, and each JVM has `-Xmx` (defaults: about 2.9 GB total).
+- **Memory:** every service has a limit, and each JVM has `-Xmx` (defaults: about 3.3 GB total).
 - **External AI APIs:** `jbh-personal-finance` calls Azure AI Document Intelligence (OCR, only with `STATEMENT_TEXT_SOURCE=azure`; default `pdfbox` reads the PDF locally), OpenRouter (or Gemini, with `STATEMENT_LLM=gemini`) and Jev over HTTPS for the bank statement import, so `jbh-private` must keep internet access.
 - **Postgres:** own container, no host port (Magus already uses `127.0.0.1:5432`), volume `jbh-pgdata`.
   `initdb/` creates `jbh_finance`, its schemas (`finance`, `preferences`, `notifications`) and `pgcrypto` on the first start.
@@ -257,7 +272,8 @@ Env vars set by `compose.yaml` inside Docker:
 |---------|---------|
 | `jbh-gateway` | `JBH_JWT_SECRET`, `CONSUL_HOST=jbh-consul`, `CONSUL_DISCOVERY_HOSTNAME=jbh-gateway`, `JBH_TRUSTED_PROXIES` |
 | `jbh-iam` | `SPRING_PROFILES_ACTIVE=prod`, `DB_HOST=jbh-postgres`, `DB_NAME=jbh`, `DB_USERNAME`, `JBH_ADMIN_PASS`, `CONSUL_HOST=jbh-consul`, `CONSUL_DISCOVERY_HOSTNAME=jbh-iam`, `JBH_JWT_SECRET`, `GOOGLE_CLIENT_IDS`, `CORS_ALLOWED_ORIGINS` (= `JBH_FRONTEND_URL`), `JBH_GATEWAY_URL=http://jbh-gateway:8080` |
-| `jbh-personal-finance` | `DATABASE_URL` (no query string), `DATABASE_USERNAME`, `DATABASE_PASSWORD`, `CONSUL_HOST=jbh-consul`, `CONSUL_PREFER_IP=true`, `JBH_GATEWAY_URL=http://jbh-gateway:8080`, `JBH_FRONTEND_URL`, `GMAIL_*`, `STATEMENT_TEXT_SOURCE`, `STATEMENT_LLM`, `AZURE_DI_ENDPOINT`, `AZURE_DI_API_KEY`, `AZURE_DI_PAGES_PER_REQUEST`, `OPENROUTER_API_KEY`, `GEMINI_API_KEY`, `JEV_API_KEY` |
+| `jbh-personal-finance` | `DATABASE_URL` (no query string), `DATABASE_USERNAME`, `DATABASE_PASSWORD`, `CONSUL_HOST=jbh-consul`, `CONSUL_PREFER_IP=true`, `JBH_GATEWAY_URL=http://jbh-gateway:8080`, `STATEMENT_TEXT_SOURCE`, `STATEMENT_LLM`, `AZURE_DI_ENDPOINT`, `AZURE_DI_API_KEY`, `AZURE_DI_PAGES_PER_REQUEST`, `OPENROUTER_API_KEY`, `GEMINI_API_KEY`, `JEV_API_KEY` |
+| `jbh-notification` | `DATABASE_URL` (no query string), `DATABASE_USERNAME`, `DATABASE_PASSWORD`, `CONSUL_HOST=jbh-consul`, `CONSUL_PREFER_IP=true`, `JBH_FRONTEND_URL`, `GMAIL_*` |
 
 **Magus side** (`magus-tesla-api/deploy/docker/`, one-time change):
 
@@ -287,11 +303,9 @@ These are real config problems, not doc problems:
 - `jbh-gateway` has no CORS config. This is fine for the current setup (local proxy, and one host in production). It breaks if the app and the API move to different domains, or for native mobile builds.
 - `jbh-gateway` registers in Consul as `API Gateway` (`spring.cloud.consul.discovery.service-name`). Other services use kebab-case names.
 - `/jbh-api/products/**` is routed but unused. `/jbh-api/admin/**` is used but not routed.
-- `/jbh-api/notifications/**` is blocked only at Caddy (production). Locally, any logged-in user can call it through
+- `/jbh-api/notifications/**` is blocked only at Caddy (production). Locally, any logged-in user can call `jbh-notification` through
   the gateway and send email. A real fix needs a service-to-service credential in `jbh-gateway-client`.
 - `jbh-iam` and `jbh-personal-finance` use the same Postgres admin user. One user per service, with fewer rights, is better.
-- Build cycle: `jbh-gateway-client` needs `jbh-notification-contracts` (in `jbh-personal-finance`), and `jbh-personal-finance` needs `jbh-gateway-client`.
-  CI breaks it by publishing the contracts first (`publish-contracts`), then the client, then the finance image.
 
 ## Keep this file in sync
 

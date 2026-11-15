@@ -10,7 +10,8 @@ For the deploy commands on the VPS, read [`DEPLOY.md`](DEPLOY.md).
   variable `AUTO_DEPLOY` is `true` ("Auto-deploy" below). For the other services, after `Image` is green, you start
   the deploy by hand: the `Deploy` workflow in `jbh-deploy`, or `make deploy s=<service>` on the VPS.
 - **Merging a PR into `main` is a push to `main`.** The same workflows run.
-- **Only `jbh-personal-finance` runs tests.** The other repos only build.
+- **Three repos run tests on a pull request:** `jbh-personal-finance`, `jbh-commons-lib` and `jbh-notification` (`mvn verify`).
+  The other repos only build.
 - **Images do not wait for tests.** In `jbh-personal-finance`, `CI Pipeline` and `Image` run side by side.
   A red `CI Pipeline` still publishes an image.
 
@@ -23,10 +24,13 @@ For the deploy commands on the VPS, read [`DEPLOY.md`](DEPLOY.md).
 | `jbh-iam` | `Image` (`image.yml`) | yes | no | yes | image `ghcr.io/kkpa-jbh/jbh-iam` |
 | `jbh-personal-finance` | `Image` (`image.yml`) | yes | no | yes | image `ghcr.io/kkpa-jbh/jbh-personal-finance` |
 | `jbh-personal-finance` | `CI Pipeline` (`ci.yml`) | yes (also `develop`) | yes (into `main` or `develop`) | no | nothing (reports and artifacts) |
-| `jbh-personal-finance` | `Publish notification contracts` (`publish-contracts.yml`) | only if the contracts or a parent `pom.xml` changed | no | yes | Maven `jbh-notification-contracts` |
+| `jbh-notification` | `Image` (`image.yml`) | yes | no | yes | image `ghcr.io/kkpa-jbh/jbh-notification` |
+| `jbh-notification` | `CI` (`ci.yml`) | no | yes (into `main`) | yes | nothing (job `verify`) |
+| `jbh-notification` | `Publish notification contracts` (`publish.yml`) | only if `jbh-notification-contracts/**` or `pom.xml` changed | no | yes | Maven `jbh-notification-contracts` and its parent POM |
+| `jbh-commons-lib` | `CI` (`ci.yml`) | no | yes (into `main`) | yes | nothing (job `verify`) |
+| `jbh-commons-lib` | `Publish` (`publish.yml`) | yes | no | yes | Maven `jbh-commons-lib` |
 | `jbh-gateway-client` | `Publish` (`publish.yml`) | yes | no | yes | Maven `jbh-gateway-client` |
 | `jbh-deploy` | `Deploy` (`deploy.yml`) | no | no | yes, or from `jbh-app`'s `Image` | nothing. Deploys one service to the VPS. For this repo's own files, the VPS runs `git pull` |
-| `jbh-discovery-nexus` | none | — | — | — | nothing. Production uses the official Consul image |
 
 "By hand": GitHub → the repo → Actions → the workflow → **Run workflow**.
 
@@ -36,8 +40,8 @@ For the deploy commands on the VPS, read [`DEPLOY.md`](DEPLOY.md).
 flowchart TD
     push[git push origin main<br/>or merge a PR] --> img[Image workflow]
     push -. only jbh-personal-finance .-> ci[CI Pipeline]
-    push -. only if contracts changed .-> pc[Publish notification contracts]
-    push -. only jbh-gateway-client .-> pub[Publish]
+    push -. only if contracts changed<br/>(jbh-notification) .-> pc[Publish notification contracts]
+    push -. jbh-gateway-client, jbh-commons-lib .-> pub[Publish]
 
     img --> build[Build the jar or the app]
     build --> docker[Build the Docker image]
@@ -53,9 +57,9 @@ flowchart TD
     ghcr -. jbh-web: Deploy starts by itself<br/>others: you run Deploy or make deploy .-> vps[VPS pulls the image]
 ```
 
-### `Image` (4 service repos)
+### `Image` (5 service repos)
 
-The same 5 steps in every service repo:
+The same steps in every service repo:
 
 1. **Checkout** the code.
 2. **Build**, without tests:
@@ -64,6 +68,8 @@ The same 5 steps in every service repo:
    - `jbh-gateway`: `./gradlew bootJar`.
    - `jbh-iam`: `./gradlew :jbh-iam-api:bootJar`. Reads `jbh-gateway-client` from GitHub Packages.
    - `jbh-personal-finance`: `mvn -pl jbh-z-assembly -am -DskipTests package`. Reads `jbh-gateway-client` from GitHub Packages.
+   - `jbh-notification`: `mvn -B -U -s .github/maven-settings.xml -Pgithub -pl jbh-notification-app -am -DskipTests package`.
+     Reads `jbh-commons-lib` from GitHub Packages.
 3. **Log in** to GHCR with `GITHUB_TOKEN`.
 4. **Build and push** the Docker image with two tags: the full git SHA and `latest`.
 5. **Delete old images.** Keep only the 2 newest versions. See "Image retention" below.
@@ -84,11 +90,29 @@ Runs on a push to `main` or `develop`, and on every pull request into them.
    - Trivy scans the files for known vulnerabilities. It never fails the job (`exit-code: 0`).
    - The JSON report is an artifact (kept 30 days).
 
-### `Publish notification contracts` (`jbh-personal-finance`)
+### `CI` (`jbh-notification`)
 
-Runs on a push to `main` only when one of these paths changed:
-`jbh-notification/jbh-notification-contracts/**`, `jbh-notification/pom.xml`, `pom.xml`.
-It runs `mvn deploy` for the contracts and their parent POMs (`-am`), because a consumer cannot resolve the contracts without the parents.
+Runs on a pull request into `main`, and by hand. One job, `verify`:
+`mvn -B -U -s .github/maven-settings.xml -Pgithub -Djbh.test.excludedGroups=none clean verify`.
+It runs every test (also the `database` tests, which start PostgreSQL in Docker) and PMD. It reads `jbh-commons-lib` from GitHub Packages.
+It publishes nothing. `verify` is a required check in `protect-main` (see "Pull requests").
+
+### `Publish notification contracts` (`jbh-notification`)
+
+Runs on a push to `main` only when `jbh-notification-contracts/**` or `pom.xml` changed, and by hand.
+It runs `mvn deploy` for `jbh-notification-contracts` and its parent POM (`-pl jbh-notification-contracts -am`),
+because a consumer cannot resolve the contracts without the parent.
+
+### `CI` (`jbh-commons-lib`)
+
+Runs on a pull request into `main`, and by hand. One job, `verify`: `mvn -B verify` (compile, tests, PMD, SpotBugs).
+It publishes nothing and needs no token. A new push to the same PR cancels the older run.
+`verify` is a required check in `protect-main` (see "Pull requests").
+
+### `Publish` (`jbh-commons-lib`)
+
+Runs on every push to `main`, and by hand. It runs `mvn -B -s .github/maven-settings.xml -DskipTests deploy`
+and publishes Maven `jbh-commons-lib` to GitHub Packages. It needs only `GITHUB_TOKEN`.
 
 ### `Publish` (`jbh-gateway-client`)
 
@@ -107,8 +131,8 @@ By hand: `jbh-deploy` → Actions → `Deploy` → **Run workflow**, then pick t
 
 1. GitHub connects to the VPS with SSH, as `magus`, with the deploy key.
 2. The key can run only `ci-deploy.sh` (a forced command in `~/.ssh/authorized_keys`), whatever the workflow sends.
-3. `ci-deploy.sh` accepts only `deploy` or `rollback`, only `jbh-web`, `jbh-gateway`, `jbh-iam` and
-   `jbh-personal-finance`, and for `deploy` an optional full git SHA. It changes the image, then waits up to
+3. `ci-deploy.sh` accepts only `deploy` or `rollback`, only `jbh-web`, `jbh-gateway`, `jbh-iam`,
+   `jbh-personal-finance` and `jbh-notification`, and for `deploy` an optional full git SHA. It changes the image, then waits up to
    3 minutes until the service is healthy. `jbh-web`'s health check loads the page and its main JavaScript file.
 4. Green = the service is healthy. Red = it is not: the log shows its last 50 log lines.
    After a red `deploy`, the VPS starts the image from before by itself, and the log says so.
@@ -139,32 +163,34 @@ GitHub emails you when a run you started fails, and the token is yours, so you g
 - **The exact commit, not `latest`:** two quick merges cannot mix up versions. `Image` runs one at a time,
   and `Deploy` keeps only the newest waiting run per service.
 - **Why only `jbh-web`:** it has no database, so a rollback undoes everything. `jbh-iam` and
-  `jbh-personal-finance` run migrations that a rollback does not undo. And in the 3 back-end repos, tests do not
+  `jbh-personal-finance` run migrations that a rollback does not undo. And in the 4 back-end repos, tests do not
   block the image yet.
 
 Setup: `DEPLOY.md` §1.2.
 
 ## Pull requests
 
-Only `jbh-personal-finance` checks a pull request (`CI Pipeline`). No other repo runs anything on a PR.
-**`main` is protected** in `jbh-app`, `jbh-gateway`, `jbh-iam` and `jbh-personal-finance` (since 2026-10-10).
-Each has the ruleset `protect-main` (repo → Settings → Rules → Rulesets):
+Three repos check a pull request: `jbh-personal-finance` (`CI Pipeline`), `jbh-notification` (`CI`) and
+`jbh-commons-lib` (`CI`). No other repo runs anything on a PR.
+All JBH repos have the ruleset `protect-main` (repo → Settings → Rules → Rulesets):
 
 - No direct push: every change goes through a pull request. 0 approvals, because nobody can approve their own PR.
 - No force push, and the branch cannot be deleted.
 - Nobody can bypass it, also not an org admin. To change it, edit the ruleset.
-- No check is required yet, so a red `CI Pipeline` does not block a merge.
+- No check is required in the other repos, so a red `CI Pipeline` does not block a merge there.
+  In `jbh-notification` and `jbh-commons-lib`, `verify` is a required status check (since 2026-11-14),
+  so a red PR cannot merge.
 
-`jbh-deploy`, `jbh-gateway-client` and `jbh-discovery-nexus` have no protection: you still push to `main` there.
 After the merge, the push to `main` starts the normal workflows above.
 
 ## Order for shared libraries
 
 The services include the libraries when CI builds them. So when a library changes, publish in this order:
 
-1. `jbh-personal-finance` → `Publish notification contracts` (only if the contracts changed).
-2. `jbh-gateway-client` → `Publish`.
-3. `jbh-iam` and `jbh-personal-finance` → `Image` (push, or **Run workflow**).
+1. `jbh-commons-lib` → `Publish`.
+2. `jbh-notification` → `Publish notification contracts` (only if the contracts changed).
+3. `jbh-gateway-client` → `Publish`.
+4. `jbh-iam`, `jbh-personal-finance` and `jbh-notification` → `Image` (push, or **Run workflow**).
 
 If you skip a step, the image is built with the old library. `DEPLOY.md` §2.3 has the full steps.
 
@@ -175,14 +201,14 @@ If you skip a step, the image is built with the old library. `DEPLOY.md` §2.3 h
 - `provenance: false` keeps one version per push. Without it, build attestations add untagged versions that use up the 2 slots.
 - Deleted images are gone for good. A rollback by commit SHA reaches only one deploy back.
   The `rollback` action does not need GHCR: it uses an image kept on the VPS.
-- Maven packages (contracts, gateway-client) are not cleaned up.
+- Maven packages (commons-lib, contracts, gateway-client) are not cleaned up.
 
 ## Secrets
 
 | Secret | Where | What for |
 |--------|-------|----------|
 | `GITHUB_TOKEN` | automatic, every workflow | Push images to GHCR, delete old images, deploy the repo's own Maven package |
-| `PACKAGES_READ_TOKEN` | repo secret in `jbh-gateway-client`, `jbh-iam`, `jbh-personal-finance` | Read another repo's Maven package. A classic PAT with only `read:packages` |
+| `PACKAGES_READ_TOKEN` | repo secret in `jbh-gateway-client`, `jbh-iam`, `jbh-personal-finance`, `jbh-notification` | Read another repo's Maven package. A classic PAT with only `read:packages` |
 | `VPS_HOST` | repo secret in `jbh-deploy` | The VPS IP, for `Deploy` |
 | `VPS_SSH_KEY` | repo secret in `jbh-deploy` | Private deploy key. It can run only `ci-deploy.sh` on the VPS |
 | `VPS_KNOWN_HOSTS` | repo secret in `jbh-deploy` | The VPS host key, so `Deploy` connects only to the real VPS |
@@ -191,7 +217,7 @@ If you skip a step, the image is built with the old library. `DEPLOY.md` §2.3 h
 Variable (not secret): `AUTO_DEPLOY` in `jbh-app`. `true` turns auto-deploy on.
 
 GitHub Packages for Maven is repository-scoped: `GITHUB_TOKEN` reads only its own repo's packages.
-That is why `PACKAGES_READ_TOKEN` exists. When it expires, renew it in all three repos.
+That is why `PACKAGES_READ_TOKEN` exists. When it expires, renew it in all four repos.
 Maven uses `-s .github/maven-settings.xml -Pgithub`; Gradle (`jbh-iam`) adds the GitHub repositories only when `PACKAGES_READ_TOKEN` is set.
 
 ## What CI does not do
@@ -200,6 +226,7 @@ Maven uses `-s .github/maven-settings.xml -Pgithub`; Gradle (`jbh-iam`) adds the
   (or run `make deploy` on the VPS).
 - It does not roll back a deploy that is healthy but has a bug. Use `rollback` for that (`DEPLOY.md` §3).
 - It does not run tests for `jbh-app`, `jbh-gateway`, `jbh-iam` or `jbh-gateway-client`.
-- It does not stop an image when `CI Pipeline` fails.
+  `jbh-notification` runs its tests only on a pull request (`CI`), not on a push to `main`.
+- It does not stop an image when `CI Pipeline` fails (or when a test fails in `jbh-notification`: its `Image` skips tests).
 - It does not run the dev server. Some bugs appear only in the production build (`ng build --configuration production`),
   so test the app that way before a deploy.

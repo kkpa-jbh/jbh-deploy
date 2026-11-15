@@ -2,7 +2,7 @@
 #
 #   Internet :443 → Magus's Caddy ─ network "edge" ─┬─ jbh-gateway:8080  (/jbh-api/*)
 #                                                   └─ jbh-web:8080      (everything else)
-#   network "jbh-private": jbh-gateway → jbh-iam, jbh-personal-finance, jbh-consul, jbh-postgres
+#   network "jbh-private": jbh-gateway → jbh-iam, jbh-personal-finance, jbh-notification, jbh-consul, jbh-postgres
 #
 # Rules this file follows (see README.md "Production"):
 #   - NO service publishes a host port. Docker-published ports bypass ufw, and Magus's Caddy owns 80/443.
@@ -15,7 +15,7 @@
 #   - Secrets come from .env (never committed). Each service gets only the variables it needs.
 #
 # Memory limits (defaults): postgres 512M + consul 256M + iam 768M + finance 768M + gateway 512M
-# + web 64M = about 2.9 GB. Magus reserves about 2 GB of the 7.7 GB VPS, so this leaves headroom.
+# + web 64M + notification 384M = about 3.3 GB. Magus reserves about 2 GB of the 7.7 GB VPS, so this leaves headroom.
 #
 # Run it through the Makefile (make up / make deploy s=<service>), which passes --env-file .env.
 
@@ -160,13 +160,6 @@ services:
       # Registers the container IP. Finance is only on jbh-private, so that IP is the right one.
       CONSUL_PREFER_IP: "true"
       JBH_GATEWAY_URL: http://jbh-gateway:8080
-      # Links inside invitation emails.
-      JBH_FRONTEND_URL: ${JBH_FRONTEND_URL:-https://jbh.usemagus.cloud}
-      GMAIL_HOST: ${GMAIL_HOST:-smtp.gmail.com}
-      GMAIL_PORT: ${GMAIL_PORT:-465}
-      GMAIL_USERNAME: ${GMAIL_USERNAME:?set GMAIL_USERNAME in .env}
-      GMAIL_APP_PASSWORD: ${GMAIL_APP_PASSWORD:?set GMAIL_APP_PASSWORD in .env}
-      GMAIL_FROM: ${GMAIL_FROM:?set GMAIL_FROM in .env}
       # Bank statement import. Empty keys keep the service up; the import endpoint then answers with an error.
       # Step 1 (PDF -> text): azure or pdfbox. Step 2 (text -> movements): openrouter or gemini.
       STATEMENT_TEXT_SOURCE: ${STATEMENT_TEXT_SOURCE:-pdfbox}
@@ -197,6 +190,52 @@ services:
         limits:
           cpus: "${FINANCE_CPU_LIMIT:-0.75}"
           memory: ${FINANCE_MEM_LIMIT:-768M}
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: true
+    tmpfs:
+      - /tmp
+
+  jbh-notification:
+    image: ghcr.io/kkpa-jbh/jbh-notification:${JBH_NOTIFICATION_TAG:?set JBH_NOTIFICATION_TAG in .env}
+    restart: unless-stopped
+    logging: *default-logging
+    environment:
+      # Same database as finance. The notifications schema comes from initdb/.
+      DATABASE_URL: jdbc:postgresql://jbh-postgres:5432/jbh_finance
+      DATABASE_USERNAME: ${POSTGRES_USER:-jbh_admin}
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD}
+      CONSUL_HOST: jbh-consul
+      # Registers the container IP. This service is only on jbh-private, so that IP is the right one.
+      CONSUL_PREFER_IP: "true"
+      # Links inside invitation emails. IAM reads the same variable for CORS.
+      JBH_FRONTEND_URL: ${JBH_FRONTEND_URL:-https://jbh.usemagus.cloud}
+      GMAIL_HOST: ${GMAIL_HOST:-smtp.gmail.com}
+      GMAIL_PORT: ${GMAIL_PORT:-465}
+      GMAIL_USERNAME: ${GMAIL_USERNAME:?set GMAIL_USERNAME in .env}
+      GMAIL_APP_PASSWORD: ${GMAIL_APP_PASSWORD:?set GMAIL_APP_PASSWORD in .env}
+      GMAIL_FROM: ${GMAIL_FROM:?set GMAIL_FROM in .env}
+      JAVA_OPTS: -Xmx${NOTIFICATION_XMX:-192m}
+    depends_on:
+      jbh-postgres:
+        condition: service_healthy
+      jbh-consul:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:7778/q/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    networks:
+      - jbh-private
+    deploy:
+      resources:
+        limits:
+          cpus: "${NOTIFICATION_CPU_LIMIT:-0.5}"
+          memory: ${NOTIFICATION_MEM_LIMIT:-384M}
     security_opt:
       - no-new-privileges:true
     cap_drop:
@@ -286,8 +325,8 @@ services:
       - /tmp
 
 networks:
-  # Plain bridge, not internal: IAM needs the internet for Google keys, finance for SMTP
-  # and for the Gemini and Jev APIs (bank statement import).
+  # Plain bridge, not internal: IAM needs the internet for Google keys, notification for SMTP,
+  # finance for the Gemini and Jev APIs (bank statement import).
   jbh-private: {}
   # Shared with Magus's Caddy. Created once on the VPS with a fixed subnet (make network),
   # because the gateway trusts X-Forwarded-For only from that subnet.

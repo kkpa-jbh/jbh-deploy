@@ -45,7 +45,7 @@ services:
     command: "agent -server -ui -node=jbh-consul -bootstrap-expect=1 -client=0.0.0.0"
     volumes:
       - jbh-local-consul-data:/consul/data
-    # Port 8500 is also used by jbh-discovery-nexus. Stop it before make local-up.
+    # Port 8500 is also used by kkpa-docker-lab/consul. Stop it (make consul down) before make local-up.
     ports:
       - "8500:8500"
 
@@ -97,12 +97,6 @@ services:
       # Consul runs in a container: 127.0.0.1 there is Consul itself.
       CONSUL_HEALTH_CHECK_HOST: host.docker.internal
       JBH_GATEWAY_URL: http://host.docker.internal:8080
-      JBH_FRONTEND_URL: http://localhost:8100
-      GMAIL_HOST: ${GMAIL_HOST:-smtp.gmail.com}
-      GMAIL_PORT: ${GMAIL_PORT:-465}
-      GMAIL_USERNAME: ${GMAIL_USERNAME:-}
-      GMAIL_APP_PASSWORD: ${GMAIL_APP_PASSWORD:-}
-      GMAIL_FROM: ${GMAIL_FROM:-}
       # Empty keys keep the service up. The statement import then answers with an error.
       STATEMENT_TEXT_SOURCE: ${STATEMENT_TEXT_SOURCE:-pdfbox}
       STATEMENT_LLM: ${STATEMENT_LLM:-openrouter}
@@ -121,6 +115,40 @@ services:
         condition: service_started
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:7777/q/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+
+  jbh-notification:
+    image: ghcr.io/kkpa-jbh/jbh-notification:latest
+    pull_policy: always
+    <<: *app-host
+    environment:
+      DATABASE_URL: jdbc:postgresql://jbh-postgres:5432/jbh_finance
+      DATABASE_USERNAME: ${POSTGRES_USER:-jbh_admin}
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD}
+      CONSUL_HOST: jbh-consul
+      # The address comes from CONSUL_DISCOVERY_HOSTNAME, so no container IP.
+      CONSUL_PREFER_IP: "false"
+      CONSUL_DISCOVERY_HOSTNAME: host.docker.internal
+      # Consul runs in a container: 127.0.0.1 there is Consul itself.
+      CONSUL_HEALTH_CHECK_HOST: host.docker.internal
+      JBH_FRONTEND_URL: http://localhost:8100
+      GMAIL_HOST: ${GMAIL_HOST:-smtp.gmail.com}
+      GMAIL_PORT: ${GMAIL_PORT:-465}
+      GMAIL_USERNAME: ${GMAIL_USERNAME:-}
+      GMAIL_APP_PASSWORD: ${GMAIL_APP_PASSWORD:-}
+      GMAIL_FROM: ${GMAIL_FROM:-}
+    ports:
+      - "7778:7778"
+    depends_on:
+      jbh-postgres:
+        condition: service_healthy
+      jbh-consul:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:7778/q/health"]
       interval: 15s
       timeout: 5s
       retries: 5

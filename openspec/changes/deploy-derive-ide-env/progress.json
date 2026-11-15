@@ -1,0 +1,208 @@
+{
+  "schema_version": 1,
+  "kind": "change",
+  "change": "deploy-derive-ide-env",
+  "module": "jbh-deploy",
+  "roadmap": null,
+  "request": "New change `deploy-derive-ide-env` in jbh-deploy, on the existing branch ft/CH3-JBH-56-deploy-add-local-pg-monitor (same draft PR #3; do not bump the work counter, do not create a branch). Ticket JBH-56. Unit tests: excluded. Goal (one source): compose.local.yaml is the only place where a backend's env vars are written; new local-swap-env.sh <service> renders compose config JSON with jq as IDE values; make local-swap calls it; LOCAL.md drops the env var tables. Translation map and per-key overrides in the script; secrets masked by key pattern SECRET|PASSWORD|PASS|API_KEY|TOKEN plus an empty explicit list; never print a real secret. SRP only. Replaces D10 of deploy-add-local-pg-monitor. Checks: sh -n, make -n local-swap, docker compose config only. Never start containers. Tell jbh-leader when committed.",
+  "status": "proposed",
+  "rollup": {
+    "current": [],
+    "pending": [
+      "1.1",
+      "2.1",
+      "3.1",
+      "3.2",
+      "4.1"
+    ],
+    "blocked": [],
+    "done": []
+  },
+  "created_at": "2026-11-15T23:16:29Z",
+  "updated_at": "2026-11-15T23:16:29Z",
+  "leader": {
+    "assistant": "Claude Code",
+    "model": "claude-opus-5-5"
+  },
+  "git": {
+    "strategy": "auto",
+    "branch": "ft/CH3-JBH-56-deploy-add-local-pg-monitor",
+    "base": "main",
+    "ticket": "JBH-56",
+    "ticket_url": "https://linear.app/kkpa/issue/JBH-56/jbh-deploy-grafana-alloy-locally-and-in-prod-postgres-and-vps-metrics",
+    "ticket_tracker": "linear",
+    "created_at": "2026-11-15T23:16:29Z"
+  },
+  "test_first": {
+    "status": "skipped",
+    "commit": null,
+    "tests": [],
+    "approved_at": null
+  },
+  "tasks": [
+    {
+      "id": "1.1",
+      "title": "local-swap-env.sh (new, POSIX sh)",
+      "module": "jbh-deploy",
+      "depends_on": [],
+      "parallel_ok": false,
+      "status": "pending",
+      "agent": null,
+      "model": null,
+      "started_at": null,
+      "completed_at": null,
+      "duration_seconds": null,
+      "notes": null,
+      "budget": null
+    },
+    {
+      "id": "2.1",
+      "title": "local.mk: local-swap calls the script",
+      "module": "jbh-deploy",
+      "depends_on": [
+        "1.1"
+      ],
+      "parallel_ok": false,
+      "status": "pending",
+      "agent": null,
+      "model": null,
+      "started_at": null,
+      "completed_at": null,
+      "duration_seconds": null,
+      "notes": null,
+      "budget": null
+    },
+    {
+      "id": "3.1",
+      "title": "LOCAL.md: drop env var tables, keep why ports differ",
+      "module": "jbh-deploy",
+      "depends_on": [
+        "1.1"
+      ],
+      "parallel_ok": false,
+      "status": "pending",
+      "agent": null,
+      "model": null,
+      "started_at": null,
+      "completed_at": null,
+      "duration_seconds": null,
+      "notes": null,
+      "budget": null
+    },
+    {
+      "id": "3.2",
+      "title": "CLAUDE.md: add local-swap-env.sh to the files table",
+      "module": "jbh-deploy",
+      "depends_on": [
+        "1.1"
+      ],
+      "parallel_ok": false,
+      "status": "pending",
+      "agent": null,
+      "model": null,
+      "started_at": null,
+      "completed_at": null,
+      "duration_seconds": null,
+      "notes": null,
+      "budget": null
+    },
+    {
+      "id": "4.1",
+      "title": "Run V1 to V15 from design.md (leader)",
+      "module": "jbh-deploy",
+      "depends_on": [
+        "1.1",
+        "2.1",
+        "3.1",
+        "3.2"
+      ],
+      "parallel_ok": false,
+      "status": "pending",
+      "agent": null,
+      "model": null,
+      "started_at": null,
+      "completed_at": null,
+      "duration_seconds": null,
+      "notes": null,
+      "budget": null
+    }
+  ],
+  "review": {
+    "status": "pending",
+    "agent": null,
+    "brief": null,
+    "rounds": []
+  },
+  "decisions": [
+    {
+      "id": "D1",
+      "at": "2026-11-15T20:20:00Z",
+      "scope": "change",
+      "made_by": "user",
+      "decision": "continue at 93% 5-hour bucket instead of waiting for reset",
+      "why": "user chose 'Continue now' at Step 0.6",
+      "covered_by": null
+    },
+    {
+      "id": "D2",
+      "at": "2026-11-15T20:21:00Z",
+      "scope": "change",
+      "made_by": "leader",
+      "decision": "no grill-me interview at Step 2",
+      "why": "request fixes scope, secret rule and SRP; no DB change; no open design choice",
+      "covered_by": "user request"
+    },
+    {
+      "id": "D3",
+      "at": "2026-11-15T20:21:00Z",
+      "scope": "change",
+      "made_by": "user",
+      "decision": "unit tests excluded; test_first skipped",
+      "why": "user said 'Unit tests: excluded'; shell script with static checks only",
+      "covered_by": "user request"
+    },
+    {
+      "id": "D4",
+      "at": "2026-11-15T20:30:00Z",
+      "scope": "change",
+      "made_by": "leader",
+      "decision": "added design D4: mask before print, raw compose JSON never output",
+      "why": "jbh-leader asked; it matches the user's never-print-a-secret rule",
+      "covered_by": "jbh-leader message"
+    },
+    {
+      "id": "D5",
+      "at": "2026-11-15T23:16:29Z",
+      "scope": "change",
+      "made_by": "user",
+      "decision": "design briefing approved; keep CLAUDE.md files-table row (task 3.2)",
+      "why": "user answered Go and Keep the row",
+      "covered_by": null
+    },
+    {
+      "id": "D6",
+      "at": "2026-11-15T23:16:29Z",
+      "scope": "concurrency",
+      "made_by": "leader",
+      "decision": "no race risk",
+      "why": "read-only script that prints values; one user, no shared writes",
+      "covered_by": null
+    },
+    {
+      "id": "D7",
+      "at": "2026-11-15T23:16:29Z",
+      "scope": "change",
+      "made_by": "leader",
+      "decision": "no counter bump, reuse branch CH3 and PR #3",
+      "why": "user instruction",
+      "covered_by": "user request"
+    }
+  ],
+  "events": [
+    {
+      "at": "2026-11-15T23:16:29Z",
+      "agent": "leader",
+      "event": "artifacts validated (openspec validate --strict); briefing approved; size estimate 10 files ~400 lines under cap 500/15"
+    }
+  ]
+}

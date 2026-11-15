@@ -217,6 +217,18 @@ services:
     volumes:
       - ./observability/alloy:/etc/alloy:ro
       - jbh-local-alloy-data:/var/lib/alloy/data
+    # memory_limiter in modules/otlp.alloy works in percent of this limit.
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    # The image has no wget or curl, so bash /dev/tcp asks /-/ready (200 once the config is loaded).
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/12345 && printf 'GET /-/ready HTTP/1.0\\r\\n\\r\\n' >&3 && head -n 1 <&3 | grep -q ' 200 '"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
     # Host side on 127.0.0.1 only. 14317/14318 because the local LGTM owns 4317/4318.
     # 12347 = Faro (browser), 12345 = Alloy UI. A service in the IDE sends OTLP to http://localhost:14317.
     ports:

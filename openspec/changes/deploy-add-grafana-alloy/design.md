@@ -116,7 +116,7 @@ Moved to JBH-84 (full text kept below). The local variables are in D11.
 
 ### D11. Local compose and Faro
 
-`jbh-alloy` in `compose.local.yaml`: same image and user, `<<: *app-host` (`host.docker.internal:host-gateway`), command with `/etc/alloy/local.alloy`, no hardening block (the local file has none for any service),
+`jbh-alloy` in `compose.local.yaml`: same image and user, `<<: *app-host` (`host.docker.internal:host-gateway`), command with `/etc/alloy/local.alloy`, no hardening block (the local file has none for any service), but a memory limit of `256M` (the `memory_limiter` works in percent of it) and the D2 healthcheck on `/-/ready` (review round 1, R1 and R2),
 no host mounts, no `depends_on`. Ports, all on `127.0.0.1` only: `127.0.0.1:14317:4317`, `127.0.0.1:14318:4318` (the local LGTM owns `4317`/`4318`), `127.0.0.1:12347:12347` (Faro), `127.0.0.1:12345:12345` (Alloy UI).
 Env: `JBH_PG_MONITOR_DSN` (D7). A named volume `jbh-local-alloy-data`.
 The Docker backends get `OTEL_EXPORTER_OTLP_ENDPOINT: http://jbh-alloy:4317`, `OTEL_SDK_DISABLED: "false"`, `JBH_ENV: local`. A service in the IDE sends to `http://localhost:14317` and sets `OTEL_SDK_DISABLED=false` (written in `LOCAL.md`).

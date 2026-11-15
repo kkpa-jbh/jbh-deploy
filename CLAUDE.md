@@ -11,7 +11,7 @@ It also holds `README.md`: the system map of all JBH services. The `kkpa-jbh/CLA
 | `DEPLOY.md` | Operator runbook: every command with the folder to run it in. Update it when a step changes. |
 | `CI.md` | GitHub Actions in every repo: triggers, steps, image retention, secrets. Update it when a workflow changes. |
 | `compose.yaml` | All jbh services. No host ports. Only `jbh-gateway` and `jbh-web` join `edge`. |
-| `compose.local.yaml`, `local.mk`, `.env.local.example`, `LOCAL.md` | Local dev stack for a developer machine (`make local-up`; `make local-pg-monitor` prepares an existing Postgres for Alloy). Publishes host ports. Never used on the VPS. |
+| `compose.local.yaml`, `local.mk`, `local-swap-env.sh`, `.env.local.example`, `LOCAL.md` | Local dev stack for a developer machine (`make local-up`; `make local-pg-monitor` prepares an existing Postgres for Alloy; `local-swap-env.sh` prints the IDE env vars for `make local-swap`). Publishes host ports. Never used on the VPS. |
 | `jbh.caddy` | Site file Magus's Caddy imports from `/etc/caddy/sites/`. |
 | `.env.example` | Every variable, with placeholders. The real `.env` exists only on the VPS. |
 | `Makefile` | `network`, `up`, `deploy s=<svc>`, `rollback s=<svc>`, `caddy-install`, `consul-tunnel`, `db-tunnel`, `backup`, `config`. |

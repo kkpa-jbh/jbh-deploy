@@ -5,21 +5,21 @@
   "module": "jbh-deploy",
   "roadmap": null,
   "request": "New change `deploy-derive-ide-env` in jbh-deploy, on the existing branch ft/CH3-JBH-56-deploy-add-local-pg-monitor (same draft PR #3; do not bump the work counter, do not create a branch). Ticket JBH-56. Unit tests: excluded. Goal (one source): compose.local.yaml is the only place where a backend's env vars are written; new local-swap-env.sh <service> renders compose config JSON with jq as IDE values; make local-swap calls it; LOCAL.md drops the env var tables. Translation map and per-key overrides in the script; secrets masked by key pattern SECRET|PASSWORD|PASS|API_KEY|TOKEN plus an empty explicit list; never print a real secret. SRP only. Replaces D10 of deploy-add-local-pg-monitor. Checks: sh -n, make -n local-swap, docker compose config only. Never start containers. Tell jbh-leader when committed.",
-  "status": "proposed",
+  "status": "applied",
   "rollup": {
     "current": [],
-    "pending": [
+    "pending": [],
+    "blocked": [],
+    "done": [
       "1.1",
       "2.1",
       "3.1",
       "3.2",
       "4.1"
-    ],
-    "blocked": [],
-    "done": []
+    ]
   },
   "created_at": "2026-11-15T23:16:29Z",
-  "updated_at": "2026-11-15T23:16:29Z",
+  "updated_at": "2026-11-15T23:19:49Z",
   "leader": {
     "assistant": "Claude Code",
     "model": "claude-opus-5-5"
@@ -46,14 +46,23 @@
       "module": "jbh-deploy",
       "depends_on": [],
       "parallel_ok": false,
-      "status": "pending",
-      "agent": null,
-      "model": null,
-      "started_at": null,
-      "completed_at": null,
-      "duration_seconds": null,
-      "notes": null,
-      "budget": null
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "claude-sonnet-5-5",
+      "started_at": "2026-11-15T23:16:57Z",
+      "completed_at": "2026-11-15T23:19:49Z",
+      "duration_seconds": 172,
+      "notes": "New POSIX local-swap-env.sh: renders compose JSON, translates hosts and masks secrets inside jq; JSON stays in a shell variable, stderr of docker/jq dropped.",
+      "budget": {
+        "five_hour_pct_start": 0,
+        "five_hour_pct_end": 38,
+        "five_hour_pct_delta": null,
+        "cost_usd_delta": 1.76,
+        "context_pct_end": 16,
+        "source": "statusline-cache",
+        "approx": true,
+        "note": "one serial worker for 1.1-3.2; pct jumped 0 to 38 likely a reset-window artifact"
+      }
     },
     {
       "id": "2.1",
@@ -63,14 +72,23 @@
         "1.1"
       ],
       "parallel_ok": false,
-      "status": "pending",
-      "agent": null,
-      "model": null,
-      "started_at": null,
-      "completed_at": null,
-      "duration_seconds": null,
-      "notes": null,
-      "budget": null
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "claude-sonnet-5-5",
+      "started_at": "2026-11-15T23:16:57Z",
+      "completed_at": "2026-11-15T23:19:49Z",
+      "duration_seconds": 172,
+      "notes": "local-swap renders with the script, then stops the container, then prints; echo lines and case block removed.",
+      "budget": {
+        "five_hour_pct_start": 0,
+        "five_hour_pct_end": 38,
+        "five_hour_pct_delta": null,
+        "cost_usd_delta": 1.76,
+        "context_pct_end": 16,
+        "source": "statusline-cache",
+        "approx": true,
+        "note": "one serial worker for 1.1-3.2; pct jumped 0 to 38 likely a reset-window artifact"
+      }
     },
     {
       "id": "3.1",
@@ -80,14 +98,23 @@
         "1.1"
       ],
       "parallel_ok": false,
-      "status": "pending",
-      "agent": null,
-      "model": null,
-      "started_at": null,
-      "completed_at": null,
-      "duration_seconds": null,
-      "notes": null,
-      "budget": null
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "claude-sonnet-5-5",
+      "started_at": "2026-11-15T23:16:57Z",
+      "completed_at": "2026-11-15T23:19:49Z",
+      "duration_seconds": 172,
+      "notes": "LOCAL.md: env var table and OTLP block removed; says what make local-swap prints; keeps why ports differ.",
+      "budget": {
+        "five_hour_pct_start": 0,
+        "five_hour_pct_end": 38,
+        "five_hour_pct_delta": null,
+        "cost_usd_delta": 1.76,
+        "context_pct_end": 16,
+        "source": "statusline-cache",
+        "approx": true,
+        "note": "one serial worker for 1.1-3.2; pct jumped 0 to 38 likely a reset-window artifact"
+      }
     },
     {
       "id": "3.2",
@@ -97,14 +124,23 @@
         "1.1"
       ],
       "parallel_ok": false,
-      "status": "pending",
-      "agent": null,
-      "model": null,
-      "started_at": null,
-      "completed_at": null,
-      "duration_seconds": null,
-      "notes": null,
-      "budget": null
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "claude-sonnet-5-5",
+      "started_at": "2026-11-15T23:16:57Z",
+      "completed_at": "2026-11-15T23:19:49Z",
+      "duration_seconds": 172,
+      "notes": "CLAUDE.md files table lists local-swap-env.sh; no new rule.",
+      "budget": {
+        "five_hour_pct_start": 0,
+        "five_hour_pct_end": 38,
+        "five_hour_pct_delta": null,
+        "cost_usd_delta": 1.76,
+        "context_pct_end": 16,
+        "source": "statusline-cache",
+        "approx": true,
+        "note": "one serial worker for 1.1-3.2; pct jumped 0 to 38 likely a reset-window artifact"
+      }
     },
     {
       "id": "4.1",
@@ -117,13 +153,13 @@
         "3.2"
       ],
       "parallel_ok": false,
-      "status": "pending",
-      "agent": null,
-      "model": null,
-      "started_at": null,
-      "completed_at": null,
-      "duration_seconds": null,
-      "notes": null,
+      "status": "done",
+      "agent": "leader",
+      "model": "claude-opus-5-5",
+      "started_at": "2026-11-15T23:17:30Z",
+      "completed_at": "2026-11-15T23:19:49Z",
+      "duration_seconds": 139,
+      "notes": "Leader ran V1-V15: all pass. V4-V7 exact; V8/V9 no unmasked secret, canaries absent; V13 stderr empty under sh; V15 empty vs change base.",
       "budget": null
     }
   ],
@@ -203,6 +239,21 @@
       "at": "2026-11-15T23:16:29Z",
       "agent": "leader",
       "event": "artifacts validated (openspec validate --strict); briefing approved; size estimate 10 files ~400 lines under cap 500/15"
+    },
+    {
+      "at": "2026-11-15T23:16:57Z",
+      "agent": "leader",
+      "event": "dispatched worker for wave 1 (tasks 1.1, 2.1, 3.1, 3.2), one serial worker; budget start five_hour_pct 0, cost_usd 2.76"
+    },
+    {
+      "at": "2026-11-15T23:19:49Z",
+      "agent": "leader",
+      "event": "wave 1 reconciled; worker timestamps were placeholders, leader used bracket start and reconcile time"
+    },
+    {
+      "at": "2026-11-15T23:19:49Z",
+      "agent": "leader (assistantRunsTests)",
+      "event": "ran V1-V15 from design.md: sh -n exit 0; make -n local-swap exit 0; both compose config -q exit 0 (Complexity-Check); masked runs V4-V7 exact; V8-V14 pass; V15 empty vs 10f6880"
     }
   ]
 }

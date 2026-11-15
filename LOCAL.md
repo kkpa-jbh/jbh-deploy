@@ -59,16 +59,10 @@ Design and tools: [`observability/README.md`](observability/README.md).
 
 ### A service run from the IDE (c)
 
-A service in the IDE sends OTLP to Alloy on the Mac port, and export is off by default. Set all three
-(the same values `compose.local.yaml` gives the Docker services, except the host and port):
+A service in the IDE sends OTLP to Alloy on the Mac port `14317`, and export is off by default.
+`make local-swap s=<service>` prints `OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:14317`, `OTEL_SDK_DISABLED=false` and `JBH_ENV=local`.
 
-```
-OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:14317
-OTEL_SDK_DISABLED=false
-JBH_ENV=local
-```
-
-Put them in the IDE run configuration, or in the service's local profile. Alloy scrapes the metrics endpoints at `host.docker.internal`,
+Put the printed values in the IDE run configuration, or in the service's local profile. Alloy scrapes the metrics endpoints at `host.docker.internal`,
 so a service in the IDE needs no change for metrics.
 
 ### Existing Postgres volume (a)
@@ -105,20 +99,14 @@ What the script runs: [`initdb/sql/pg-monitor.sql`](initdb/sql/pg-monitor.sql). 
 
 ## Swap one service for your IDE
 
-1. `make local-swap s=jbh-iam` (also `jbh-personal-finance`, `jbh-notification` or `jbh-gateway`). It stops that container and prints the env vars.
+1. `make local-swap s=jbh-iam` (also `jbh-personal-finance`, `jbh-notification` or `jbh-gateway`). It stops that container
+   and prints the env vars for the IDE, read from `compose.local.yaml`. Secrets show as `<from .env.local>`: copy them from `.env.local`.
 2. Run the same service from your IDE with those env vars.
 3. When you finish: stop it in the IDE, then `make local-restore s=jbh-iam`.
 
-Env vars for a service you run from the IDE:
-
-| Service | Env vars |
-|---------|----------|
-| all four | `CONSUL_DISCOVERY_HOSTNAME=host.docker.internal` |
-| all four | `OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:14317`, `OTEL_SDK_DISABLED=false`, `JBH_ENV=local` (see "A service run from the IDE"). |
-| `jbh-iam`, `jbh-gateway` | `JBH_JWT_SECRET` = the same value as in `.env.local`. If it differs, every call gets a 401. |
-| `jbh-iam` | Profile `local`. Database: `DB_HOST=localhost`, `DB_PORT=5433`, `DB_NAME=jbh`, `DB_USERNAME`, `JBH_ADMIN_PASS` (the Postgres values from `.env.local`). |
-| `jbh-personal-finance` | `DATABASE_URL=jdbc:postgresql://localhost:5433/jbh_finance`, `DATABASE_USERNAME`, `DATABASE_PASSWORD`. Quarkus dev mode already sets `CONSUL_HEALTH_CHECK_HOST=host.docker.internal`. |
-| `jbh-notification` | `DATABASE_URL=jdbc:postgresql://localhost:5433/jbh_finance`, `DATABASE_USERNAME`, `DATABASE_PASSWORD`. Optional: the `GMAIL_*` keys and `JBH_FRONTEND_URL=http://localhost:8100`. |
+The printed ports differ from the container ones, because the Mac Postgres and the local LGTM own the defaults:
+Postgres is `localhost:5433` (container 5432) and OTLP is `localhost:14317` (container 4317).
+`JBH_JWT_SECRET` must be the same value in `jbh-iam` and `jbh-gateway`. If it differs, every call gets a 401.
 
 ## Catches
 

@@ -21,26 +21,17 @@ local-ps:
 local-logs:
 	$(LOCAL_COMPOSE) logs -f --tail=200 $(s)
 
-# Stops the container. Its port is free, so the same service can start in your IDE.
+# Stops the container and prints the IDE env vars (from local-swap-env.sh, secrets masked). Its port is free, so the same service can start in your IDE.
+# The script runs before the stop: a missing tool or file ends the target while the container still runs.
 local-swap:
 	@test -n "$(s)" || (echo "usage: make local-swap s=<service>   ($(LOCAL_SWAPPABLE))" && exit 1)
 	@echo "$(LOCAL_SWAPPABLE)" | tr ' ' '\n' | grep -qx "$(s)" || (echo "$(s) cannot be swapped. Use: $(LOCAL_SWAPPABLE)" && exit 1)
-	$(LOCAL_COMPOSE) stop $(s)
-	@echo ""
-	@echo "$(s) is stopped. Start it from your IDE with these env vars:"
-	@echo "  CONSUL_DISCOVERY_HOSTNAME=host.docker.internal"
-	@echo "  OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:14317 OTEL_SDK_DISABLED=false JBH_ENV=local"
-	@case "$(s)" in \
-	  jbh-iam) echo "  JBH_JWT_SECRET=<same value as in .env.local>"; \
-	           echo "  DB_HOST=localhost DB_PORT=5433 DB_NAME=jbh DB_USERNAME=<POSTGRES_USER> JBH_ADMIN_PASS=<POSTGRES_PASSWORD>"; \
-	           echo "  Profile: local" ;; \
-	  jbh-gateway) echo "  JBH_JWT_SECRET=<same value as in .env.local>" ;; \
-	  jbh-personal-finance) echo "  DATABASE_URL=jdbc:postgresql://localhost:5433/jbh_finance DATABASE_USERNAME=<POSTGRES_USER> DATABASE_PASSWORD=<POSTGRES_PASSWORD>"; \
-	           echo "  CONSUL_HEALTH_CHECK_HOST already defaults to host.docker.internal in Quarkus dev mode" ;; \
-		  jbh-notification) echo "  DATABASE_URL=jdbc:postgresql://localhost:5433/jbh_finance DATABASE_USERNAME=<POSTGRES_USER> DATABASE_PASSWORD=<POSTGRES_PASSWORD>"; \
-		           echo "  Optional: the GMAIL_* variables, and JBH_FRONTEND_URL=http://localhost:8100" ;; \
-	esac
-	@echo "Consul is at localhost:8500 (the default CONSUL_HOST). Undo with: make local-restore s=$(s)"
+	@vars="$$(sh ./local-swap-env.sh $(s))" || exit 1; \
+	$(LOCAL_COMPOSE) stop $(s) || exit 1; \
+	echo ""; \
+	echo "$(s) is stopped. Start it from your IDE with these env vars:"; \
+	printf '%s\n' "$$vars" | sed 's/^/  /'; \
+	echo "Consul is at localhost:8500. Undo with: make local-restore s=$(s)"
 
 local-restore:
 	@test -n "$(s)" || (echo "usage: make local-restore s=<service>   ($(LOCAL_SWAPPABLE))" && exit 1)

@@ -101,12 +101,44 @@ What the script runs: [`initdb/sql/pg-monitor.sql`](initdb/sql/pg-monitor.sql). 
 
 1. `make local-swap s=jbh-iam` (also `jbh-personal-finance`, `jbh-notification` or `jbh-gateway`). It stops that container
    and prints the env vars for the IDE, read from `compose.local.yaml`. Secrets show as `<from .env.local>`: copy them from `.env.local`.
+   To load the real values from one file instead, see [Env file for the IDE](#env-file-for-the-ide-jbhenv).
 2. Run the same service from your IDE with those env vars.
 3. When you finish: stop it in the IDE, then `make local-restore s=jbh-iam`.
 
 The printed ports differ from the container ones, because the Mac Postgres and the local LGTM own the defaults:
 Postgres is `localhost:5433` (container 5432) and OTLP is `localhost:14317` (container 4317).
 `JBH_JWT_SECRET` must be the same value in `jbh-iam` and `jbh-gateway`. If it differs, every call gets a 401.
+
+## Env file for the IDE (jbh.env)
+
+`make local-ide-env` writes `jbh.env` in this folder. It holds the env vars of `jbh-iam`, `jbh-personal-finance`, `jbh-notification`
+and `jbh-gateway` in one list of `KEY=value` lines, read from `compose.local.yaml`. A key with the same value in several services appears once.
+If one key has different values in two services, the command stops, writes nothing and names the key and the services.
+
+**`jbh.env` holds real secrets** (your `.env.local` and shell values). It has mode 600 and is git-ignored. Never commit it or share it.
+
+`SPRING_PROFILES_ACTIVE` is not in the file: it would start the `local` profile in `jbh-gateway` too. Set the profile in each run configuration
+(`jbh-iam`: `local`).
+
+IntelliJ steps (EnvFile plugin):
+
+1. Install the EnvFile plugin. Newer IntelliJ versions may load an env file without it.
+2. Run, Edit Configurations, pick the service, tab **EnvFile**.
+3. Tick **Enable EnvFile**, click `+`, choose **.env file**, then pick `<path>/jbh-deploy/jbh.env`.
+4. Set the profile in the run configuration, then run the service.
+
+After `compose.local.yaml` or `.env.local` changes, run `make local-ide-env` again and restart the service.
+`make local-swap s=<service>` still prints the masked values of one service.
+
+Quarkus (`jbh-personal-finance`, `jbh-notification`) reads a `.env` file in its working directory. Link the same file, from `jbh-deploy`:
+
+```
+ln -s "$PWD/jbh.env" ../jbh-personal-finance/.env
+ln -s "$PWD/jbh.env" ../jbh-notification/.env
+```
+
+Before you link, run `git check-ignore .env` in that repo. It must print `.env`. If it prints nothing, add `.env` to that repo's `.gitignore` first:
+the link shows real secrets in that repo. If the run configuration has another working directory, link the `.env` there. There is no make target for this.
 
 ## Catches
 

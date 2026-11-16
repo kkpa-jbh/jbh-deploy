@@ -5,7 +5,7 @@ LOCAL_COMPOSE = docker compose --env-file .env.local -f compose.local.yaml
 # Services you can swap for a copy that runs in your IDE.
 LOCAL_SWAPPABLE = jbh-iam jbh-personal-finance jbh-notification jbh-gateway
 
-.PHONY: local-up local-down local-ps local-logs local-swap local-restore local-alloy local-alloy-logs local-pg-monitor
+.PHONY: local-up local-down local-ps local-logs local-swap local-ide-env local-restore local-alloy local-alloy-logs local-pg-monitor
 
 # Port 8500 is also used by kkpa-docker-lab/consul. Compose fails with "port is already allocated" if it still runs.
 local-up:
@@ -32,6 +32,11 @@ local-swap:
 	echo "$(s) is stopped. Start it from your IDE with these env vars:"; \
 	printf '%s\n' "$$vars" | sed 's/^/  /'; \
 	echo "Consul is at localhost:8500. Undo with: make local-restore s=$(s)"
+
+# Writes jbh.env: the env vars of all four swappable services in one file, with REAL secrets (mode 600, git-ignored).
+# Run it again after compose.local.yaml or .env.local changes. Steps: LOCAL.md.
+local-ide-env:
+	@sh ./local-swap-env.sh --write-all jbh.env
 
 local-restore:
 	@test -n "$(s)" || (echo "usage: make local-restore s=<service>   ($(LOCAL_SWAPPABLE))" && exit 1)

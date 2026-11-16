@@ -5,24 +5,23 @@
   "module": "jbh-deploy",
   "roadmap": null,
   "request": "One single generated env file jbh.env with the env vars of all 4 backends, written by a make command, so every IntelliJ run configuration points to one file (EnvFile plugin). Compose stays the one source. User: name it jbh.env; SRP only; no unit tests; Quarkus symlinks docs only; same branch, PR #3.",
-  "status": "in-progress",
+  "status": "applied",
   "rollup": {
-    "current": [
+    "current": [],
+    "pending": [],
+    "blocked": [],
+    "done": [
       "1.1",
       "1.2",
       "2.1",
       "3.1",
       "4.1",
-      "4.2"
-    ],
-    "pending": [
+      "4.2",
       "5.1"
-    ],
-    "blocked": [],
-    "done": []
+    ]
   },
   "created_at": "2026-11-16T00:03:57Z",
-  "updated_at": "2026-11-16T00:03:57Z",
+  "updated_at": "2026-11-16T00:06:20Z",
   "leader": {
     "assistant": "Claude Code",
     "model": "claude-opus-5-5"
@@ -49,13 +48,13 @@
       "module": "jbh-deploy",
       "depends_on": [],
       "parallel_ok": false,
-      "status": "in-progress",
+      "status": "done",
       "agent": "jbh-deploy",
       "model": "claude-sonnet-5-5",
       "started_at": "2026-11-16T00:03:57Z",
-      "completed_at": null,
-      "duration_seconds": null,
-      "notes": null,
+      "completed_at": "2026-11-16T00:06:20Z",
+      "duration_seconds": 143,
+      "notes": "Jq rules moved into shared JQ_RULES with entries($svc); SWAPPABLE and EXCLUDED_KEYS added. Print mode output unchanged (V4-V7 same).",
       "budget": null
     },
     {
@@ -66,13 +65,13 @@
         "1.1"
       ],
       "parallel_ok": false,
-      "status": "in-progress",
+      "status": "done",
       "agent": "jbh-deploy",
       "model": "claude-sonnet-5-5",
       "started_at": "2026-11-16T00:03:57Z",
-      "completed_at": null,
-      "duration_seconds": null,
-      "notes": null,
+      "completed_at": "2026-11-16T00:06:20Z",
+      "duration_seconds": 143,
+      "notes": "Added union_lines, report_conflicts, write_env_file (umask 077, mktemp, trap, mv), write_all, print_one, main switch. One stdout line only.",
       "budget": null
     },
     {
@@ -81,13 +80,13 @@
       "module": "jbh-deploy",
       "depends_on": [],
       "parallel_ok": false,
-      "status": "in-progress",
+      "status": "done",
       "agent": "jbh-deploy",
       "model": "claude-sonnet-5-5",
       "started_at": "2026-11-16T00:03:57Z",
-      "completed_at": null,
-      "duration_seconds": null,
-      "notes": null,
+      "completed_at": "2026-11-16T00:06:20Z",
+      "duration_seconds": 143,
+      "notes": "local-ide-env target runs sh ./local-swap-env.sh --write-all jbh.env.",
       "budget": null
     },
     {
@@ -96,13 +95,13 @@
       "module": "jbh-deploy",
       "depends_on": [],
       "parallel_ok": false,
-      "status": "in-progress",
+      "status": "done",
       "agent": "jbh-deploy",
       "model": "claude-sonnet-5-5",
       "started_at": "2026-11-16T00:03:57Z",
-      "completed_at": null,
-      "duration_seconds": null,
-      "notes": null,
+      "completed_at": "2026-11-16T00:06:20Z",
+      "duration_seconds": 143,
+      "notes": "jbh.env added to .gitignore.",
       "budget": null
     },
     {
@@ -111,13 +110,13 @@
       "module": "jbh-deploy",
       "depends_on": [],
       "parallel_ok": false,
-      "status": "in-progress",
+      "status": "done",
       "agent": "jbh-deploy",
       "model": "claude-sonnet-5-5",
       "started_at": "2026-11-16T00:03:57Z",
-      "completed_at": null,
-      "duration_seconds": null,
-      "notes": null,
+      "completed_at": "2026-11-16T00:06:20Z",
+      "duration_seconds": 143,
+      "notes": "LOCAL.md section: IntelliJ EnvFile steps, profile, re-run, Quarkus ln -s with .gitignore warning.",
       "budget": null
     },
     {
@@ -126,13 +125,13 @@
       "module": "jbh-deploy",
       "depends_on": [],
       "parallel_ok": false,
-      "status": "in-progress",
+      "status": "done",
       "agent": "jbh-deploy",
       "model": "claude-sonnet-5-5",
       "started_at": "2026-11-16T00:03:57Z",
-      "completed_at": null,
-      "duration_seconds": null,
-      "notes": null,
+      "completed_at": "2026-11-16T00:06:20Z",
+      "duration_seconds": 143,
+      "notes": "CLAUDE.md files table lists jbh.env and make local-ide-env.",
       "budget": null
     },
     {
@@ -148,13 +147,13 @@
         "4.2"
       ],
       "parallel_ok": false,
-      "status": "pending",
-      "agent": null,
-      "model": null,
-      "started_at": null,
-      "completed_at": null,
-      "duration_seconds": null,
-      "notes": null,
+      "status": "done",
+      "agent": "leader",
+      "model": "claude-opus-5-5",
+      "started_at": "2026-11-16T00:06:00Z",
+      "completed_at": "2026-11-16T00:06:20Z",
+      "duration_seconds": 20,
+      "notes": "Leader ran E1-E12: all pass. E4 file exact, mode 600, no temp file; E5 canary only in file; E6 conflict after fixing the test's awk edit.",
       "budget": null
     }
   ],
@@ -209,6 +208,15 @@
       "decision": "no grill-me interview",
       "why": "user fixed name, scope, SRP and symlink scope; no DB change",
       "covered_by": null
+    },
+    {
+      "id": "D6",
+      "at": "2026-11-16T00:06:20Z",
+      "scope": "task:5.1",
+      "made_by": "leader",
+      "decision": "fixed E6 test command in design.md (replace whole value, not the default)",
+      "why": "the default after :- is unused because .env.local.example sets POSTGRES_USER; script was correct",
+      "covered_by": null
     }
   ],
   "events": [
@@ -221,6 +229,16 @@
       "at": "2026-11-16T00:03:57Z",
       "agent": "leader",
       "event": "dispatched worker for wave 1 (tasks 1.1-4.2), one serial worker"
+    },
+    {
+      "at": "2026-11-16T00:06:20Z",
+      "agent": "leader",
+      "event": "wave 1 reconciled; worker start time approximate"
+    },
+    {
+      "at": "2026-11-16T00:06:20Z",
+      "agent": "leader (assistantRunsTests)",
+      "event": "ran E1-E12: sh -n 0; make -n ok; compose config -q x2 exit 0 (Complexity-Check); E4-E12 pass; E6 first failed on a test defect, passed after the fix"
     }
   ]
 }

@@ -117,7 +117,7 @@ Postgres is `localhost:5433` (container 5432) and OTLP is `localhost:14317` (con
 and `jbh-gateway` in one list of `KEY=value` lines, read from `compose.local.yaml`. A key with the same value in several services appears once.
 If one key has different values in two services, the command stops, writes nothing and names the key and the services.
 
-**`jbh.env` holds real secrets** (your `.env.local` and shell values). It has mode 600 and is git-ignored. Never commit it or share it.
+**`jbh.env` holds real secrets** (your `.env.local` values; `make` removes your shell exports of those keys first). It has mode 600 and is git-ignored. Never commit it or share it.
 
 `SPRING_PROFILES_ACTIVE` is not in the file: it would start the `local` profile in `jbh-gateway` too. Set the profile in each run configuration
 (`jbh-iam`: `local`).

@@ -23,7 +23,7 @@ No unit tests in this change (excluded by the user). No blueprint group. The che
 
 ## 4. Checks (leader)
 
-- [ ] 4.1 Run C1 to C15 from design.md. Depends on: 1, 2, 3.
+- [x] 4.1 Run C1 to C15 from design.md. Depends on: 1, 2, 3.
 - Suite commands: none besides the checks. The `Complexity-Check` of `CLAUDE.md` (both `compose ... config -q`) is C8.
 
 Size estimate: 8 files, ~170 changed lines (tests and docs included)

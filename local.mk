@@ -1,7 +1,14 @@
 # Local dev stack (see LOCAL.md). Included by the Makefile.
 # These commands are for your machine. The VPS commands stay in the Makefile.
 
-LOCAL_COMPOSE = docker compose --env-file .env.local -f compose.local.yaml
+# Compose prefers shell exports over --env-file, so a variable from your shell profile (for example POSTGRES_USER)
+# would win over .env.local. LOCAL_CLEAN_ENV removes every key listed in .env.local.example from the child process.
+# Recursive "=" on purpose: the file is read only when a local recipe runs, never for the VPS targets.
+LOCAL_ENV_KEYS = $(shell sed -n 's/^[^A-Za-z]*\([A-Z][A-Z0-9_]*\)=.*/\1/p' .env.local.example)
+LOCAL_CLEAN_ENV = env $(addprefix -u ,$(LOCAL_ENV_KEYS))
+LOCAL_COMPOSE = $(LOCAL_CLEAN_ENV) docker compose --env-file .env.local -f compose.local.yaml
+# Output file of local-ide-env. Set it to write somewhere else.
+IDE_ENV_FILE ?= jbh.env
 # Services you can swap for a copy that runs in your IDE.
 LOCAL_SWAPPABLE = jbh-iam jbh-personal-finance jbh-notification jbh-gateway
 
@@ -26,7 +33,7 @@ local-logs:
 local-swap:
 	@test -n "$(s)" || (echo "usage: make local-swap s=<service>   ($(LOCAL_SWAPPABLE))" && exit 1)
 	@echo "$(LOCAL_SWAPPABLE)" | tr ' ' '\n' | grep -qx "$(s)" || (echo "$(s) cannot be swapped. Use: $(LOCAL_SWAPPABLE)" && exit 1)
-	@vars="$$(sh ./local-swap-env.sh $(s))" || exit 1; \
+	@vars="$$($(LOCAL_CLEAN_ENV) sh ./local-swap-env.sh $(s))" || exit 1; \
 	$(LOCAL_COMPOSE) stop $(s) || exit 1; \
 	echo ""; \
 	echo "$(s) is stopped. Start it from your IDE with these env vars:"; \
@@ -36,7 +43,7 @@ local-swap:
 # Writes jbh.env: the env vars of all four swappable services in one file, with REAL secrets (mode 600, git-ignored).
 # Run it again after compose.local.yaml or .env.local changes. Steps: LOCAL.md.
 local-ide-env:
-	@sh ./local-swap-env.sh --write-all jbh.env
+	@$(LOCAL_CLEAN_ENV) sh ./local-swap-env.sh --write-all $(IDE_ENV_FILE)
 
 local-restore:
 	@test -n "$(s)" || (echo "usage: make local-restore s=<service>   ($(LOCAL_SWAPPABLE))" && exit 1)

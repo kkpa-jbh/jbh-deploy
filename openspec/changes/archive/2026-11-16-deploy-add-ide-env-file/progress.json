@@ -5,7 +5,7 @@
   "module": "jbh-deploy",
   "roadmap": null,
   "request": "One single generated env file jbh.env with the env vars of all 4 backends, written by a make command, so every IntelliJ run configuration points to one file (EnvFile plugin). Compose stays the one source. User: name it jbh.env; SRP only; no unit tests; Quarkus symlinks docs only; same branch, PR #3.",
-  "status": "applied",
+  "status": "archived",
   "rollup": {
     "current": [],
     "pending": [],
@@ -21,7 +21,7 @@
     ]
   },
   "created_at": "2026-11-16T00:03:57Z",
-  "updated_at": "2026-11-16T00:06:20Z",
+  "updated_at": "2026-11-16T00:09:29Z",
   "leader": {
     "assistant": "Claude Code",
     "model": "claude-opus-5-5"
@@ -158,10 +158,32 @@
     }
   ],
   "review": {
-    "status": "pending",
-    "agent": null,
-    "brief": null,
-    "rounds": []
+    "status": "reviewer-approved",
+    "agent": "jbh-deploy-reviewer",
+    "brief": "Review deploy-add-ide-env-file: diff d794a05...HEAD (commits 69f0d55, b2fc219 only). User decisions in decisions[] made_by user: one file jbh.env, SRP only, no unit tests, symlinks docs only, size over cap accepted, security-review skipped. Binding: jbh.env holds real secrets, mode 600, atomic write, never printed; raw compose JSON never output; SPRING_PROFILES_ACTIVE excluded; conflict fails with key and services only. E6 test command fixed by leader (D6). Signals: E1-E12 assistant-run by the leader, all pass. Never run the script, make local-ide-env, or compose config without -q: the shell exports real secrets.",
+    "rounds": [
+      {
+        "round": 1,
+        "at": "2026-11-16T00:15:00Z",
+        "verdict": "approved",
+        "security": {
+          "status": "skipped",
+          "ran_at": "2026-11-16T00:15:00Z",
+          "scope": "git.base",
+          "findings": [],
+          "note": "Skipped by user decision D7 (review:security-gate). Reviewer read the script for secret leaks by hand (risk lens): none found."
+        },
+        "findings": [
+          {
+            "id": "R1",
+            "severity": "minor",
+            "note": "openspec/changes/deploy-add-ide-env-file/tasks.md:30 task 5.1 is still '[ ]' while progress.json has 5.1 done. Tick it so both match.",
+            "status": "fixed",
+            "triage": "accepted"
+          }
+        ]
+      }
+    ]
   },
   "decisions": [
     {
@@ -217,6 +239,15 @@
       "decision": "fixed E6 test command in design.md (replace whole value, not the default)",
       "why": "the default after :- is unused because .env.local.example sets POSTGRES_USER; script was correct",
       "covered_by": null
+    },
+    {
+      "id": "D7",
+      "at": "2026-11-16T00:08:39Z",
+      "scope": "review:security-gate",
+      "made_by": "user",
+      "decision": "skip /security-review",
+      "why": "user chose Skip; leader checks E4 mode 600, E5 canary, E10 guards found no leak",
+      "covered_by": null
     }
   ],
   "events": [
@@ -239,6 +270,26 @@
       "at": "2026-11-16T00:06:20Z",
       "agent": "leader (assistantRunsTests)",
       "event": "ran E1-E12: sh -n 0; make -n ok; compose config -q x2 exit 0 (Complexity-Check); E4-E12 pass; E6 first failed on a test defect, passed after the fix"
+    },
+    {
+      "at": "2026-11-16T00:08:39Z",
+      "agent": "leader",
+      "event": "verified: recorded pass E1-E12. Real size d794a05..HEAD: see git diff --shortstat"
+    },
+    {
+      "at": "2026-11-16T00:08:39Z",
+      "agent": "leader",
+      "event": "dispatched reviewer round 1 (Security-Gate: skip)"
+    },
+    {
+      "at": "2026-11-16T00:09:28Z",
+      "agent": "leader",
+      "event": "R1 fixed: ticked task 5.1 in tasks.md"
+    },
+    {
+      "at": "2026-11-16T00:09:29Z",
+      "agent": "leader",
+      "event": "archived; specs synced; KB sync skipped: no kkpa/context"
     }
   ]
 }

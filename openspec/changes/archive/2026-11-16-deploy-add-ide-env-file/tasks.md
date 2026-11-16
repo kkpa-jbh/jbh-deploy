@@ -27,7 +27,7 @@ T1 to T4 touch different files. T2 and T3 only use the command line fixed in des
 
 ## 5. Checks (leader)
 
-- [ ] 5.1 Run E1 to E12 from design.md and the Complexity-Check command.
+- [x] 5.1 Run E1 to E12 from design.md and the Complexity-Check command.
 - Depends on: 1, 2, 3, 4.
 
 Size estimate: 10 files, ~560 changed lines (tests and docs included)

@@ -1,0 +1,238 @@
+{
+  "schema_version": 1,
+  "kind": "change",
+  "change": "deploy-ignore-shell-env-local",
+  "module": "jbh-deploy",
+  "roadmap": null,
+  "request": "make local-* must ignore shell exports (user's ~/.zshrc exports Magus POSTGRES_USER/PASSWORD, JBH_JWT_SECRET, GEMINI_API_KEY) so .env.local is the only source for the local stack. Same branch, PR #3. SRP only. No unit tests.",
+  "status": "in-progress",
+  "rollup": {
+    "current": [
+      "1.1",
+      "1.2",
+      "1.3",
+      "1.4",
+      "2.1",
+      "3.1",
+      "3.2"
+    ],
+    "pending": [
+      "4.1"
+    ],
+    "blocked": [],
+    "done": []
+  },
+  "created_at": "2026-11-16T00:47:09Z",
+  "updated_at": "2026-11-16T00:47:09Z",
+  "leader": {
+    "assistant": "Claude Code",
+    "model": "claude-opus-5-5"
+  },
+  "git": {
+    "strategy": "auto",
+    "branch": "ft/CH3-JBH-56-deploy-add-local-pg-monitor",
+    "base": "main",
+    "ticket": "JBH-56",
+    "ticket_url": "https://linear.app/kkpa/issue/JBH-56/jbh-deploy-grafana-alloy-locally-and-in-prod-postgres-and-vps-metrics",
+    "ticket_tracker": "linear",
+    "created_at": "2026-11-16T00:47:09Z"
+  },
+  "test_first": {
+    "status": "skipped",
+    "commit": null,
+    "tests": [],
+    "approved_at": null
+  },
+  "tasks": [
+    {
+      "id": "1.1",
+      "title": "local.mk: LOCAL_ENV_KEYS and LOCAL_CLEAN_ENV",
+      "module": "jbh-deploy",
+      "depends_on": [],
+      "parallel_ok": false,
+      "status": "in-progress",
+      "agent": "jbh-deploy",
+      "model": "claude-sonnet-5-5",
+      "started_at": "2026-11-16T00:47:09Z",
+      "completed_at": null,
+      "duration_seconds": null,
+      "notes": null,
+      "budget": null
+    },
+    {
+      "id": "1.2",
+      "title": "local.mk: LOCAL_COMPOSE uses the prefix",
+      "module": "jbh-deploy",
+      "depends_on": [
+        "1.1"
+      ],
+      "parallel_ok": false,
+      "status": "in-progress",
+      "agent": "jbh-deploy",
+      "model": "claude-sonnet-5-5",
+      "started_at": "2026-11-16T00:47:09Z",
+      "completed_at": null,
+      "duration_seconds": null,
+      "notes": null,
+      "budget": null
+    },
+    {
+      "id": "1.3",
+      "title": "local.mk: IDE_ENV_FILE and local-ide-env prefix",
+      "module": "jbh-deploy",
+      "depends_on": [
+        "1.1"
+      ],
+      "parallel_ok": false,
+      "status": "in-progress",
+      "agent": "jbh-deploy",
+      "model": "claude-sonnet-5-5",
+      "started_at": "2026-11-16T00:47:09Z",
+      "completed_at": null,
+      "duration_seconds": null,
+      "notes": null,
+      "budget": null
+    },
+    {
+      "id": "1.4",
+      "title": "local.mk: local-swap prefix",
+      "module": "jbh-deploy",
+      "depends_on": [
+        "1.1"
+      ],
+      "parallel_ok": false,
+      "status": "in-progress",
+      "agent": "jbh-deploy",
+      "model": "claude-sonnet-5-5",
+      "started_at": "2026-11-16T00:47:09Z",
+      "completed_at": null,
+      "duration_seconds": null,
+      "notes": null,
+      "budget": null
+    },
+    {
+      "id": "2.1",
+      "title": "local-swap-env.sh: header comment",
+      "module": "jbh-deploy",
+      "depends_on": [],
+      "parallel_ok": false,
+      "status": "in-progress",
+      "agent": "jbh-deploy",
+      "model": "claude-sonnet-5-5",
+      "started_at": "2026-11-16T00:47:09Z",
+      "completed_at": null,
+      "duration_seconds": null,
+      "notes": null,
+      "budget": null
+    },
+    {
+      "id": "3.1",
+      "title": "LOCAL.md: shell exports note",
+      "module": "jbh-deploy",
+      "depends_on": [],
+      "parallel_ok": false,
+      "status": "in-progress",
+      "agent": "jbh-deploy",
+      "model": "claude-sonnet-5-5",
+      "started_at": "2026-11-16T00:47:09Z",
+      "completed_at": null,
+      "duration_seconds": null,
+      "notes": null,
+      "budget": null
+    },
+    {
+      "id": "3.2",
+      "title": "LOCAL.md: volume warning",
+      "module": "jbh-deploy",
+      "depends_on": [],
+      "parallel_ok": false,
+      "status": "in-progress",
+      "agent": "jbh-deploy",
+      "model": "claude-sonnet-5-5",
+      "started_at": "2026-11-16T00:47:09Z",
+      "completed_at": null,
+      "duration_seconds": null,
+      "notes": null,
+      "budget": null
+    },
+    {
+      "id": "4.1",
+      "title": "Run C1 to C15 (leader)",
+      "module": "jbh-deploy",
+      "depends_on": [
+        "1.1",
+        "1.2",
+        "1.3",
+        "1.4",
+        "2.1",
+        "3.1",
+        "3.2"
+      ],
+      "parallel_ok": false,
+      "status": "pending",
+      "agent": null,
+      "model": null,
+      "started_at": null,
+      "completed_at": null,
+      "duration_seconds": null,
+      "notes": null,
+      "budget": null
+    }
+  ],
+  "review": {
+    "status": "pending",
+    "agent": null,
+    "brief": null,
+    "rounds": []
+  },
+  "decisions": [
+    {
+      "id": "D1",
+      "at": "2026-11-16T00:47:09Z",
+      "scope": "change",
+      "made_by": "user",
+      "decision": "SRP only; unit tests excluded; same branch PR #3",
+      "why": "user answers before the change",
+      "covered_by": null
+    },
+    {
+      "id": "D2",
+      "at": "2026-11-16T00:47:09Z",
+      "scope": "change",
+      "made_by": "user",
+      "decision": "briefing approved",
+      "why": "user answered Go",
+      "covered_by": null
+    },
+    {
+      "id": "D3",
+      "at": "2026-11-16T00:47:09Z",
+      "scope": "concurrency",
+      "made_by": "leader",
+      "decision": "no race risk",
+      "why": "only removes env vars from one command",
+      "covered_by": null
+    },
+    {
+      "id": "D4",
+      "at": "2026-11-16T00:47:09Z",
+      "scope": "change",
+      "made_by": "leader",
+      "decision": "no grill-me interview",
+      "why": "user chose the approach; SRP lines given; no DB change",
+      "covered_by": null
+    }
+  ],
+  "events": [
+    {
+      "at": "2026-11-16T00:47:09Z",
+      "agent": "leader",
+      "event": "artifacts validated (--strict); briefing approved; size ~170 lines under cap"
+    },
+    {
+      "at": "2026-11-16T00:47:09Z",
+      "agent": "leader",
+      "event": "dispatched worker for wave 1 (tasks 1.1-3.2)"
+    }
+  ]
+}

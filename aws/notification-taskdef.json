@@ -1,0 +1,76 @@
+{
+  "family": "jbh-notification",
+  "requiresCompatibilities": ["FARGATE"],
+  "networkMode": "awsvpc",
+  "cpu": "256",
+  "memory": "512",
+  "runtimePlatform": { "operatingSystemFamily": "LINUX", "cpuArchitecture": "X86_64" },
+  "executionRoleArn": "arn:aws:iam::<ACCOUNT_ID>:role/jbh-notification-execution",
+  "taskRoleArn": "arn:aws:iam::<ACCOUNT_ID>:role/jbh-notification-task",
+  "volumes": [{ "name": "tmp" }],
+  "containerDefinitions": [
+    {
+      "name": "db-init",
+      "image": "public.ecr.aws/docker/library/postgres:16-alpine",
+      "essential": false,
+      "entryPoint": ["psql"],
+      "command": ["-v", "ON_ERROR_STOP=1", "-c",
+        "SELECT pg_advisory_lock(7778); CREATE SCHEMA IF NOT EXISTS notifications;"],
+      "environment": [
+        { "name": "PGHOST", "value": "<RDS_ENDPOINT>" },
+        { "name": "PGPORT", "value": "5432" },
+        { "name": "PGDATABASE", "value": "jbh_finance" },
+        { "name": "PGSSLMODE", "value": "require" }
+      ],
+      "secrets": [
+        { "name": "PGUSER", "valueFrom": "<DB_SECRET_ARN>:username::" },
+        { "name": "PGPASSWORD", "valueFrom": "<DB_SECRET_ARN>:password::" }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": { "awslogs-group": "/ecs/jbh-notification", "awslogs-region": "<REGION>", "awslogs-stream-prefix": "db-init" }
+      }
+    },
+    {
+      "name": "app",
+      "image": "ghcr.io/kkpa-jbh/jbh-notification:<GIT_SHA>",
+      "essential": true,
+      "repositoryCredentials": { "credentialsParameter": "<GHCR_SECRET_ARN>" },
+      "dependsOn": [{ "containerName": "db-init", "condition": "SUCCESS" }],
+      "portMappings": [{ "containerPort": 7778, "protocol": "tcp", "name": "http" }],
+      "readonlyRootFilesystem": true,
+      "mountPoints": [{ "sourceVolume": "tmp", "containerPath": "/tmp" }],
+      "linuxParameters": { "capabilities": { "drop": ["ALL"] } },
+      "stopTimeout": 30,
+      "environment": [
+        { "name": "DATABASE_URL", "value": "jdbc:postgresql://<RDS_ENDPOINT>:5432/jbh_finance" },
+        { "name": "CONSUL_HOST", "value": "<CONSUL_HOST>" },
+        { "name": "CONSUL_PORT", "value": "8500" },
+        { "name": "CONSUL_PREFER_IP", "value": "true" },
+        { "name": "JBH_FRONTEND_URL", "value": "https://jbh.usemagus.cloud" },
+        { "name": "GMAIL_HOST", "value": "smtp.gmail.com" },
+        { "name": "GMAIL_PORT", "value": "465" },
+        { "name": "GMAIL_FROM", "value": "<sender address>" },
+        { "name": "OTEL_SDK_DISABLED", "value": "true" },
+        { "name": "JAVA_OPTS", "value": "-Xmx256m -XX:+ExitOnOutOfMemoryError" }
+      ],
+      "secrets": [
+        { "name": "DATABASE_USERNAME", "valueFrom": "<DB_SECRET_ARN>:username::" },
+        { "name": "DATABASE_PASSWORD", "valueFrom": "<DB_SECRET_ARN>:password::" },
+        { "name": "GMAIL_USERNAME", "valueFrom": "<SMTP_SECRET_ARN>:GMAIL_USERNAME::" },
+        { "name": "GMAIL_APP_PASSWORD", "valueFrom": "<SMTP_SECRET_ARN>:GMAIL_APP_PASSWORD::" }
+      ],
+      "healthCheck": {
+        "command": ["CMD-SHELL", "wget -q -O /dev/null http://localhost:7778/q/health/live || exit 1"],
+        "interval": 15, "timeout": 5, "retries": 5, "startPeriod": 120
+      },
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/jbh-notification", "awslogs-region": "<REGION>",
+          "awslogs-stream-prefix": "app", "mode": "non-blocking", "max-buffer-size": "4m"
+        }
+      }
+    }
+  ]
+}

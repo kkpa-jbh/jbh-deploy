@@ -78,9 +78,19 @@ services:
       GOOGLE_CLIENT_IDS: ${GOOGLE_CLIENT_IDS:-}
       CORS_ALLOWED_ORIGINS: http://localhost:8100
       JBH_GATEWAY_URL: http://host.docker.internal:8080
+      # Token life and user cache. Defaults are the ones in jbh-iam's application.yml.
+      # Spring does not fall back to its default on an empty value, so each key has one here.
+      JWT_EXPIRATION_IN_MS: ${JWT_EXPIRATION_IN_MS:-900000}
+      REFRESH_TOKEN_EXPIRATION_IN_MS: ${REFRESH_TOKEN_EXPIRATION_IN_MS:-2592000000}
+      CACHE_USER_ENABLED: ${CACHE_USER_ENABLED:-true}
+      CACHE_USER_MAX_SIZE: ${CACHE_USER_MAX_SIZE:-5000}
+      CACHE_USER_EXPIRE_ACCESS_MINUTES: ${CACHE_USER_EXPIRE_ACCESS_MINUTES:-30}
+      CACHE_USER_EXPIRE_WRITE_MINUTES: ${CACHE_USER_EXPIRE_WRITE_MINUTES:-60}
       # Telemetry goes to jbh-alloy. A missing collector never stops this service.
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jbh-alloy:4317
       OTEL_SDK_DISABLED: "false"
+      OTEL_TRACES_SAMPLER_ARG: ${OTEL_TRACES_SAMPLER_ARG:-1.0}
+      JBH_SERVICE_VERSION: ${JBH_SERVICE_VERSION:-unknown}
       JBH_ENV: local
     ports:
       - "9999:9999"
@@ -121,9 +131,18 @@ services:
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       JEV_API_KEY: ${JEV_API_KEY:-}
+      OLLAMA_API_KEY: ${OLLAMA_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-flash-latest}
+      STATEMENT_IMPORT_STALE_AFTER: ${STATEMENT_IMPORT_STALE_AFTER:-10m}
+      # Off by default, as in the prod profile. The output folder is inside the container.
+      STATEMENT_LLM_COMPARE: ${STATEMENT_LLM_COMPARE:-false}
+      STATEMENT_LLM_COMPARE_DIR: ${STATEMENT_LLM_COMPARE_DIR:-target/llm-compare}
       # Telemetry goes to jbh-alloy. A missing collector never stops this service.
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jbh-alloy:4317
       OTEL_SDK_DISABLED: "false"
+      OTEL_TRACES_SAMPLER: ${OTEL_TRACES_SAMPLER:-parentbased_traceidratio}
+      OTEL_TRACES_SAMPLER_ARG: ${OTEL_TRACES_SAMPLER_ARG:-1.0}
+      JBH_SERVICE_VERSION: ${JBH_SERVICE_VERSION:-unknown}
       JBH_ENV: local
     ports:
       - "7777:7777"
@@ -162,6 +181,8 @@ services:
       # Telemetry goes to jbh-alloy. A missing collector never stops this service.
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jbh-alloy:4317
       OTEL_SDK_DISABLED: "false"
+      OTEL_TRACES_SAMPLER: ${OTEL_TRACES_SAMPLER:-parentbased_traceidratio}
+      OTEL_TRACES_SAMPLER_ARG: ${OTEL_TRACES_SAMPLER_ARG:-1.0}
       JBH_ENV: local
     ports:
       - "7778:7778"
@@ -188,6 +209,8 @@ services:
       # Telemetry goes to jbh-alloy. A missing collector never stops this service.
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jbh-alloy:4317
       OTEL_SDK_DISABLED: "false"
+      OTEL_TRACES_SAMPLER_ARG: ${OTEL_TRACES_SAMPLER_ARG:-1.0}
+      JBH_SERVICE_VERSION: ${JBH_SERVICE_VERSION:-unknown}
       JBH_ENV: local
     ports:
       - "8080:8080"

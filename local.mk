@@ -12,15 +12,24 @@ IDE_ENV_FILE ?= jbh.env
 # Services you can swap for a copy that runs in your IDE.
 LOCAL_SWAPPABLE = jbh-iam jbh-personal-finance jbh-notification jbh-gateway
 
-.PHONY: local-up local-down local-ps local-logs local-swap local-ide-env local-restore local-alloy local-alloy-logs local-pg-monitor
+.PHONY: local-up local-down local-ps local-logs local-swap local-ide-env local-restore local-alloy local-alloy-logs local-pg-monitor local-db-backup local-db-restore
 
 # Port 8500 is also used by kkpa-docker-lab/consul. Compose fails with "port is already allocated" if it still runs.
 local-up:
 	@test -f .env.local || (echo "Missing .env.local. Run: cp .env.local.example .env.local" && exit 1)
 	$(LOCAL_COMPOSE) up -d
 
+# Keeps the volumes (no -v), so the Postgres data stays. Back it up with local-db-backup.
 local-down:
 	$(LOCAL_COMPOSE) down
+
+# Dumps jbh and jbh_finance to backups/local/<UTC time>/ (git-ignored). Postgres must run.
+local-db-backup:
+	@$(LOCAL_CLEAN_ENV) sh ./local-db.sh backup
+
+# Restores a snapshot: takes a safety backup first, stops IAM, finance and notification, restores, starts them again.
+local-db-restore:
+	@$(LOCAL_CLEAN_ENV) sh ./local-db.sh restore "$(d)"
 
 local-ps:
 	$(LOCAL_COMPOSE) ps

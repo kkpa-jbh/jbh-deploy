@@ -33,7 +33,7 @@ call this service.
 | 4 | **Consul on AWS**, reachable by a stable name (for example Cloud Map `jbh-consul.jbh.local`) | **No** |
 | 5 | **jbh-gateway and jbh-iam on AWS**, using the same Consul | **No** |
 | 6 | Secrets: GHCR pull, DB credentials, SMTP credentials | GHCR and DB only for finance |
-| 7 | IAM: execution role (and an optional task role) | Only for finance |
+| 7 | IAM: execution role (a task role only for a debug shell) | Only for finance |
 | 8 | Security group `jbh-notification`, plus rules on the RDS and Consul groups | No |
 | 9 | CloudWatch log group `/ecs/jbh-notification` | No |
 | 10 | ECS service | No |
@@ -150,10 +150,14 @@ aws iam put-role-policy --role-name jbh-notification-execution \
 
 If a secret uses a customer-managed KMS key, add `kms:Decrypt` on that key.
 
-### 4. Task role (optional)
+### 4. Task role (only for a debug shell)
 
-The app calls no AWS API, so it needs no permission. Keep the role only for ECS Exec (a shell in the
-running task, for debugging). Otherwise remove `taskRoleArn` from the task definition.
+The app calls no AWS API, so the task definition has no `taskRoleArn`. Skip this step for a normal setup.
+
+ECS Exec (a shell in the running task) does **not** work with `readonlyRootFilesystem: true`
+([AWS docs](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/ecs-exec.html)). So the default
+setup has no ECS Exec. For a debug shell, create this role once, then use a separate debug revision
+(see "Debug shell" in step 7).
 
 `ecs-exec.json`:
 
@@ -190,6 +194,7 @@ aws iam put-role-policy --role-name jbh-notification-task --policy-name ecs-exec
 | `jbh-notification` | out | `8500` | Consul group | register and deregister |
 | `jbh-notification` | out | `465`, `443` | `0.0.0.0/0` | Gmail SMTP, GHCR image pull (through the NAT) |
 | RDS group | in | `5432` | `jbh-notification` | database |
+| Consul group | in | `8500` | `jbh-notification` | register and deregister. An outbound rule does not open the other side. |
 
 ```bash
 SG=$(aws ec2 create-security-group --group-name jbh-notification \
@@ -197,7 +202,10 @@ SG=$(aws ec2 create-security-group --group-name jbh-notification \
 aws ec2 authorize-security-group-ingress --group-id "$SG" --protocol tcp --port 7778 --source-group <GATEWAY_SG>
 aws ec2 authorize-security-group-ingress --group-id "$SG" --protocol tcp --port 7778 --source-group <CONSUL_SG>
 aws ec2 authorize-security-group-ingress --group-id <RDS_SG> --protocol tcp --port 5432 --source-group "$SG"
+aws ec2 authorize-security-group-ingress --group-id <CONSUL_SG> --protocol tcp --port 8500 --source-group "$SG"
 ```
+
+Without the last rule, the task cannot register in Consul, and the gateway sends it no traffic.
 
 A new group allows all outbound traffic. To keep only the 4 outbound rules above, revoke the default
 rule and add them with `authorize-security-group-egress`.
@@ -226,11 +234,26 @@ aws ecs create-service \
   --launch-type FARGATE \
   --platform-version LATEST \
   --network-configuration "awsvpcConfiguration={subnets=[<PRIVATE_SUBNET_A>,<PRIVATE_SUBNET_B>],securityGroups=[$SG],assignPublicIp=DISABLED}" \
-  --deployment-configuration "minimumHealthyPercent=100,maximumPercent=200,deploymentCircuitBreaker={enable=true,rollback=true}" \
-  --enable-execute-command
+  --deployment-configuration "minimumHealthyPercent=100,maximumPercent=200,deploymentCircuitBreaker={enable=true,rollback=true}"
 ```
 
-Drop `--enable-execute-command` if you skipped the task role.
+**Debug shell (optional).** It needs the task role from step 4. Copy the task definition to a debug
+file. In the `app` container, set `"readonlyRootFilesystem": false`. At the top level, add
+`"taskRoleArn": "arn:aws:iam::<ACCOUNT_ID>:role/jbh-notification-task"`. Then:
+
+```bash
+aws ecs register-task-definition --cli-input-json file://notification-taskdef-debug.json
+aws ecs update-service --cluster <CLUSTER> --service jbh-notification \
+  --task-definition jbh-notification:<DEBUG_REVISION> --enable-execute-command --force-new-deployment
+aws ecs execute-command --cluster <CLUSTER> --task <TASK_ID> --container app --interactive --command "sh"
+```
+
+When you are done, go back to the read-only revision:
+
+```bash
+aws ecs update-service --cluster <CLUSTER> --service jbh-notification \
+  --task-definition jbh-notification:<NORMAL_REVISION> --disable-execute-command --force-new-deployment
+```
 
 **Deploy a new version:** change the image tag, register again, then:
 

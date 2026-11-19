@@ -6,7 +6,6 @@
   "memory": "512",
   "runtimePlatform": { "operatingSystemFamily": "LINUX", "cpuArchitecture": "X86_64" },
   "executionRoleArn": "arn:aws:iam::<ACCOUNT_ID>:role/jbh-notification-execution",
-  "taskRoleArn": "arn:aws:iam::<ACCOUNT_ID>:role/jbh-notification-task",
   "volumes": [{ "name": "tmp" }],
   "containerDefinitions": [
     {

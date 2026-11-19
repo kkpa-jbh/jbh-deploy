@@ -1,0 +1,295 @@
+{
+  "schema_version": 1,
+  "kind": "change",
+  "change": "deploy-add-ide-env-file",
+  "module": "jbh-deploy",
+  "roadmap": null,
+  "request": "One single generated env file jbh.env with the env vars of all 4 backends, written by a make command, so every IntelliJ run configuration points to one file (EnvFile plugin). Compose stays the one source. User: name it jbh.env; SRP only; no unit tests; Quarkus symlinks docs only; same branch, PR #3.",
+  "status": "archived",
+  "rollup": {
+    "current": [],
+    "pending": [],
+    "blocked": [],
+    "done": [
+      "1.1",
+      "1.2",
+      "2.1",
+      "3.1",
+      "4.1",
+      "4.2",
+      "5.1"
+    ]
+  },
+  "created_at": "2026-11-16T00:03:57Z",
+  "updated_at": "2026-11-16T00:09:29Z",
+  "leader": {
+    "assistant": "Claude Code",
+    "model": "claude-opus-5-5"
+  },
+  "git": {
+    "strategy": "auto",
+    "branch": "ft/CH3-JBH-56-deploy-add-local-pg-monitor",
+    "base": "main",
+    "ticket": "JBH-56",
+    "ticket_url": "https://linear.app/kkpa/issue/JBH-56/jbh-deploy-grafana-alloy-locally-and-in-prod-postgres-and-vps-metrics",
+    "ticket_tracker": "linear",
+    "created_at": "2026-11-16T00:03:57Z"
+  },
+  "test_first": {
+    "status": "skipped",
+    "commit": null,
+    "tests": [],
+    "approved_at": null
+  },
+  "tasks": [
+    {
+      "id": "1.1",
+      "title": "local-swap-env.sh: shared JQ_RULES, entries, SWAPPABLE, EXCLUDED_KEYS",
+      "module": "jbh-deploy",
+      "depends_on": [],
+      "parallel_ok": false,
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "claude-sonnet-5-5",
+      "started_at": "2026-11-16T00:03:57Z",
+      "completed_at": "2026-11-16T00:06:20Z",
+      "duration_seconds": 143,
+      "notes": "Jq rules moved into shared JQ_RULES with entries($svc); SWAPPABLE and EXCLUDED_KEYS added. Print mode output unchanged (V4-V7 same).",
+      "budget": null
+    },
+    {
+      "id": "1.2",
+      "title": "local-swap-env.sh: union, conflicts, write_env_file, main switch",
+      "module": "jbh-deploy",
+      "depends_on": [
+        "1.1"
+      ],
+      "parallel_ok": false,
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "claude-sonnet-5-5",
+      "started_at": "2026-11-16T00:03:57Z",
+      "completed_at": "2026-11-16T00:06:20Z",
+      "duration_seconds": 143,
+      "notes": "Added union_lines, report_conflicts, write_env_file (umask 077, mktemp, trap, mv), write_all, print_one, main switch. One stdout line only.",
+      "budget": null
+    },
+    {
+      "id": "2.1",
+      "title": "local.mk: local-ide-env target",
+      "module": "jbh-deploy",
+      "depends_on": [],
+      "parallel_ok": false,
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "claude-sonnet-5-5",
+      "started_at": "2026-11-16T00:03:57Z",
+      "completed_at": "2026-11-16T00:06:20Z",
+      "duration_seconds": 143,
+      "notes": "local-ide-env target runs sh ./local-swap-env.sh --write-all jbh.env.",
+      "budget": null
+    },
+    {
+      "id": "3.1",
+      "title": ".gitignore: jbh.env",
+      "module": "jbh-deploy",
+      "depends_on": [],
+      "parallel_ok": false,
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "claude-sonnet-5-5",
+      "started_at": "2026-11-16T00:03:57Z",
+      "completed_at": "2026-11-16T00:06:20Z",
+      "duration_seconds": 143,
+      "notes": "jbh.env added to .gitignore.",
+      "budget": null
+    },
+    {
+      "id": "4.1",
+      "title": "LOCAL.md: IDE env file section",
+      "module": "jbh-deploy",
+      "depends_on": [],
+      "parallel_ok": false,
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "claude-sonnet-5-5",
+      "started_at": "2026-11-16T00:03:57Z",
+      "completed_at": "2026-11-16T00:06:20Z",
+      "duration_seconds": 143,
+      "notes": "LOCAL.md section: IntelliJ EnvFile steps, profile, re-run, Quarkus ln -s with .gitignore warning.",
+      "budget": null
+    },
+    {
+      "id": "4.2",
+      "title": "CLAUDE.md: files table row",
+      "module": "jbh-deploy",
+      "depends_on": [],
+      "parallel_ok": false,
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "claude-sonnet-5-5",
+      "started_at": "2026-11-16T00:03:57Z",
+      "completed_at": "2026-11-16T00:06:20Z",
+      "duration_seconds": 143,
+      "notes": "CLAUDE.md files table lists jbh.env and make local-ide-env.",
+      "budget": null
+    },
+    {
+      "id": "5.1",
+      "title": "Run E1 to E12 and Complexity-Check (leader)",
+      "module": "jbh-deploy",
+      "depends_on": [
+        "1.1",
+        "1.2",
+        "2.1",
+        "3.1",
+        "4.1",
+        "4.2"
+      ],
+      "parallel_ok": false,
+      "status": "done",
+      "agent": "leader",
+      "model": "claude-opus-5-5",
+      "started_at": "2026-11-16T00:06:00Z",
+      "completed_at": "2026-11-16T00:06:20Z",
+      "duration_seconds": 20,
+      "notes": "Leader ran E1-E12: all pass. E4 file exact, mode 600, no temp file; E5 canary only in file; E6 conflict after fixing the test's awk edit.",
+      "budget": null
+    }
+  ],
+  "review": {
+    "status": "reviewer-approved",
+    "agent": "jbh-deploy-reviewer",
+    "brief": "Review deploy-add-ide-env-file: diff d794a05...HEAD (commits 69f0d55, b2fc219 only). User decisions in decisions[] made_by user: one file jbh.env, SRP only, no unit tests, symlinks docs only, size over cap accepted, security-review skipped. Binding: jbh.env holds real secrets, mode 600, atomic write, never printed; raw compose JSON never output; SPRING_PROFILES_ACTIVE excluded; conflict fails with key and services only. E6 test command fixed by leader (D6). Signals: E1-E12 assistant-run by the leader, all pass. Never run the script, make local-ide-env, or compose config without -q: the shell exports real secrets.",
+    "rounds": [
+      {
+        "round": 1,
+        "at": "2026-11-16T00:15:00Z",
+        "verdict": "approved",
+        "security": {
+          "status": "skipped",
+          "ran_at": "2026-11-16T00:15:00Z",
+          "scope": "git.base",
+          "findings": [],
+          "note": "Skipped by user decision D7 (review:security-gate). Reviewer read the script for secret leaks by hand (risk lens): none found."
+        },
+        "findings": [
+          {
+            "id": "R1",
+            "severity": "minor",
+            "note": "openspec/changes/deploy-add-ide-env-file/tasks.md:30 task 5.1 is still '[ ]' while progress.json has 5.1 done. Tick it so both match.",
+            "status": "fixed",
+            "triage": "accepted"
+          }
+        ]
+      }
+    ]
+  },
+  "decisions": [
+    {
+      "id": "D1",
+      "at": "2026-11-16T00:03:57Z",
+      "scope": "change",
+      "made_by": "user",
+      "decision": "SRP only; unit tests excluded; Quarkus symlinks docs only; same branch and PR #3, no counter bump",
+      "why": "user answers before the change",
+      "covered_by": null
+    },
+    {
+      "id": "D2",
+      "at": "2026-11-16T00:03:57Z",
+      "scope": "change",
+      "made_by": "user",
+      "decision": "one file jbh.env, not one file per service",
+      "why": "user wants each env var kept once",
+      "covered_by": null
+    },
+    {
+      "id": "D3",
+      "at": "2026-11-16T00:03:57Z",
+      "scope": "change",
+      "made_by": "user",
+      "decision": "briefing approved; size ~560 lines over cap 500 accepted",
+      "why": "most lines are OpenSpec docs; code ~150 lines",
+      "covered_by": null
+    },
+    {
+      "id": "D4",
+      "at": "2026-11-16T00:03:57Z",
+      "scope": "concurrency",
+      "made_by": "leader",
+      "decision": "no race risk",
+      "why": "unique temp file per run and atomic mv; single user",
+      "covered_by": null
+    },
+    {
+      "id": "D5",
+      "at": "2026-11-16T00:03:57Z",
+      "scope": "change",
+      "made_by": "leader",
+      "decision": "no grill-me interview",
+      "why": "user fixed name, scope, SRP and symlink scope; no DB change",
+      "covered_by": null
+    },
+    {
+      "id": "D6",
+      "at": "2026-11-16T00:06:20Z",
+      "scope": "task:5.1",
+      "made_by": "leader",
+      "decision": "fixed E6 test command in design.md (replace whole value, not the default)",
+      "why": "the default after :- is unused because .env.local.example sets POSTGRES_USER; script was correct",
+      "covered_by": null
+    },
+    {
+      "id": "D7",
+      "at": "2026-11-16T00:08:39Z",
+      "scope": "review:security-gate",
+      "made_by": "user",
+      "decision": "skip /security-review",
+      "why": "user chose Skip; leader checks E4 mode 600, E5 canary, E10 guards found no leak",
+      "covered_by": null
+    }
+  ],
+  "events": [
+    {
+      "at": "2026-11-16T00:03:57Z",
+      "agent": "leader",
+      "event": "artifacts validated (--strict); briefing approved"
+    },
+    {
+      "at": "2026-11-16T00:03:57Z",
+      "agent": "leader",
+      "event": "dispatched worker for wave 1 (tasks 1.1-4.2), one serial worker"
+    },
+    {
+      "at": "2026-11-16T00:06:20Z",
+      "agent": "leader",
+      "event": "wave 1 reconciled; worker start time approximate"
+    },
+    {
+      "at": "2026-11-16T00:06:20Z",
+      "agent": "leader (assistantRunsTests)",
+      "event": "ran E1-E12: sh -n 0; make -n ok; compose config -q x2 exit 0 (Complexity-Check); E4-E12 pass; E6 first failed on a test defect, passed after the fix"
+    },
+    {
+      "at": "2026-11-16T00:08:39Z",
+      "agent": "leader",
+      "event": "verified: recorded pass E1-E12. Real size d794a05..HEAD: see git diff --shortstat"
+    },
+    {
+      "at": "2026-11-16T00:08:39Z",
+      "agent": "leader",
+      "event": "dispatched reviewer round 1 (Security-Gate: skip)"
+    },
+    {
+      "at": "2026-11-16T00:09:28Z",
+      "agent": "leader",
+      "event": "R1 fixed: ticked task 5.1 in tasks.md"
+    },
+    {
+      "at": "2026-11-16T00:09:29Z",
+      "agent": "leader",
+      "event": "archived; specs synced; KB sync skipped: no kkpa/context"
+    }
+  ]
+}

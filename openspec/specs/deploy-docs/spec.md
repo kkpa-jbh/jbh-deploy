@@ -40,15 +40,49 @@ service at a time and no email is sent twice; until finance is deployed without 
 
 ### Requirement: Docs describe the local Alloy setup
 `README.md` SHALL have a short local "Observability" paragraph, name the dev OTLP port `14317`, and link to `observability/README.md`. It SHALL NOT change the "Production" section.
-`LOCAL.md` SHALL explain how to start the local LGTM and then Alloy (`make local-up` or `make local-alloy`), list the published Alloy ports, give `http://localhost:14317` as the OTLP endpoint for a service run from the IDE, give the monitor SQL for an existing local volume, the `postgresql.conf` lines and SQL for a Postgres installed on the Mac (port 5432), and say that an IDE service needs `OTEL_SDK_DISABLED=false`.
+`LOCAL.md` SHALL explain how to start the local LGTM and then Alloy (`make local-up` or `make local-alloy`), list the published Alloy ports, say that the OTLP port on the Mac is `14317` (not the `4317` of the container) and that `make local-swap s=<service>` prints the endpoint and `OTEL_SDK_DISABLED=false` for a service run from the IDE, give the monitor SQL for an existing local volume, and the `postgresql.conf` lines and SQL for a Postgres installed on the Mac (port 5432).
 `observability/README.md` SHALL hold the series budget table for the local scope and say that Alloy scrapes the metrics locally.
 `CLAUDE.md` SHALL list `observability/alloy/` and the new `initdb/` script in its files table.
 
 #### Scenario: Reader finds the OTLP endpoint for the IDE
 - **WHEN** a reader looks in `LOCAL.md` for the endpoint of a service run from the IDE
-- **THEN** it says `http://localhost:14317`
+- **THEN** it names port `14317` and tells the reader to run `make local-swap s=<service>`, which prints `OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:14317`
 
 #### Scenario: Reader finds the series budget
 - **WHEN** a reader opens `observability/README.md`
 - **THEN** a table lists each local source with its estimated series and a total, and says the prod budget belongs to JBH-84
+
+### Requirement: Docs describe make local-pg-monitor
+`LOCAL.md` SHALL tell the user to run `make local-pg-monitor` for an existing local Postgres volume (with `PG_ADMIN_URL=postgresql://jbh_admin@localhost:5433/postgres`) and for the Postgres installed on the Mac (default URL),
+SHALL say that a restart may be needed and that the target must then run again, and SHALL point to `initdb/sql/pg-monitor.sql` for what it runs. It SHALL NOT keep the hand-written monitor SQL or the `postgresql.conf` lines.
+`CLAUDE.md` SHALL list `initdb/sql/pg-monitor.sql`, `local-pg-monitor.sh` and the `local-pg-monitor` target in its files table.
+`compose.yaml`, `compose.local.yaml`, `.env.example`, `Makefile`, `DEPLOY.md`, `ci-deploy.sh`, `README.md` and `.github/` SHALL NOT change.
+
+#### Scenario: Reader finds the one command
+- **WHEN** a reader looks in `LOCAL.md` for how to prepare the Mac Postgres for Alloy
+- **THEN** the text says `make local-pg-monitor`, the restart note and the second run, and no `CREATE ROLE` SQL block
+
+#### Scenario: Production files are untouched
+- **WHEN** `git diff --stat main -- compose.yaml compose.local.yaml .env.example DEPLOY.md Makefile ci-deploy.sh README.md .github` runs after the change
+- **THEN** it prints nothing
+
+### Requirement: Docs describe the IDE env file
+`LOCAL.md` SHALL tell the reader to run `make local-ide-env` and give the IntelliJ steps: install the EnvFile plugin; Run, Edit Configurations, tab EnvFile, Enable, `+`, `.env file`,
+the path of `jbh.env`; set the profile in the run configuration (IAM: `local`); run `make local-ide-env` again and restart after `compose.local.yaml` changes.
+It SHALL say that `SPRING_PROFILES_ACTIVE` is not in the file, that newer IntelliJ versions may load an env file without the plugin, and that `make local-swap` still prints the masked values of one service.
+It SHALL show `ln -s` for `jbh-personal-finance` and `jbh-notification` (Quarkus reads `.env`), with a warning to check that the repo's `.gitignore` covers `.env`, and SHALL say `jbh.env` holds real secrets.
+`CLAUDE.md` SHALL list `jbh.env` and the `local-ide-env` target in its files table.
+`compose.yaml`, `compose.local.yaml`, `.env.example`, `.env.local.example`, `Makefile`, `DEPLOY.md`, `README.md` and `.github/` SHALL NOT change.
+
+#### Scenario: Reader sets up IntelliJ
+- **WHEN** a reader looks in `LOCAL.md` for how to give a service its env vars in IntelliJ
+- **THEN** the text says `make local-ide-env`, the EnvFile steps with the path of `jbh.env`, and that the profile is set in the run configuration
+
+#### Scenario: Reader links a Quarkus repo
+- **WHEN** a reader looks in `LOCAL.md` for the Quarkus `.env`
+- **THEN** the text has the `ln -s` command and the `.gitignore` warning, and no make target for it
+
+#### Scenario: Other files are untouched
+- **WHEN** `git diff --stat main -- compose.yaml compose.local.yaml .env.example .env.local.example Makefile DEPLOY.md README.md .github` runs after the change
+- **THEN** it prints nothing
 

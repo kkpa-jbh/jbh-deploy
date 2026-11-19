@@ -59,47 +59,35 @@ Design and tools: [`observability/README.md`](observability/README.md).
 
 ### A service run from the IDE (c)
 
-A service in the IDE sends OTLP to Alloy on the Mac port, and export is off by default. Set both:
+A service in the IDE sends OTLP to Alloy on the Mac port `14317`, and export is off by default.
+`make local-swap s=<service>` prints `OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:14317`, `OTEL_SDK_DISABLED=false` and `JBH_ENV=local`.
 
-```
-OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:14317
-OTEL_SDK_DISABLED=false
-```
-
-Put them in the IDE run configuration, or in the service's local profile. Alloy scrapes the metrics endpoints at `host.docker.internal`,
+Put the printed values in the IDE run configuration, or in the service's local profile. Alloy scrapes the metrics endpoints at `host.docker.internal`,
 so a service in the IDE needs no change for metrics.
 
 ### Existing Postgres volume (a)
 
-`initdb/` runs only on an empty volume. If your `jbh-local-pgdata` volume already exists, create the monitor role once by hand.
-Use a URL-safe password: the same value as `JBH_PG_MONITOR_PASSWORD` in `.env.local`.
+`initdb/` runs only on an empty volume. If your `jbh-local-pgdata` volume already exists, create the monitor role once.
+Set `JBH_PG_MONITOR_PASSWORD` in `.env.local` (a URL-safe value), then run:
 
 ```
-docker compose --env-file .env.local -f compose.local.yaml exec -T jbh-postgres \
-  psql -U jbh_admin -d postgres -v pw='change-me' <<'SQL'
-CREATE ROLE jbh_monitor LOGIN PASSWORD :'pw';
-GRANT pg_monitor TO jbh_monitor;
-CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
-SQL
+PG_ADMIN_URL=postgresql://jbh_admin@localhost:5433/postgres make local-pg-monitor
 ```
 
-Use your `POSTGRES_USER` instead of `jbh_admin` if you changed it. Then run `make local-up`: compose recreates `jbh-postgres`,
-because its command now loads `pg_stat_statements`. Until the role exists, Alloy logs an authentication error for Postgres. Other signals work.
+Use your `POSTGRES_USER` instead of `jbh_admin` if you changed it. If psql asks for the admin password, set `PGPASSWORD` or use `~/.pgpass`:
+no password is read from a file by the script. The container already loads `pg_stat_statements` in its command, so no restart is needed.
+Then run `make local-up`: compose recreates `jbh-postgres` if its command changed. Until the role exists, Alloy logs an authentication error for Postgres. Other signals work.
 
 ### Postgres installed on the Mac (b)
 
 If you scrape the Postgres on your Mac (port 5432) and not the container:
 
-1. In `postgresql.conf` set:
-
-   ```
-   shared_preload_libraries = 'pg_stat_statements'
-   pg_stat_statements.track = top
-   ```
-
-2. Restart that Postgres.
-3. Run the same SQL as above against it (`psql -h localhost -p 5432 -U <admin> -d postgres -v pw='change-me' ...`).
-4. In `.env.local` set the override, so Alloy reaches the Mac and not the container:
+1. Run `make local-pg-monitor` (it uses `postgresql://localhost:5432/postgres` and your current user, which must be a superuser).
+2. If `shared_preload_libraries` is empty, the script sets it to `pg_stat_statements` with `ALTER SYSTEM`, prints the restart command and stops without creating the role.
+   If it holds other libraries, the script prints them, changes nothing and exits 1: add `pg_stat_statements` by hand.
+3. Restart that Postgres (Homebrew: `brew services restart postgresql@16`). The script never restarts it.
+4. Run `make local-pg-monitor` again. It prints `jbh_monitor is ready`. You can run it as many times as you want.
+5. In `.env.local` set the override, so Alloy reaches the Mac and not the container:
 
    ```
    JBH_PG_MONITOR_DSN=postgresql://jbh_monitor:<password>@host.docker.internal:5432/postgres?sslmode=disable
@@ -107,21 +95,50 @@ If you scrape the Postgres on your Mac (port 5432) and not the container:
 
 Then `make local-alloy` to restart Alloy with the new value.
 
+What the script runs: [`initdb/sql/pg-monitor.sql`](initdb/sql/pg-monitor.sql). A new Docker volume runs the same file from `initdb/02-create-monitor-role.sh`.
+
 ## Swap one service for your IDE
 
-1. `make local-swap s=jbh-iam` (also `jbh-personal-finance`, `jbh-notification` or `jbh-gateway`). It stops that container and prints the env vars.
+1. `make local-swap s=jbh-iam` (also `jbh-personal-finance`, `jbh-notification` or `jbh-gateway`). It stops that container
+   and prints the env vars for the IDE, read from `compose.local.yaml`. Secrets show as `<from .env.local>`: copy them from `.env.local`.
+   To load the real values from one file instead, see [Env file for the IDE](#env-file-for-the-ide-jbhenv).
 2. Run the same service from your IDE with those env vars.
 3. When you finish: stop it in the IDE, then `make local-restore s=jbh-iam`.
 
-Env vars for a service you run from the IDE:
+The printed ports differ from the container ones, because the Mac Postgres and the local LGTM own the defaults:
+Postgres is `localhost:5433` (container 5432) and OTLP is `localhost:14317` (container 4317).
+`JBH_JWT_SECRET` must be the same value in `jbh-iam` and `jbh-gateway`. If it differs, every call gets a 401.
 
-| Service | Env vars |
-|---------|----------|
-| all four | `CONSUL_DISCOVERY_HOSTNAME=host.docker.internal` |
-| `jbh-iam`, `jbh-gateway` | `JBH_JWT_SECRET` = the same value as in `.env.local`. If it differs, every call gets a 401. |
-| `jbh-iam` | Profile `local`. Database: `DB_HOST=localhost`, `DB_PORT=5433`, `DB_NAME=jbh`, `DB_USERNAME`, `JBH_ADMIN_PASS` (the Postgres values from `.env.local`). |
-| `jbh-personal-finance` | `DATABASE_URL=jdbc:postgresql://localhost:5433/jbh_finance`, `DATABASE_USERNAME`, `DATABASE_PASSWORD`. Quarkus dev mode already sets `CONSUL_HEALTH_CHECK_HOST=host.docker.internal`. |
-| `jbh-notification` | `DATABASE_URL=jdbc:postgresql://localhost:5433/jbh_finance`, `DATABASE_USERNAME`, `DATABASE_PASSWORD`. Optional: the `GMAIL_*` keys and `JBH_FRONTEND_URL=http://localhost:8100`. |
+## Env file for the IDE (jbh.env)
+
+`make local-ide-env` writes `jbh.env` in this folder. It holds the env vars of `jbh-iam`, `jbh-personal-finance`, `jbh-notification`
+and `jbh-gateway` in one list of `KEY=value` lines, read from `compose.local.yaml`. A key with the same value in several services appears once.
+If one key has different values in two services, the command stops, writes nothing and names the key and the services.
+
+**`jbh.env` holds real secrets** (your `.env.local` and shell values). It has mode 600 and is git-ignored. Never commit it or share it.
+
+`SPRING_PROFILES_ACTIVE` is not in the file: it would start the `local` profile in `jbh-gateway` too. Set the profile in each run configuration
+(`jbh-iam`: `local`).
+
+IntelliJ steps (EnvFile plugin):
+
+1. Install the EnvFile plugin. Newer IntelliJ versions may load an env file without it.
+2. Run, Edit Configurations, pick the service, tab **EnvFile**.
+3. Tick **Enable EnvFile**, click `+`, choose **.env file**, then pick `<path>/jbh-deploy/jbh.env`.
+4. Set the profile in the run configuration, then run the service.
+
+After `compose.local.yaml` or `.env.local` changes, run `make local-ide-env` again and restart the service.
+`make local-swap s=<service>` still prints the masked values of one service.
+
+Quarkus (`jbh-personal-finance`, `jbh-notification`) reads a `.env` file in its working directory. Link the same file, from `jbh-deploy`:
+
+```
+ln -s "$PWD/jbh.env" ../jbh-personal-finance/.env
+ln -s "$PWD/jbh.env" ../jbh-notification/.env
+```
+
+Before you link, run `git check-ignore .env` in that repo. It must print `.env`. If it prints nothing, add `.env` to that repo's `.gitignore` first:
+the link shows real secrets in that repo. If the run configuration has another working directory, link the `.env` there. There is no make target for this.
 
 ## Catches
 
@@ -129,6 +146,6 @@ Env vars for a service you run from the IDE:
 - IAM runs with the `local` profile in Docker. The `prod` profile sets Secure cookies, and a browser drops them on `http://localhost`.
 - The finance image must include the `CONSUL_DISCOVERY_HOSTNAME` change (JBH-63). An older `latest` image saves its container ID in Consul, and the gateway returns 503.
 - `make local-up` does not start `jbh-web`. `ionic serve` stays the frontend.
-- Metrics can be stored twice. The local LGTM also scrapes `jbh-personal-finance` and `jbh-iam` itself, and Alloy sends the same series.
-  Ask the docker-lab owner to remove the `jbh-personal-finance` and `jbh-iam` jobs from `kkpa-docker-lab/lgtm/prometheus.yaml`.
+- The local LGTM does not scrape the JBH services: its old `jbh-personal-finance` and `jbh-iam` jobs were removed from
+  `kkpa-docker-lab/lgtm/prometheus.yaml`. Do not add scrape jobs there. Alloy already sends these series, so they would be stored twice.
 - Images are `latest`: a new `main` build changes what you test. `make local-up` pulls them each time.

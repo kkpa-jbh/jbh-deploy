@@ -5,7 +5,7 @@ LOCAL_COMPOSE = docker compose --env-file .env.local -f compose.local.yaml
 # Services you can swap for a copy that runs in your IDE.
 LOCAL_SWAPPABLE = jbh-iam jbh-personal-finance jbh-notification jbh-gateway
 
-.PHONY: local-up local-down local-ps local-logs local-swap local-restore local-alloy local-alloy-logs
+.PHONY: local-up local-down local-ps local-logs local-swap local-ide-env local-restore local-alloy local-alloy-logs local-pg-monitor
 
 # Port 8500 is also used by kkpa-docker-lab/consul. Compose fails with "port is already allocated" if it still runs.
 local-up:
@@ -21,32 +21,29 @@ local-ps:
 local-logs:
 	$(LOCAL_COMPOSE) logs -f --tail=200 $(s)
 
-# Stops the container. Its port is free, so the same service can start in your IDE.
+# Stops the container and prints the IDE env vars (from local-swap-env.sh, secrets masked). Its port is free, so the same service can start in your IDE.
+# The script runs before the stop: a missing tool or file ends the target while the container still runs.
 local-swap:
 	@test -n "$(s)" || (echo "usage: make local-swap s=<service>   ($(LOCAL_SWAPPABLE))" && exit 1)
 	@echo "$(LOCAL_SWAPPABLE)" | tr ' ' '\n' | grep -qx "$(s)" || (echo "$(s) cannot be swapped. Use: $(LOCAL_SWAPPABLE)" && exit 1)
-	$(LOCAL_COMPOSE) stop $(s)
-	@echo ""
-	@echo "$(s) is stopped. Start it from your IDE with these env vars:"
-	@echo "  CONSUL_DISCOVERY_HOSTNAME=host.docker.internal"
-	@case "$(s)" in \
-	  jbh-iam) echo "  JBH_JWT_SECRET=<same value as in .env.local>"; \
-	           echo "  DB_HOST=localhost DB_PORT=5433 DB_NAME=jbh DB_USERNAME=<POSTGRES_USER> JBH_ADMIN_PASS=<POSTGRES_PASSWORD>"; \
-	           echo "  Profile: local" ;; \
-	  jbh-gateway) echo "  JBH_JWT_SECRET=<same value as in .env.local>" ;; \
-	  jbh-personal-finance) echo "  DATABASE_URL=jdbc:postgresql://localhost:5433/jbh_finance DATABASE_USERNAME=<POSTGRES_USER> DATABASE_PASSWORD=<POSTGRES_PASSWORD>"; \
-	           echo "  CONSUL_HEALTH_CHECK_HOST already defaults to host.docker.internal in Quarkus dev mode" ;; \
-		  jbh-notification) echo "  DATABASE_URL=jdbc:postgresql://localhost:5433/jbh_finance DATABASE_USERNAME=<POSTGRES_USER> DATABASE_PASSWORD=<POSTGRES_PASSWORD>"; \
-		           echo "  Optional: the GMAIL_* variables, and JBH_FRONTEND_URL=http://localhost:8100" ;; \
-	esac
-	@echo "Consul is at localhost:8500 (the default CONSUL_HOST). Undo with: make local-restore s=$(s)"
+	@vars="$$(sh ./local-swap-env.sh $(s))" || exit 1; \
+	$(LOCAL_COMPOSE) stop $(s) || exit 1; \
+	echo ""; \
+	echo "$(s) is stopped. Start it from your IDE with these env vars:"; \
+	printf '%s\n' "$$vars" | sed 's/^/  /'; \
+	echo "Consul is at localhost:8500. Undo with: make local-restore s=$(s)"
+
+# Writes jbh.env: the env vars of all four swappable services in one file, with REAL secrets (mode 600, git-ignored).
+# Run it again after compose.local.yaml or .env.local changes. Steps: LOCAL.md.
+local-ide-env:
+	@sh ./local-swap-env.sh --write-all jbh.env
 
 local-restore:
 	@test -n "$(s)" || (echo "usage: make local-restore s=<service>   ($(LOCAL_SWAPPABLE))" && exit 1)
 	@echo "$(LOCAL_SWAPPABLE)" | tr ' ' '\n' | grep -qx "$(s)" || (echo "$(s) cannot be swapped. Use: $(LOCAL_SWAPPABLE)" && exit 1)
 	$(LOCAL_COMPOSE) up -d $(s)
 
-# Only Alloy, for work in the IDE (Postgres must run: make local-up). Start the local LGTM first.
+# Only Alloy, for work in the IDE (Postgres must run: make local-up, or Postgres on your Mac: make local-pg-monitor first). Start the local LGTM first.
 # A service in the IDE sends OTLP to http://localhost:14317.
 local-alloy:
 	@test -f .env.local || (echo "Missing .env.local. Run: cp .env.local.example .env.local" && exit 1)
@@ -54,3 +51,10 @@ local-alloy:
 
 local-alloy-logs:
 	$(LOCAL_COMPOSE) logs -f --tail=200 jbh-alloy
+
+# Prepares an existing Postgres for Alloy (LOCAL.md). Reads only JBH_PG_MONITOR_PASSWORD from .env.local:
+# the file is not sourced (other lines may hold spaces), and "@" keeps make from printing the value.
+# Docker volume: PG_ADMIN_URL=postgresql://jbh_admin@localhost:5433/postgres make local-pg-monitor
+local-pg-monitor:
+	@test -f .env.local || (echo "Missing .env.local. Run: cp .env.local.example .env.local" && exit 1)
+	@JBH_PG_MONITOR_PASSWORD="$$(sed -n 's/^JBH_PG_MONITOR_PASSWORD=//p' .env.local | tail -n 1)" sh ./local-pg-monitor.sh

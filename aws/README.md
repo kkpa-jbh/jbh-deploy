@@ -1,5 +1,7 @@
 # jbh-personal-finance on AWS Fargate
 
+`jbh-notification` on Fargate (proposal): see [`notification-fargate.md`](notification-fargate.md).
+
 One CloudFormation template, `finance-fargate.yaml`. It runs `jbh-personal-finance` on ECS Fargate
 behind an HTTPS load balancer, with its own RDS PostgreSQL database and CPU-based auto scaling.
 

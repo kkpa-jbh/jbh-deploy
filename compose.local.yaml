@@ -23,6 +23,11 @@ x-app-host: &app-host
 services:
   jbh-postgres:
     image: postgres:16-alpine
+    # Same memory limit as compose.yaml, so a laptop sees the production limits. No CPU limit: a fast start matters more here.
+    deploy:
+      resources:
+        limits:
+          memory: ${POSTGRES_MEM_LIMIT:-512M}
     # pg_stat_statements: Alloy reads query statistics.
     command:
       - postgres
@@ -53,6 +58,11 @@ services:
 
   jbh-consul:
     image: hashicorp/consul:1.16.2
+    # Same memory limit as compose.yaml, so a laptop sees the production limits. No CPU limit: a fast start matters more here.
+    deploy:
+      resources:
+        limits:
+          memory: ${CONSUL_MEM_LIMIT:-256M}
     command: "agent -server -ui -node=jbh-consul -bootstrap-expect=1 -client=0.0.0.0"
     volumes:
       - jbh-local-consul-data:/consul/data
@@ -62,9 +72,16 @@ services:
 
   jbh-iam:
     image: ghcr.io/kkpa-jbh/jbh-iam:latest
+    # Same memory limit as compose.yaml, so a laptop sees the production limits. No CPU limit: a fast start matters more here.
+    deploy:
+      resources:
+        limits:
+          memory: ${IAM_MEM_LIMIT:-768M}
     pull_policy: always
     <<: *app-host
     environment:
+      # Heap cap, read by the image's entrypoint. Same default as compose.yaml.
+      JAVA_OPTS: -Xmx${IAM_XMX:-384m}
       # "local", not "prod": prod sets Secure cookies, which a browser drops on http://localhost.
       SPRING_PROFILES_ACTIVE: local
       DB_HOST: jbh-postgres
@@ -108,9 +125,16 @@ services:
 
   jbh-personal-finance:
     image: ghcr.io/kkpa-jbh/jbh-personal-finance:latest
+    # Same memory limit as compose.yaml, so a laptop sees the production limits. No CPU limit: a fast start matters more here.
+    deploy:
+      resources:
+        limits:
+          memory: ${FINANCE_MEM_LIMIT:-768M}
     pull_policy: always
     <<: *app-host
     environment:
+      # Heap cap, read by the image's entrypoint. Same default as compose.yaml.
+      JAVA_OPTS: -Xmx${FINANCE_XMX:-384m}
       # No query string here: each datasource appends ?currentSchema=<module>.
       DATABASE_URL: jdbc:postgresql://jbh-postgres:5432/jbh_finance
       DATABASE_USERNAME: ${POSTGRES_USER:-jbh_admin}
@@ -160,9 +184,16 @@ services:
 
   jbh-notification:
     image: ghcr.io/kkpa-jbh/jbh-notification:latest
+    # Same memory limit as compose.yaml, so a laptop sees the production limits. No CPU limit: a fast start matters more here.
+    deploy:
+      resources:
+        limits:
+          memory: ${NOTIFICATION_MEM_LIMIT:-384M}
     pull_policy: always
     <<: *app-host
     environment:
+      # Heap cap, read by the image's entrypoint. Same default as compose.yaml.
+      JAVA_OPTS: -Xmx${NOTIFICATION_XMX:-192m}
       DATABASE_URL: jdbc:postgresql://jbh-postgres:5432/jbh_finance
       DATABASE_USERNAME: ${POSTGRES_USER:-jbh_admin}
       DATABASE_PASSWORD: ${POSTGRES_PASSWORD}
@@ -200,9 +231,16 @@ services:
 
   jbh-gateway:
     image: ghcr.io/kkpa-jbh/jbh-gateway:latest
+    # Same memory limit as compose.yaml, so a laptop sees the production limits. No CPU limit: a fast start matters more here.
+    deploy:
+      resources:
+        limits:
+          memory: ${GATEWAY_MEM_LIMIT:-512M}
     pull_policy: always
     <<: *app-host
     environment:
+      # Heap cap, read by the image's entrypoint. Same default as compose.yaml.
+      JAVA_OPTS: -Xmx${GATEWAY_XMX:-256m}
       JBH_JWT_SECRET: ${JBH_JWT_SECRET:?set JBH_JWT_SECRET in .env.local}
       CONSUL_HOST: jbh-consul
       CONSUL_DISCOVERY_HOSTNAME: host.docker.internal

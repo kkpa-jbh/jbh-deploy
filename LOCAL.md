@@ -155,3 +155,6 @@ the link shows real secrets in that repo. If the run configuration has another w
   set `.env.local` to the values of the volume, or recreate the volume. **The second fix deletes all local database data:**
   `make local-down`, then `docker volume rm jbh-local_jbh-local-pgdata`, then `make local-up`.
 - Images are `latest`: a new `main` build changes what you test. `make local-up` pulls them each time.
+- Each container has the production memory limit, and each JVM the production heap cap (`-Xmx`), about 3.4 GB for the whole stack.
+  A container that needs more is killed (`make local-ps` shows exit code 137). Raise its `*_MEM_LIMIT` and `*_XMX` in `.env.local`
+  (the keys are in `.env.local.example`), then `make local-up`. A swapped service in the IDE has no limit.

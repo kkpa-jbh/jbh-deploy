@@ -8,6 +8,8 @@
 #                                      (relative to this folder). Called by `make local-ide-env`.
 #                                      THE FILE HOLDS REAL SECRET VALUES: mode 600, git-ignored, never commit.
 # Env: LOCAL_ENV_FILE (default .env.local). Needs docker and jq.
+# Through make (`make local-swap`, `make local-ide-env`), the shell exports of the keys in .env.local.example
+# are removed first. Run by hand, the script reads your shell too.
 # The compose JSON can hold real secrets from your shell. It stays in a shell variable and never
 # reaches the terminal or a file. Only the final env file (write mode) holds values. The script starts
 # and stops nothing.

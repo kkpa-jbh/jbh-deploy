@@ -1,0 +1,299 @@
+{
+  "schema_version": 1,
+  "kind": "change",
+  "change": "deploy-ignore-shell-env-local",
+  "module": "jbh-deploy",
+  "roadmap": null,
+  "request": "make local-* must ignore shell exports (user's ~/.zshrc exports Magus POSTGRES_USER/PASSWORD, JBH_JWT_SECRET, GEMINI_API_KEY) so .env.local is the only source for the local stack. Same branch, PR #3. SRP only. No unit tests.",
+  "status": "archived",
+  "rollup": {
+    "current": [],
+    "pending": [],
+    "blocked": [],
+    "done": [
+      "1.1",
+      "1.2",
+      "1.3",
+      "1.4",
+      "2.1",
+      "3.1",
+      "3.2",
+      "4.1"
+    ]
+  },
+  "created_at": "2026-11-16T00:47:09Z",
+  "updated_at": "2026-11-16T00:51:24Z",
+  "leader": {
+    "assistant": "Claude Code",
+    "model": "claude-opus-5-5"
+  },
+  "git": {
+    "strategy": "auto",
+    "branch": "ft/CH3-JBH-56-deploy-add-local-pg-monitor",
+    "base": "main",
+    "ticket": "JBH-56",
+    "ticket_url": "https://linear.app/kkpa/issue/JBH-56/jbh-deploy-grafana-alloy-locally-and-in-prod-postgres-and-vps-metrics",
+    "ticket_tracker": "linear",
+    "created_at": "2026-11-16T00:47:09Z"
+  },
+  "test_first": {
+    "status": "skipped",
+    "commit": null,
+    "tests": [],
+    "approved_at": null
+  },
+  "tasks": [
+    {
+      "id": "1.1",
+      "title": "local.mk: LOCAL_ENV_KEYS and LOCAL_CLEAN_ENV",
+      "module": "jbh-deploy",
+      "depends_on": [],
+      "parallel_ok": false,
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "claude-sonnet-5-5",
+      "started_at": "2026-11-16T00:47:21Z",
+      "completed_at": "2026-11-16T00:48:28Z",
+      "duration_seconds": 67,
+      "notes": "LOCAL_ENV_KEYS read from .env.local.example with sed (19 keys); LOCAL_CLEAN_ENV = env -u per key; recursive = so VPS targets never read the file.",
+      "budget": null
+    },
+    {
+      "id": "1.2",
+      "title": "local.mk: LOCAL_COMPOSE uses the prefix",
+      "module": "jbh-deploy",
+      "depends_on": [
+        "1.1"
+      ],
+      "parallel_ok": false,
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "claude-sonnet-5-5",
+      "started_at": "2026-11-16T00:47:21Z",
+      "completed_at": "2026-11-16T00:48:28Z",
+      "duration_seconds": 67,
+      "notes": "LOCAL_COMPOSE starts with LOCAL_CLEAN_ENV.",
+      "budget": null
+    },
+    {
+      "id": "1.3",
+      "title": "local.mk: IDE_ENV_FILE and local-ide-env prefix",
+      "module": "jbh-deploy",
+      "depends_on": [
+        "1.1"
+      ],
+      "parallel_ok": false,
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "claude-sonnet-5-5",
+      "started_at": "2026-11-16T00:47:21Z",
+      "completed_at": "2026-11-16T00:48:28Z",
+      "duration_seconds": 67,
+      "notes": "IDE_ENV_FILE ?= jbh.env; local-ide-env uses the prefix.",
+      "budget": null
+    },
+    {
+      "id": "1.4",
+      "title": "local.mk: local-swap prefix",
+      "module": "jbh-deploy",
+      "depends_on": [
+        "1.1"
+      ],
+      "parallel_ok": false,
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "claude-sonnet-5-5",
+      "started_at": "2026-11-16T00:47:21Z",
+      "completed_at": "2026-11-16T00:48:28Z",
+      "duration_seconds": 67,
+      "notes": "local-swap script call uses the prefix; local-pg-monitor unchanged.",
+      "budget": null
+    },
+    {
+      "id": "2.1",
+      "title": "local-swap-env.sh: header comment",
+      "module": "jbh-deploy",
+      "depends_on": [],
+      "parallel_ok": false,
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "claude-sonnet-5-5",
+      "started_at": "2026-11-16T00:47:21Z",
+      "completed_at": "2026-11-16T00:48:28Z",
+      "duration_seconds": 67,
+      "notes": "Two header comment lines; no logic change.",
+      "budget": null
+    },
+    {
+      "id": "3.1",
+      "title": "LOCAL.md: shell exports note",
+      "module": "jbh-deploy",
+      "depends_on": [],
+      "parallel_ok": false,
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "claude-sonnet-5-5",
+      "started_at": "2026-11-16T00:47:21Z",
+      "completed_at": "2026-11-16T00:48:28Z",
+      "duration_seconds": 67,
+      "notes": "LOCAL.md note: make local-* ignores shell exports.",
+      "budget": null
+    },
+    {
+      "id": "3.2",
+      "title": "LOCAL.md: volume warning",
+      "module": "jbh-deploy",
+      "depends_on": [],
+      "parallel_ok": false,
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "claude-sonnet-5-5",
+      "started_at": "2026-11-16T00:47:21Z",
+      "completed_at": "2026-11-16T00:48:28Z",
+      "duration_seconds": 67,
+      "notes": "LOCAL.md volume warning with both fixes; data loss marked.",
+      "budget": null
+    },
+    {
+      "id": "4.1",
+      "title": "Run C1 to C15 (leader)",
+      "module": "jbh-deploy",
+      "depends_on": [
+        "1.1",
+        "1.2",
+        "1.3",
+        "1.4",
+        "2.1",
+        "3.1",
+        "3.2"
+      ],
+      "parallel_ok": false,
+      "status": "done",
+      "agent": "leader",
+      "model": "claude-opus-5-5",
+      "started_at": "2026-11-16T00:48:00Z",
+      "completed_at": "2026-11-16T00:48:28Z",
+      "duration_seconds": 28,
+      "notes": "Leader ran C1-C15: all pass. C9 canary absent, file exact, mode 600; C10 control 6 hits (contract said 4, miscount fixed); real jbh.env untouched.",
+      "budget": null
+    }
+  ],
+  "review": {
+    "status": "reviewer-approved",
+    "agent": "jbh-deploy-reviewer",
+    "brief": "Review deploy-ignore-shell-env-local: diff 81e5fa3...HEAD (commits a6c4269, 92554dd). User decisions: SRP only, no unit tests, briefing approved, security-review skipped. Binding: .env.local is the only source for make local-*; key list from .env.local.example, no second list; Makefile unchanged; local-pg-monitor unchanged; secrets never printed. Leader ran C1-C15, all pass; fixed C10 expected count 4->6 (D5). Never run real make targets, the script, or compose config without -q: the shell exports real secrets.",
+    "rounds": [
+      {
+        "round": 1,
+        "verdict": "approved",
+        "at": "2026-11-16T00:55:00Z",
+        "security": {
+          "status": "skipped",
+          "ran_at": "2026-11-16T00:55:00Z",
+          "scope": "git.base",
+          "findings": [],
+          "note": "User skipped /security-review (decision D6, scope review:security-gate)."
+        },
+        "findings": [
+          {
+            "id": "R1",
+            "lens": "conventions",
+            "severity": "minor",
+            "status": "fixed",
+            "note": "LOCAL.md:120 says jbh.env holds 'your .env.local and shell values'. Through make, shell values are now removed. Reword to say only .env.local values (shell values only when the script runs by hand).",
+            "triage": "accepted"
+          }
+        ],
+        "note": "Intent, architecture, conventions, design, risk, tests lenses read. make -n local-ide-env shows 19 -u flags; local-pg-monitor unchanged; only local.mk, local-swap-env.sh (comments), LOCAL.md changed."
+      }
+    ]
+  },
+  "decisions": [
+    {
+      "id": "D1",
+      "at": "2026-11-16T00:47:09Z",
+      "scope": "change",
+      "made_by": "user",
+      "decision": "SRP only; unit tests excluded; same branch PR #3",
+      "why": "user answers before the change",
+      "covered_by": null
+    },
+    {
+      "id": "D2",
+      "at": "2026-11-16T00:47:09Z",
+      "scope": "change",
+      "made_by": "user",
+      "decision": "briefing approved",
+      "why": "user answered Go",
+      "covered_by": null
+    },
+    {
+      "id": "D3",
+      "at": "2026-11-16T00:47:09Z",
+      "scope": "concurrency",
+      "made_by": "leader",
+      "decision": "no race risk",
+      "why": "only removes env vars from one command",
+      "covered_by": null
+    },
+    {
+      "id": "D4",
+      "at": "2026-11-16T00:47:09Z",
+      "scope": "change",
+      "made_by": "leader",
+      "decision": "no grill-me interview",
+      "why": "user chose the approach; SRP lines given; no DB change",
+      "covered_by": null
+    },
+    {
+      "id": "D5",
+      "at": "2026-11-16T00:48:28Z",
+      "scope": "task:4.1",
+      "made_by": "leader",
+      "decision": "fixed C10 expected count in design.md from 4 to 6",
+      "why": "the canary POSTGRES_USER also reaches DATABASE_USERNAME and DB_USERNAME; the control's purpose holds",
+      "covered_by": null
+    },
+    {
+      "id": "D6",
+      "at": "2026-11-16T00:50:41Z",
+      "scope": "review:security-gate",
+      "made_by": "user",
+      "decision": "skip /security-review",
+      "why": "user chose Skip; make variable, comments and docs only; C9/C10 canary checks pass",
+      "covered_by": null
+    }
+  ],
+  "events": [
+    {
+      "at": "2026-11-16T00:47:09Z",
+      "agent": "leader",
+      "event": "artifacts validated (--strict); briefing approved; size ~170 lines under cap"
+    },
+    {
+      "at": "2026-11-16T00:47:09Z",
+      "agent": "leader",
+      "event": "dispatched worker for wave 1 (tasks 1.1-3.2)"
+    },
+    {
+      "at": "2026-11-16T00:48:28Z",
+      "agent": "leader (assistantRunsTests)",
+      "event": "ran C1-C15: make -n checks ok; sh -n 0; compose config -q x2 exit 0 (Complexity-Check); C9 canary run exit 0, 0 canary, exact; C10 6; C11-C15 pass"
+    },
+    {
+      "at": "2026-11-16T00:50:41Z",
+      "agent": "leader",
+      "event": "verified; dispatched reviewer round 1 (Security-Gate: skip)"
+    },
+    {
+      "at": "2026-11-16T00:51:23Z",
+      "agent": "leader",
+      "event": "R1 fixed: LOCAL.md jbh.env line says .env.local values only"
+    },
+    {
+      "at": "2026-11-16T00:51:24Z",
+      "agent": "leader",
+      "event": "archived; specs synced; KB sync skipped: no kkpa/context"
+    }
+  ]
+}

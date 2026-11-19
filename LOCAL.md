@@ -35,6 +35,8 @@ Postgres is a container with its own empty data. It is not the Postgres on your 
 2. Log in to GHCR if the packages are not public: `docker login ghcr.io` (token with `read:packages`).
 3. `cp .env.local.example .env.local`, then fill it. Set `POSTGRES_PASSWORD` and `JBH_JWT_SECRET` (`openssl rand -base64 32`).
    Mail and AI keys can stay empty.
+   `make local-*` ignores shell exports of the keys in `.env.local.example` (for example `POSTGRES_USER` from `~/.zshrc`).
+   `.env.local` is the only source: change values there.
 4. Stop the standalone Consul (it also uses port 8500): run `make consul down` in `kkpa-docker-lab`.
 
 ## Daily use
@@ -115,7 +117,7 @@ Postgres is `localhost:5433` (container 5432) and OTLP is `localhost:14317` (con
 and `jbh-gateway` in one list of `KEY=value` lines, read from `compose.local.yaml`. A key with the same value in several services appears once.
 If one key has different values in two services, the command stops, writes nothing and names the key and the services.
 
-**`jbh.env` holds real secrets** (your `.env.local` and shell values). It has mode 600 and is git-ignored. Never commit it or share it.
+**`jbh.env` holds real secrets** (your `.env.local` values; `make` removes your shell exports of those keys first). It has mode 600 and is git-ignored. Never commit it or share it.
 
 `SPRING_PROFILES_ACTIVE` is not in the file: it would start the `local` profile in `jbh-gateway` too. Set the profile in each run configuration
 (`jbh-iam`: `local`).
@@ -148,4 +150,8 @@ the link shows real secrets in that repo. If the run configuration has another w
 - `make local-up` does not start `jbh-web`. `ionic serve` stays the frontend.
 - The local LGTM does not scrape the JBH services: its old `jbh-personal-finance` and `jbh-iam` jobs were removed from
   `kkpa-docker-lab/lgtm/prometheus.yaml`. Do not add scrape jobs there. Alloy already sends these series, so they would be stored twice.
+- Postgres sets its user and password only at the first start of an empty volume. The `jbh-local-pgdata` volume keeps the first user.
+  If `POSTGRES_USER` or `POSTGRES_PASSWORD` in `.env.local` differ from it, IAM and finance cannot log in. Two fixes:
+  set `.env.local` to the values of the volume, or recreate the volume. **The second fix deletes all local database data:**
+  `make local-down`, then `docker volume rm jbh-local_jbh-local-pgdata`, then `make local-up`.
 - Images are `latest`: a new `main` build changes what you test. `make local-up` pulls them each time.

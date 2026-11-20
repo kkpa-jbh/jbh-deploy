@@ -1,0 +1,884 @@
+{
+  "title": "JBH - Service detail",
+  "uid": "jbh-service",
+  "description": "One JBH service in depth: latency per uri, errors, JVM memory, GC, threads, CPU and DB pool. Pick the service in the variable. Metrics: http_server_requests_seconds_*, jvm_*, process_cpu_usage, agroal_*, hikaricp_*.",
+  "tags": [
+    "jbh",
+    "service",
+    "jvm"
+  ],
+  "editable": true,
+  "graphTooltip": 1,
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "templating": {
+    "list": [
+      {
+        "name": "datasource",
+        "label": "Prometheus",
+        "type": "datasource",
+        "query": "prometheus",
+        "current": {},
+        "hide": 0
+      },
+      {
+        "name": "service",
+        "label": "service",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "query": {
+          "query": "label_values(up{job=~\"jbh-.*\"}, job)",
+          "refId": "service"
+        },
+        "definition": "label_values(up{job=~\"jbh-.*\"}, job)",
+        "refresh": 2,
+        "includeAll": false,
+        "multi": false,
+        "hide": 0,
+        "current": {
+          "text": "jbh-personal-finance",
+          "value": "jbh-personal-finance"
+        }
+      },
+      {
+        "name": "env",
+        "label": "env",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "query": {
+          "query": "label_values(jvm_memory_used_bytes{job=\"$service\"}, env)",
+          "refId": "env"
+        },
+        "definition": "label_values(jvm_memory_used_bytes{job=\"$service\"}, env)",
+        "refresh": 2,
+        "includeAll": true,
+        "multi": false,
+        "hide": 0,
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "allValue": ".*"
+      },
+      {
+        "name": "instance",
+        "label": "instance",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "query": {
+          "query": "label_values(jvm_memory_used_bytes{job=\"$service\", env=~\"$env\"}, instance)",
+          "refId": "instance"
+        },
+        "definition": "label_values(jvm_memory_used_bytes{job=\"$service\", env=~\"$env\"}, instance)",
+        "refresh": 2,
+        "includeAll": true,
+        "multi": false,
+        "hide": 0,
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "allValue": ".*"
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Latency p50 per uri",
+      "description": "Median response time per endpoint. Normal: a few ms to tens of ms. Actuator and /q/ URIs are left out. Needs traffic.",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 0
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.5, sum by (uri, le) (rate(http_server_requests_seconds_bucket{job=\"$service\", env=~\"$env\", instance=~\"$instance\", uri!~\"/actuator.*|/q/.*\"}[$__rate_interval])))",
+          "legendFormat": "{{uri}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Latency p95 per uri",
+      "description": "95% of calls are faster than this. The alert 'p95 above 2 s' uses the same query per job. Normal: under 1 s. Needs traffic.",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 0
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by (uri, le) (rate(http_server_requests_seconds_bucket{job=\"$service\", env=~\"$env\", instance=~\"$instance\", uri!~\"/actuator.*|/q/.*\"}[$__rate_interval])))",
+          "legendFormat": "{{uri}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false,
+            "thresholdsStyle": {
+              "mode": "line"
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 2
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Latency p99 per uri",
+      "description": "99% of calls are faster than this. Spikes here with a calm p95 mean a few slow calls. Needs traffic.",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 0
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.99, sum by (uri, le) (rate(http_server_requests_seconds_bucket{job=\"$service\", env=~\"$env\", instance=~\"$instance\", uri!~\"/actuator.*|/q/.*\"}[$__rate_interval])))",
+          "legendFormat": "{{uri}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Error rate per uri",
+      "description": "Calls per second with a 5xx status (server fault) and with a 4xx status (client fault: bad input, no login). Normal: 5xx is empty; 4xx is low.",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (uri) (rate(http_server_requests_seconds_count{job=\"$service\", env=~\"$env\", instance=~\"$instance\", uri!~\"/actuator.*|/q/.*\", status=~\"5..\"}[$__rate_interval]))",
+          "legendFormat": "5xx {{uri}}"
+        },
+        {
+          "refId": "B",
+          "expr": "sum by (uri) (rate(http_server_requests_seconds_count{job=\"$service\", env=~\"$env\", instance=~\"$instance\", uri!~\"/actuator.*|/q/.*\", status=~\"4..\"}[$__rate_interval]))",
+          "legendFormat": "4xx {{uri}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Request rate per uri",
+      "description": "Calls per second per endpoint (actuator and /q/ left out). Context for the latency and error panels.",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (uri) (rate(http_server_requests_seconds_count{job=\"$service\", env=~\"$env\", instance=~\"$instance\", uri!~\"/actuator.*|/q/.*\"}[$__rate_interval]))",
+          "legendFormat": "{{uri}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "JVM heap used vs max",
+      "description": "Heap in use per instance against the heap limit (only pools with a limit; max -1 means no limit and is left out). Normal: used stays below max and falls after a GC.",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 16
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (instance) (jvm_memory_used_bytes{job=\"$service\", env=~\"$env\", instance=~\"$instance\", area=\"heap\"})",
+          "legendFormat": "used {{instance}}"
+        },
+        {
+          "refId": "B",
+          "expr": "sum by (instance) (jvm_memory_committed_bytes{job=\"$service\", env=~\"$env\", instance=~\"$instance\", area=\"heap\"})",
+          "legendFormat": "committed {{instance}}"
+        },
+        {
+          "refId": "C",
+          "expr": "sum by (instance) (jvm_memory_max_bytes{job=\"$service\", env=~\"$env\", instance=~\"$instance\", area=\"heap\"} > 0)",
+          "legendFormat": "max {{instance}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "JVM non-heap used vs max",
+      "description": "Metaspace, code cache and class space. Max counts only pools with a limit (Metaspace has none, so it shows in used but not in max). Normal: flat after start-up.",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 16
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (instance) (jvm_memory_used_bytes{job=\"$service\", env=~\"$env\", instance=~\"$instance\", area=\"nonheap\"})",
+          "legendFormat": "used {{instance}}"
+        },
+        {
+          "refId": "B",
+          "expr": "sum by (instance) (jvm_memory_committed_bytes{job=\"$service\", env=~\"$env\", instance=~\"$instance\", area=\"nonheap\"})",
+          "legendFormat": "committed {{instance}}"
+        },
+        {
+          "refId": "C",
+          "expr": "sum by (instance) (jvm_memory_max_bytes{job=\"$service\", env=~\"$env\", instance=~\"$instance\", area=\"nonheap\"} > 0)",
+          "legendFormat": "max {{instance}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "GC pause",
+      "description": "Time spent in garbage collection per second (rate of the pause sum) and the longest single pause. Normal: well under 5% of the time, pauses under 100 ms.",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 24
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (instance) (rate(jvm_gc_pause_seconds_sum{job=\"$service\", env=~\"$env\", instance=~\"$instance\"}[$__rate_interval]))",
+          "legendFormat": "pause per second {{instance}}"
+        },
+        {
+          "refId": "B",
+          "expr": "max by (instance) (jvm_gc_pause_seconds_max{job=\"$service\", env=~\"$env\", instance=~\"$instance\"})",
+          "legendFormat": "longest pause {{instance}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 9,
+      "type": "timeseries",
+      "title": "Threads",
+      "description": "Live and daemon threads. Normal: flat. A line that only goes up is a thread leak.",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 24
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (instance) (jvm_threads_live_threads{job=\"$service\", env=~\"$env\", instance=~\"$instance\"})",
+          "legendFormat": "live {{instance}}"
+        },
+        {
+          "refId": "B",
+          "expr": "sum by (instance) (jvm_threads_daemon_threads{job=\"$service\", env=~\"$env\", instance=~\"$instance\"})",
+          "legendFormat": "daemon {{instance}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "CPU",
+      "description": "Process CPU and system CPU as a share of the machine (0 to 1). Normal: process under 0.5 when idle.",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 32
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "avg by (instance) (process_cpu_usage{job=\"$service\", env=~\"$env\", instance=~\"$instance\"})",
+          "legendFormat": "process {{instance}}"
+        },
+        {
+          "refId": "B",
+          "expr": "avg by (instance) (system_cpu_usage{job=\"$service\", env=~\"$env\", instance=~\"$instance\"})",
+          "legendFormat": "system {{instance}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false
+          },
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "DB pool: Agroal (Quarkus)",
+      "description": "Agroal connection pool of jbh-personal-finance and jbh-notification. Active = in use, available = free, awaiting = callers that wait. Normal: awaiting is 0. No data for jbh-iam and jbh-gateway: they do not use Agroal.",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 32
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (instance, datasource) (agroal_active_count{job=\"$service\", env=~\"$env\", instance=~\"$instance\"})",
+          "legendFormat": "active {{instance}}"
+        },
+        {
+          "refId": "B",
+          "expr": "sum by (instance, datasource) (agroal_available_count{job=\"$service\", env=~\"$env\", instance=~\"$instance\"})",
+          "legendFormat": "available {{instance}}"
+        },
+        {
+          "refId": "C",
+          "expr": "sum by (instance, datasource) (agroal_awaiting_count{job=\"$service\", env=~\"$env\", instance=~\"$instance\"})",
+          "legendFormat": "awaiting {{instance}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 12,
+      "type": "timeseries",
+      "title": "DB pool: Hikari (Spring Boot)",
+      "description": "HikariCP pool of jbh-iam. Active = in use, idle = free, pending = callers that wait, max = pool size. Normal: pending is 0. No data for the other services.",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 40
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (instance, pool) (hikaricp_connections_active{job=\"$service\", env=~\"$env\", instance=~\"$instance\"})",
+          "legendFormat": "active {{instance}}"
+        },
+        {
+          "refId": "B",
+          "expr": "sum by (instance, pool) (hikaricp_connections_idle{job=\"$service\", env=~\"$env\", instance=~\"$instance\"})",
+          "legendFormat": "idle {{instance}}"
+        },
+        {
+          "refId": "C",
+          "expr": "sum by (instance, pool) (hikaricp_connections_pending{job=\"$service\", env=~\"$env\", instance=~\"$instance\"})",
+          "legendFormat": "pending {{instance}}"
+        },
+        {
+          "refId": "D",
+          "expr": "sum by (instance, pool) (hikaricp_connections_max{job=\"$service\", env=~\"$env\", instance=~\"$instance\"})",
+          "legendFormat": "max {{instance}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 13,
+      "type": "stat",
+      "title": "Heap used %",
+      "description": "Heap used divided by heap max (pools with a limit only). The alert fires above 90%. Normal: under 70%.",
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 12,
+        "y": 40
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(jvm_memory_used_bytes{job=\"$service\", env=~\"$env\", instance=~\"$instance\", area=\"heap\"}) / sum(jvm_memory_max_bytes{job=\"$service\", env=~\"$env\", instance=~\"$instance\", area=\"heap\"} > 0)",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 0.7
+              },
+              {
+                "color": "red",
+                "value": 0.9
+              }
+            ]
+          },
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 14,
+      "type": "stat",
+      "title": "Up",
+      "description": "1 = Prometheus can scrape this service. 0 = down. Same signal as the 'service down' alert.",
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 18,
+        "y": 40
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "min(up{job=\"$service\"})",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          },
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    }
+  ]
+}

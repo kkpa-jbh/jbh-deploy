@@ -5,10 +5,22 @@
   "module": ".",
   "roadmap": null,
   "request": "go section 8 — JBH-55 (from jbh-leader, sub-issue JBH-61): plan section 8 'jbh-deploy — dashboards, alerts, docs and beginner LGTM guide', plus the Faro service.name fix in local.alloy, a README line for the Faro port 12347, and a CSP hand-over note to JBH-84. Done when: every dashboard has a fixed uid and a data source variable; GUIDE.md covers 7 parts; pointer file kkpa-jbh/kkpa/observability.md exists.",
-  "status": "proposed",
+  "status": "in-progress",
   "rollup": {
     "current": [],
     "pending": [
+      "4.1",
+      "5.1",
+      "5.2",
+      "6.1",
+      "7.1",
+      "8.1",
+      "8.2",
+      "8.4",
+      "8.5"
+    ],
+    "blocked": [],
+    "done": [
       "1.1",
       "2.1",
       "2.2",
@@ -21,22 +33,11 @@
       "3.5",
       "3.6",
       "3.7",
-      "4.1",
-      "5.1",
-      "5.2",
-      "6.1",
-      "7.1",
-      "8.1",
-      "8.2",
-      "8.3",
-      "8.4",
-      "8.5"
-    ],
-    "blocked": [],
-    "done": []
+      "8.3"
+    ]
   },
   "created_at": "2026-11-20T13:34:59Z",
-  "updated_at": "2026-11-20T13:36:52Z",
+  "updated_at": "2026-11-20T13:40:50Z",
   "leader": {
     "assistant": "Claude Code",
     "model": "claude-opus-5-5"
@@ -63,14 +64,22 @@
       "module": ".",
       "depends_on": [],
       "parallel_ok": true,
-      "status": "pending",
-      "agent": null,
-      "model": null,
-      "started_at": null,
-      "completed_at": null,
-      "duration_seconds": null,
-      "notes": null,
-      "budget": null
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "claude-sonnet-5-5",
+      "started_at": "2026-11-20T13:37:27Z",
+      "completed_at": "2026-11-20T13:40:50Z",
+      "duration_seconds": 203,
+      "notes": "faro_service transform (log context) between otelcol.receiver.loki faro and the exporter; sets resource service.name from app_name in the body. M1 proves it at run time.",
+      "budget": {
+        "five_hour_pct_start": 31,
+        "source": "statusline-cache",
+        "approx": true,
+        "note": "wave 1, 3 parallel workers",
+        "five_hour_pct_end": 38,
+        "five_hour_pct_delta": 7,
+        "context_pct_end": 24
+      }
     },
     {
       "id": "2.1",
@@ -78,14 +87,22 @@
       "module": ".",
       "depends_on": [],
       "parallel_ok": true,
-      "status": "pending",
-      "agent": null,
-      "model": null,
-      "started_at": null,
-      "completed_at": null,
-      "duration_seconds": null,
-      "notes": null,
-      "budget": null
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "claude-sonnet-5-5",
+      "started_at": "2026-11-20T13:37:27Z",
+      "completed_at": "2026-11-20T13:40:50Z",
+      "duration_seconds": 203,
+      "notes": "jbh-overview.json, 7 panels, vars datasource/loki/env, links to jbh dashboards and Tempo. Up/rate/4xx/p95 had data; 5xx and frontend errors empty (no errors).",
+      "budget": {
+        "five_hour_pct_start": 31,
+        "source": "statusline-cache",
+        "approx": true,
+        "note": "wave 1, 3 parallel workers",
+        "five_hour_pct_end": 38,
+        "five_hour_pct_delta": 7,
+        "context_pct_end": 24
+      }
     },
     {
       "id": "2.2",
@@ -93,14 +110,22 @@
       "module": ".",
       "depends_on": [],
       "parallel_ok": true,
-      "status": "pending",
-      "agent": null,
-      "model": null,
-      "started_at": null,
-      "completed_at": null,
-      "duration_seconds": null,
-      "notes": null,
-      "budget": null
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "claude-sonnet-5-5",
+      "started_at": "2026-11-20T13:37:27Z",
+      "completed_at": "2026-11-20T13:40:50Z",
+      "duration_seconds": 203,
+      "notes": "jbh-service.json, 884 lines, 14 panels, vars datasource/service/env/instance. JVM, GC, threads, CPU, pools had data; HTTP panels no data (idle, stale series).",
+      "budget": {
+        "five_hour_pct_start": 31,
+        "source": "statusline-cache",
+        "approx": true,
+        "note": "wave 1, 3 parallel workers",
+        "five_hour_pct_end": 38,
+        "five_hour_pct_delta": 7,
+        "context_pct_end": 24
+      }
     },
     {
       "id": "2.3",
@@ -108,14 +133,22 @@
       "module": ".",
       "depends_on": [],
       "parallel_ok": true,
-      "status": "pending",
-      "agent": null,
-      "model": null,
-      "started_at": null,
-      "completed_at": null,
-      "duration_seconds": null,
-      "notes": null,
-      "budget": null
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "claude-sonnet-5-5",
+      "started_at": "2026-11-20T13:37:27Z",
+      "completed_at": "2026-11-20T13:40:50Z",
+      "duration_seconds": 203,
+      "notes": "jbh-postgres.json, 654 lines, 10 panels incl. connections vs max_connections and top-10 pg_stat_statements; all queries had data.",
+      "budget": {
+        "five_hour_pct_start": 31,
+        "source": "statusline-cache",
+        "approx": true,
+        "note": "wave 1, 3 parallel workers",
+        "five_hour_pct_end": 38,
+        "five_hour_pct_delta": 7,
+        "context_pct_end": 24
+      }
     },
     {
       "id": "2.4",
@@ -123,14 +156,22 @@
       "module": ".",
       "depends_on": [],
       "parallel_ok": true,
-      "status": "pending",
-      "agent": null,
-      "model": null,
-      "started_at": null,
-      "completed_at": null,
-      "duration_seconds": null,
-      "notes": null,
-      "budget": null
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "claude-sonnet-5-5",
+      "started_at": "2026-11-20T13:37:27Z",
+      "completed_at": "2026-11-20T13:40:50Z",
+      "duration_seconds": 203,
+      "notes": "jbh-traces.json, 6 panels: 3 TraceQL tables, nodeGraph service map, 2 service-graph rate series. Slow query returned a trace; errors 0.",
+      "budget": {
+        "five_hour_pct_start": 31,
+        "source": "statusline-cache",
+        "approx": true,
+        "note": "wave 1, 3 parallel workers",
+        "five_hour_pct_end": 38,
+        "five_hour_pct_delta": 7,
+        "context_pct_end": 24
+      }
     },
     {
       "id": "3.1",
@@ -138,14 +179,22 @@
       "module": ".",
       "depends_on": [],
       "parallel_ok": true,
-      "status": "pending",
-      "agent": null,
-      "model": null,
-      "started_at": null,
-      "completed_at": null,
-      "duration_seconds": null,
-      "notes": null,
-      "budget": null
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "claude-sonnet-5-5",
+      "started_at": "2026-11-20T13:37:27Z",
+      "completed_at": "2026-11-20T13:40:50Z",
+      "duration_seconds": 203,
+      "notes": "Provisioning-format rule per design D4 table (uid, threshold, for, noDataState, what_to_check_first). Query ran once on the local stack; healthy value seen.",
+      "budget": {
+        "five_hour_pct_start": 31,
+        "source": "statusline-cache",
+        "approx": true,
+        "note": "wave 1, 3 parallel workers",
+        "five_hour_pct_end": 38,
+        "five_hour_pct_delta": 7,
+        "context_pct_end": 24
+      }
     },
     {
       "id": "3.2",
@@ -153,14 +202,22 @@
       "module": ".",
       "depends_on": [],
       "parallel_ok": true,
-      "status": "pending",
-      "agent": null,
-      "model": null,
-      "started_at": null,
-      "completed_at": null,
-      "duration_seconds": null,
-      "notes": null,
-      "budget": null
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "claude-sonnet-5-5",
+      "started_at": "2026-11-20T13:37:27Z",
+      "completed_at": "2026-11-20T13:40:50Z",
+      "duration_seconds": 203,
+      "notes": "Provisioning-format rule per design D4 table (uid, threshold, for, noDataState, what_to_check_first). Query ran once on the local stack; healthy value seen.",
+      "budget": {
+        "five_hour_pct_start": 31,
+        "source": "statusline-cache",
+        "approx": true,
+        "note": "wave 1, 3 parallel workers",
+        "five_hour_pct_end": 38,
+        "five_hour_pct_delta": 7,
+        "context_pct_end": 24
+      }
     },
     {
       "id": "3.3",
@@ -168,14 +225,22 @@
       "module": ".",
       "depends_on": [],
       "parallel_ok": true,
-      "status": "pending",
-      "agent": null,
-      "model": null,
-      "started_at": null,
-      "completed_at": null,
-      "duration_seconds": null,
-      "notes": null,
-      "budget": null
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "claude-sonnet-5-5",
+      "started_at": "2026-11-20T13:37:27Z",
+      "completed_at": "2026-11-20T13:40:50Z",
+      "duration_seconds": 203,
+      "notes": "Provisioning-format rule per design D4 table (uid, threshold, for, noDataState, what_to_check_first). Query ran once on the local stack; healthy value seen.",
+      "budget": {
+        "five_hour_pct_start": 31,
+        "source": "statusline-cache",
+        "approx": true,
+        "note": "wave 1, 3 parallel workers",
+        "five_hour_pct_end": 38,
+        "five_hour_pct_delta": 7,
+        "context_pct_end": 24
+      }
     },
     {
       "id": "3.4",
@@ -183,14 +248,22 @@
       "module": ".",
       "depends_on": [],
       "parallel_ok": true,
-      "status": "pending",
-      "agent": null,
-      "model": null,
-      "started_at": null,
-      "completed_at": null,
-      "duration_seconds": null,
-      "notes": null,
-      "budget": null
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "claude-sonnet-5-5",
+      "started_at": "2026-11-20T13:37:27Z",
+      "completed_at": "2026-11-20T13:40:50Z",
+      "duration_seconds": 203,
+      "notes": "Provisioning-format rule per design D4 table (uid, threshold, for, noDataState, what_to_check_first). Query ran once on the local stack; healthy value seen.",
+      "budget": {
+        "five_hour_pct_start": 31,
+        "source": "statusline-cache",
+        "approx": true,
+        "note": "wave 1, 3 parallel workers",
+        "five_hour_pct_end": 38,
+        "five_hour_pct_delta": 7,
+        "context_pct_end": 24
+      }
     },
     {
       "id": "3.5",
@@ -198,14 +271,22 @@
       "module": ".",
       "depends_on": [],
       "parallel_ok": true,
-      "status": "pending",
-      "agent": null,
-      "model": null,
-      "started_at": null,
-      "completed_at": null,
-      "duration_seconds": null,
-      "notes": null,
-      "budget": null
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "claude-sonnet-5-5",
+      "started_at": "2026-11-20T13:37:27Z",
+      "completed_at": "2026-11-20T13:40:50Z",
+      "duration_seconds": 203,
+      "notes": "Provisioning-format rule per design D4 table (uid, threshold, for, noDataState, what_to_check_first). Query ran once on the local stack; healthy value seen.",
+      "budget": {
+        "five_hour_pct_start": 31,
+        "source": "statusline-cache",
+        "approx": true,
+        "note": "wave 1, 3 parallel workers",
+        "five_hour_pct_end": 38,
+        "five_hour_pct_delta": 7,
+        "context_pct_end": 24
+      }
     },
     {
       "id": "3.6",
@@ -213,14 +294,22 @@
       "module": ".",
       "depends_on": [],
       "parallel_ok": true,
-      "status": "pending",
-      "agent": null,
-      "model": null,
-      "started_at": null,
-      "completed_at": null,
-      "duration_seconds": null,
-      "notes": null,
-      "budget": null
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "claude-sonnet-5-5",
+      "started_at": "2026-11-20T13:37:27Z",
+      "completed_at": "2026-11-20T13:40:50Z",
+      "duration_seconds": 203,
+      "notes": "Provisioning-format rule per design D4 table (uid, threshold, for, noDataState, what_to_check_first). Query ran once on the local stack; healthy value seen.",
+      "budget": {
+        "five_hour_pct_start": 31,
+        "source": "statusline-cache",
+        "approx": true,
+        "note": "wave 1, 3 parallel workers",
+        "five_hour_pct_end": 38,
+        "five_hour_pct_delta": 7,
+        "context_pct_end": 24
+      }
     },
     {
       "id": "3.7",
@@ -228,14 +317,22 @@
       "module": ".",
       "depends_on": [],
       "parallel_ok": true,
-      "status": "pending",
-      "agent": null,
-      "model": null,
-      "started_at": null,
-      "completed_at": null,
-      "duration_seconds": null,
-      "notes": null,
-      "budget": null
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "claude-sonnet-5-5",
+      "started_at": "2026-11-20T13:37:27Z",
+      "completed_at": "2026-11-20T13:40:50Z",
+      "duration_seconds": 203,
+      "notes": "Provisioning-format rule per design D4 table (uid, threshold, for, noDataState, what_to_check_first). Query ran once on the local stack; healthy value seen.",
+      "budget": {
+        "five_hour_pct_start": 31,
+        "source": "statusline-cache",
+        "approx": true,
+        "note": "wave 1, 3 parallel workers",
+        "five_hour_pct_end": 38,
+        "five_hour_pct_delta": 7,
+        "context_pct_end": 24
+      }
     },
     {
       "id": "4.1",
@@ -405,14 +502,22 @@
         "2.4"
       ],
       "parallel_ok": true,
-      "status": "pending",
-      "agent": null,
-      "model": null,
-      "started_at": null,
-      "completed_at": null,
-      "duration_seconds": null,
-      "notes": null,
-      "budget": null
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "claude-sonnet-5-5",
+      "started_at": "2026-11-20T13:37:27Z",
+      "completed_at": "2026-11-20T13:40:50Z",
+      "duration_seconds": 203,
+      "notes": "3+ services panel uses the explicit && span-set query; description names the count_distinct parse error. Returned 0 traces in the default window: M2 checks it.",
+      "budget": {
+        "five_hour_pct_start": 31,
+        "source": "statusline-cache",
+        "approx": true,
+        "note": "wave 1, 3 parallel workers",
+        "five_hour_pct_end": 38,
+        "five_hour_pct_delta": 7,
+        "context_pct_end": 24
+      }
     },
     {
       "id": "8.4",
@@ -504,6 +609,15 @@
       "decision": "Add observability/VERIFY.md (5 scenarios) to scope, via jbh-leader",
       "why": "User request relayed by the leader after the briefing; appended as task group 8; size now ~4,000 lines, 18 files",
       "covered_by": "D2"
+    },
+    {
+      "id": "D6",
+      "at": "2026-11-20T13:37:27Z",
+      "scope": "change",
+      "made_by": "leader",
+      "decision": "Wave 1 runs as 3 parallel workers: A=1.1+3.x, B=2.1+2.4+8.3, C=2.2+2.3",
+      "why": "~3,000 lines of disjoint files; one serial worker risks its context. Bucket at 31%.",
+      "covered_by": null
     }
   ],
   "events": [
@@ -516,6 +630,31 @@
       "at": "2026-11-20T13:36:52Z",
       "agent": "leader",
       "event": "artifacts appended (group 8, D9-D10) by the worker; openspec validate --strict passed"
+    },
+    {
+      "at": "2026-11-20T13:37:27Z",
+      "agent": "leader",
+      "event": "dispatched wave 1: A (1.1, 3.1-3.7), B (2.1, 2.4, 8.3), C (2.2, 2.3)"
+    },
+    {
+      "at": "2026-11-20T13:37:27Z",
+      "agent": "leader",
+      "event": ".gitignore has an uncommitted new line openspec/changes/** not made by the leader; left unstaged, user to decide"
+    },
+    {
+      "at": "2026-11-20T13:40:50Z",
+      "agent": "leader",
+      "event": "wave 1 reconciled. Worker timestamps were approximate (A said 13:00-13:20, C said 14:05-14:30); leader used dispatch time and completion time instead"
+    },
+    {
+      "at": "2026-11-20T13:40:50Z",
+      "agent": "leader",
+      "event": "verified by the leader (assistantRunsTests): S1 json.tool 0 BAD; S2 no fixed uid; S3/S4 uids and datasource first var OK; S5 (ruby yaml, no PyYAML) 7 rules OK; S6 = 2; S7 Complexity-Check exit 0; no HTML comments"
+    },
+    {
+      "at": "2026-11-20T13:40:50Z",
+      "agent": "leader",
+      "event": "archive progress.json (notification-service) has an uncommitted edit 'Claude Code X' not made by the pipeline; not staged"
     }
   ]
 }

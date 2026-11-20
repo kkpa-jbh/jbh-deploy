@@ -1,0 +1,64 @@
+apiVersion: 1
+groups:
+  - orgId: 1
+    name: jbh-http
+    folder: JBH
+    interval: 1m
+    rules:
+      - uid: jbh-alert-http-p95
+        title: JBH HTTP p95 latency above 2 s
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: prometheus
+            model:
+              datasource:
+                type: prometheus
+                uid: prometheus
+              expr: 'histogram_quantile(0.95, sum by (job, le) (rate(http_server_requests_seconds_bucket{job=~"jbh-(gateway|iam|personal-finance|notification)",uri!~"/actuator.*|/q/.*"}[5m])))'
+              instant: false
+              range: true
+              refId: A
+          - refId: B
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              datasource:
+                type: __expr__
+                uid: __expr__
+              type: reduce
+              expression: A
+              reducer: last
+              refId: B
+          - refId: C
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              datasource:
+                type: __expr__
+                uid: __expr__
+              type: threshold
+              expression: B
+              conditions:
+                - evaluator:
+                    type: gt
+                    params:
+                      - 2
+              refId: C
+        noDataState: OK
+        execErrState: Error
+        for: 10m
+        annotations:
+          summary: "The p95 latency of a JBH service is above 2 seconds."
+          description: "The 95th percentile of http_server_requests_seconds (actuator and /q/ URIs excluded) stayed above 2 seconds for 10 minutes. With no traffic the result is NaN or empty and the rule stays Normal."
+          what_to_check_first: "Dashboard jbh-service (pick the job; panel p95 per uri), then jbh-traces (slowest traces). Query: { trace:rootService = \"jbh-gateway\" && trace:duration > 2s } in Explore, Tempo. Check the DB pool panel too."
+        labels:
+          severity: warning
+          service: jbh

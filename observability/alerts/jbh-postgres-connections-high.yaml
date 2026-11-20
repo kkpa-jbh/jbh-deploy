@@ -1,0 +1,64 @@
+apiVersion: 1
+groups:
+  - orgId: 1
+    name: jbh-postgres
+    folder: JBH
+    interval: 1m
+    rules:
+      - uid: jbh-alert-pg-connections
+        title: JBH Postgres connections above 80%
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: prometheus
+            model:
+              datasource:
+                type: prometheus
+                uid: prometheus
+              expr: 'sum(pg_stat_activity_count{service="jbh-postgres"}) / max(pg_settings_max_connections{service="jbh-postgres"})'
+              instant: false
+              range: true
+              refId: A
+          - refId: B
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              datasource:
+                type: __expr__
+                uid: __expr__
+              type: reduce
+              expression: A
+              reducer: last
+              refId: B
+          - refId: C
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              datasource:
+                type: __expr__
+                uid: __expr__
+              type: threshold
+              expression: B
+              conditions:
+                - evaluator:
+                    type: gt
+                    params:
+                      - 0.8
+              refId: C
+        noDataState: Alerting
+        execErrState: Error
+        for: 5m
+        annotations:
+          summary: "Postgres uses more than 80% of max_connections, or its metrics are missing."
+          description: "Open connections (pg_stat_activity_count) divided by max_connections stayed above 80% for 5 minutes. No data also fires: it means the Postgres exporter stopped."
+          what_to_check_first: "Dashboard jbh-postgres (panels connections by state, locks). Query: sum by (state) (pg_stat_activity_count{service=\"jbh-postgres\"}). Then the DB pool panels in jbh-service for each backend. If no data: pg_up and the Alloy UI http://localhost:12345."
+        labels:
+          severity: critical
+          service: jbh

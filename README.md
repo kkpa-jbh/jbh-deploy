@@ -209,6 +209,7 @@ Check http://localhost:8500 : `jbh-iam-service`, `jbh-personal-finance`, `jbh-no
 **One command instead:** `make local-up` in `jbh-deploy` starts Postgres, Consul, IAM, finance, notification and the gateway in Docker
 (`compose.local.yaml`, images `latest` from `main`). Every service saves `host.docker.internal` in Consul, so you can stop one
 container (`make local-swap s=<service>`) and run it from the IDE. Steps: [`LOCAL.md`](LOCAL.md).
+The images hold no config: compose passes the env vars from `.env.local` (locally) or `.env` (VPS) at start (`LOCAL.md`, "How a container gets its config").
 
 ## Observability (local)
 

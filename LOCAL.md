@@ -29,6 +29,22 @@ The four Alloy ports are published on `127.0.0.1` only. `14317` and `14318` are 
 
 Postgres is a container with its own empty data. It is not the Postgres on your Mac (5432).
 
+### How a container gets its config
+
+An image holds no config: only the jar and Java. The values come in when the container starts:
+
+1. `.env.local` holds your values (passwords, `JBH_JWT_SECRET`, API keys, the optional `*_XMX` and `*_MEM_LIMIT`).
+2. `compose.local.yaml` lists the env vars of each service, with placeholders: `JBH_JWT_SECRET: ${JBH_JWT_SECRET}`,
+   `JAVA_OPTS: -Xmx${IAM_XMX:-384m}` (the value after `:-` is the default).
+3. `make local-up` runs `docker compose --env-file .env.local ...`. Compose fills every `${...}`. `make` removes your shell exports of the same keys first.
+4. Docker starts the container with the result as normal env vars. Spring Boot (`application.yml`) and Quarkus (`application.properties`) read them.
+
+The VPS runs the **same image** with `compose.yaml` and its own `.env`. Build once, configure per environment.
+
+- After a change to `.env.local` or `compose.local.yaml`, run `make local-up`. It recreates only the containers whose config changed.
+  `docker restart` keeps the old values.
+- To see what a container got: `docker inspect jbh-local-jbh-iam-1 --format '{{json .Config.Env}}'`. **It prints the secrets in clear text.**
+
 ## One-time setup
 
 1. Add this line to `/etc/hosts`: `127.0.0.1 host.docker.internal`
@@ -158,3 +174,6 @@ the link shows real secrets in that repo. If the run configuration has another w
   set `.env.local` to the values of the volume, or recreate the volume. **The second fix deletes all local database data:**
   `make local-down`, then `docker volume rm jbh-local_jbh-local-pgdata`, then `make local-up`.
 - Images are `latest`: a new `main` build changes what you test. `make local-up` pulls them each time.
+- Each container has the production memory limit, and each JVM the production heap cap (`-Xmx`), about 3.4 GB for the whole stack.
+  A container that needs more is killed (`make local-ps` shows exit code 137). Raise its `*_MEM_LIMIT` and `*_XMX` in `.env.local`
+  (the keys are in `.env.local.example`), then `make local-up`. A swapped service in the IDE has no limit.

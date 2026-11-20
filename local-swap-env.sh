@@ -22,9 +22,9 @@ ENV_FILE=${LOCAL_ENV_FILE:-.env.local}
 EXTRA_SECRET_KEYS=""
 # Services the IDE can run, in the order used in conflict messages.
 SWAPPABLE="jbh-iam jbh-personal-finance jbh-notification jbh-gateway"
-# Left out of the merged file: the key would start the "local" profile in jbh-gateway too.
-# Each run configuration sets its own profile. Space separated.
-EXCLUDED_KEYS="SPRING_PROFILES_ACTIVE"
+# Left out of the merged file, space separated. SPRING_PROFILES_ACTIVE would start the "local" profile in
+# jbh-gateway too. JAVA_OPTS has a different heap cap per service. Each run configuration sets its own.
+EXCLUDED_KEYS="SPRING_PROFILES_ACTIVE JAVA_OPTS"
 
 # jq defs shared by both modes. A mode adds its own tail after them.
 JQ_RULES='

@@ -158,6 +158,22 @@ ln -s "$PWD/jbh.env" ../jbh-notification/.env
 Before you link, run `git check-ignore .env` in that repo. It must print `.env`. If it prints nothing, add `.env` to that repo's `.gitignore` first:
 the link shows real secrets in that repo. If the run configuration has another working directory, link the `.env` there. There is no make target for this.
 
+## Back up and restore the local data
+
+`make local-down` keeps the Postgres data: it runs `docker compose down` without `-v`, so the volume `jbh-local_jbh-local-pgdata` stays.
+The data is lost only when the volume is deleted: `down -v`, `docker volume rm`, `docker volume prune`, or a Docker Desktop reset.
+Take a backup before any of these.
+
+- `make local-db-backup` dumps `jbh` and `jbh_finance` to `backups/local/<UTC time>/` (for example `backups/local/20261119T213000Z/`).
+  Postgres must run. The folder is git-ignored and only you can read it. Old snapshots are never deleted: remove them by hand.
+- `make local-db-restore d=backups/local/<snapshot>` restores one snapshot. Without `d=` it lists the snapshots. It runs in this order:
+  1. a safety backup of the current data (a new snapshot),
+  2. stops `jbh-iam`, `jbh-personal-finance` and `jbh-notification` if they run,
+  3. restores each database in one transaction (a failed restore changes nothing),
+  4. starts again only the services it stopped.
+
+  A service you run in the IDE keeps its connections open. Stop it first, or the restore stops and names the database.
+
 ## Catches
 
 - If you forget `local-swap`, the service in your IDE cannot start: the port is taken. Two copies never run at once.
@@ -172,7 +188,8 @@ the link shows real secrets in that repo. If the run configuration has another w
 - Postgres sets its user and password only at the first start of an empty volume. The `jbh-local-pgdata` volume keeps the first user.
   If `POSTGRES_USER` or `POSTGRES_PASSWORD` in `.env.local` differ from it, IAM and finance cannot log in. Two fixes:
   set `.env.local` to the values of the volume, or recreate the volume. **The second fix deletes all local database data:**
-  `make local-down`, then `docker volume rm jbh-local_jbh-local-pgdata`, then `make local-up`.
+  `make local-db-backup`, `make local-down`, then `docker volume rm jbh-local_jbh-local-pgdata`, then `make local-up`
+  and `make local-db-restore d=<snapshot>`.
 - Images are `latest`: a new `main` build changes what you test. `make local-up` pulls them each time.
 - Each container has the production memory limit, and each JVM the production heap cap (`-Xmx`), about 3.4 GB for the whole stack.
   A container that needs more is killed (`make local-ps` shows exit code 137). Raise its `*_MEM_LIMIT` and `*_XMX` in `.env.local`

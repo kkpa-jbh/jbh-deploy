@@ -20,6 +20,7 @@ It also holds `README.md`: the system map of all JBH services. The `kkpa-jbh/CLA
 | `initdb/sql/pg-monitor.sql` | Shared, re-runnable SQL for the monitor role. In a subfolder, so the Postgres entrypoint does not run it alone. Used by `02-create-monitor-role.sh` and `local-pg-monitor.sh`. |
 | `local-pg-monitor.sh` | Local only. Checks `shared_preload_libraries` of an existing Postgres, then runs the shared SQL. Called by `make local-pg-monitor`. Never restarts Postgres. |
 | `backup-db.sh` | Daily `pg_dump` of both databases. |
+| `local-db.sh` | Local only. `make local-db-backup` / `make local-db-restore d=<dir>`: dumps to and restores from `backups/local/`. Restore takes a safety backup first and restarts only the services it stopped. |
 | `ci-deploy.sh` | Deploy or roll back one app service, wait until healthy, roll back by itself on failure. Forced command of the CI deploy key; `make deploy` / `make rollback` call it too. |
 | `.github/workflows/deploy.yml` | `Deploy` workflow: SSH to the VPS, runs `ci-deploy.sh`. By hand, or from `jbh-app`'s `Image` (auto-deploy of `jbh-web`). |
 

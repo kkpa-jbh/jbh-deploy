@@ -180,31 +180,32 @@ Nothing to undo. These steps only read.
 
 1. Create the 7 alert rules by hand. Use the steps in [`README.md`](README.md#add-an-alert-rule) for each file in `observability/alerts/`.
 2. Wait 2 minutes.
-3. Make one rule fire, without stopping anything. Use `jbh-http-5xx-rate`:
-   1. Make one gateway call, so the query has data: `curl -si http://localhost:8080/jbh-api/users/userinfo`.
-      The call is a `401`, so the 5xx share is `0`. The rule then needs a threshold below `0` to fire.
-   2. **Alerting**, **Alert rules**, open `JBH HTTP 5xx rate above 5%`, **Edit**.
-   3. Change the threshold from `IS ABOVE 0.05` to `IS ABOVE -1`.
-   4. Set the pending period to `0s`. Click **Save rule and exit**.
+3. Make one rule fire, without stopping anything. Use `jbh-jvm-heap-high`, because its query always has data:
+   1. **Alerting**, **Alert rules**, open `JBH JVM heap above 90%`, **Edit**.
+   2. Change the threshold from `IS ABOVE 0.9` to `IS ABOVE 0`. Every running service uses some heap, so it passes.
+   3. Set the pending period to `0s`. Click **Save rule and exit**.
 4. Wait one or two minutes.
+
+Do not use a 5xx or p95 rule for this test. With no `5xx`, their query returns nothing, not `0`.
+An empty result is "no data", and these rules keep **Normal** on no data. A lower threshold does not change that.
 
 **Look**
 
 - **Alerting**, **Alert rules**. Open the folder `JBH`.
 - After step 2, all 7 rules show **Normal**.
-- After step 4, `JBH HTTP 5xx rate above 5%` shows **Pending**, then **Firing**.
+- After step 4, `JBH JVM heap above 90%` shows **Pending**, then **Firing**. It fires once per service (one series each).
 - Open the rule. The annotation `what_to_check_first` shows the first check.
 - No email is sent locally. Email is JBH-84. The state in **Alert rules** is the check.
 
 **Query**
 
-The data behind the 5xx rule. Explore, Prometheus:
+The heap rule uses this query (heap used, as a share of the max). Explore, Prometheus:
 
 ```
-sum by (job) (rate(http_server_requests_seconds_count{status=~"5.."}[5m]))
+sum by (job, instance) (jvm_memory_used_bytes{area="heap"}) / sum by (job, instance) (jvm_memory_max_bytes{area="heap"} > 0)
 ```
 
-The rule itself uses this query (the share of 5xx):
+The 5xx rule uses this query (the share of 5xx):
 
 ```
 sum by (job) (rate(http_server_requests_seconds_count{job=~"jbh-(gateway|iam|personal-finance|notification)",uri!~"/actuator.*|/q/.*",status=~"5.."}[5m])) / sum by (job) (rate(http_server_requests_seconds_count{job=~"jbh-(gateway|iam|personal-finance|notification)",uri!~"/actuator.*|/q/.*"}[5m]))
@@ -213,12 +214,14 @@ sum by (job) (rate(http_server_requests_seconds_count{job=~"jbh-(gateway|iam|per
 **You should see**
 
 - All 7 rules **Normal** after 2 minutes. None in **Error**. The rule `JBH service down` stays Normal because the 4 `up` series are 1.
-- The first query returns nothing when no `5xx` happened. That is normal on a healthy stack.
-- The edited rule goes **Pending**, then **Firing**.
+- The heap query returns one value per service, between `0` and `1` (for example `0.2`).
+- The 5xx query returns nothing when no `5xx` happened. That is normal on a healthy stack.
+- The edited heap rule goes **Pending**, then **Firing**.
+- To see the 5xx rule fire for real, stop a service and call it (scenario 4 makes `503` answers).
 
 **Undo**
 
-Open the edited rule, **Edit**. Set the threshold `IS ABOVE 0.05` and the pending period `5m` from the file `jbh-http-5xx-rate.yaml`.
+Open the edited rule, **Edit**. Set the threshold `IS ABOVE 0.9` and the pending period `10m` from the file `jbh-jvm-heap-high.yaml`.
 Save. The state returns to **Normal**. Or delete the rule and create it again from its file.
 
 ## Scenario 4: Service down

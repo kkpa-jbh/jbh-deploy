@@ -5,7 +5,7 @@
   "module": ".",
   "roadmap": null,
   "request": "go section 8 — JBH-55 (from jbh-leader, sub-issue JBH-61): plan section 8 'jbh-deploy — dashboards, alerts, docs and beginner LGTM guide', plus the Faro service.name fix in local.alloy, a README line for the Faro port 12347, and a CSP hand-over note to JBH-84. Done when: every dashboard has a fixed uid and a data source variable; GUIDE.md covers 7 parts; pointer file kkpa-jbh/kkpa/observability.md exists.",
-  "status": "applied",
+  "status": "changes-requested",
   "rollup": {
     "current": [],
     "pending": [],
@@ -36,7 +36,7 @@
     ]
   },
   "created_at": "2026-11-20T13:34:59Z",
-  "updated_at": "2026-11-20T16:50:25Z",
+  "updated_at": "2026-11-20T17:16:37Z",
   "leader": {
     "assistant": "Claude Code",
     "model": "claude-opus-5-5"
@@ -606,10 +606,41 @@
     }
   ],
   "review": {
-    "status": "pending",
-    "agent": null,
-    "brief": null,
-    "rounds": []
+    "status": "changes-requested",
+    "agent": "jbh-deploy-reviewer",
+    "brief": "JBH-55 section 8 / JBH-61. User decisions: D1 manual UI import only (no script); D2 accept over-cap size; D5 VERIFY.md added via the leader. Check: dashboards follow design D1/D3 (fixed uid, datasource variable first, job label, actuator filter, Tempo/Loki names per D10); alert YAML matches D4 table and Grafana file-provisioning format; D2 Faro OTTL statement is plausible for Alloy otelcol.processor.transform (log context, resource.attributes, ExtractPatterns on log.body.string); GUIDE.md 7 parts; VERIFY.md 5 scenarios x 5 sub-headings, commands safe and real; plan section 8 doc items (X-Trace-Id bullet, gateway budget, JBH_SERVICE_VERSION, CSP note, Faro port line) present; B2 writing rules; no secrets, no HTML comments. Question for you: VERIFY scenario 3 makes the 5xx rule fire with threshold 'above -1': judge if that is clear and correct. Signals: all static checks S1-S12 and the read-only queries were assistant-run (leader); manual checks M1-M6 are user-reported later, not run. Security-Gate: skip (D7). Test-First: off (skipped).",
+    "rounds": [
+      {
+        "round": 1,
+        "at": "2026-11-20T17:15:45Z",
+        "verdict": "changes-requested",
+        "security": {
+          "status": "skipped",
+          "ran_at": "2026-11-20T17:15:45Z",
+          "scope": "git.base",
+          "findings": [],
+          "note": "Skipped by leader decision D7 (scope review:security-gate): docs, dashboard JSON, alert YAML, one Alloy transform; no secrets, auth, ports, dependencies or CI."
+        },
+        "findings": [
+          {
+            "id": "R1",
+            "lens": "intent",
+            "severity": "major",
+            "status": "fixed",
+            "note": "observability/VERIFY.md scenario 3 (Do step 3, ~line 185-190, and 'You should see'): the 'force the 5xx rule to fire' test does not work. With no 5xx request, the numerator of the rule query has no series, so the division is an empty result (checked read only on Prometheus: both the 5xx rate and the ratio return []). Empty + noDataState OK = the rule stays Normal even with threshold 'IS ABOVE -1'. The text 'the 5xx share is 0' is wrong. Spec scenario 'Forced firing' and the brief question: not met. Fix: force a rule that always has data (jbh-jvm-heap-high with '> 0', as GUIDE part 6 already does; or jbh-postgres-connections-high), and fix the 'share is 0' sentence, the Undo text and the Query block.",
+            "triage": "accepted"
+          },
+          {
+            "id": "R2",
+            "lens": "conventions",
+            "severity": "minor",
+            "status": "fixed",
+            "note": "observability/GUIDE.md part 3 ('With no traffic the result is empty') is correct, but VERIFY.md scenario 3 contradicts it. Align both after R1.",
+            "triage": "accepted"
+          }
+        ]
+      }
+    ]
   },
   "decisions": [
     {
@@ -664,6 +695,15 @@
       "made_by": "leader",
       "decision": "Wave 1 runs as 3 parallel workers: A=1.1+3.x, B=2.1+2.4+8.3, C=2.2+2.3",
       "why": "~3,000 lines of disjoint files; one serial worker risks its context. Bucket at 31%.",
+      "covered_by": null
+    },
+    {
+      "id": "D7",
+      "at": "2026-11-20T16:50:44Z",
+      "scope": "review:security-gate",
+      "made_by": "leader",
+      "decision": "Skip /security-review",
+      "why": "Diff is docs, dashboard JSON, alert YAML and one Alloy log-transform step; no secrets, auth, ports, dependencies or CI",
       "covered_by": null
     }
   ],
@@ -722,6 +762,21 @@
       "at": "2026-11-20T16:50:25Z",
       "agent": "leader",
       "event": "verified by the leader (assistantRunsTests): S1-S11 pass, Complexity-Check exit 0; S12 ran 9 PromQL, 4 TraceQL, 4 LogQL, gateway curl (401 + X-Trace-Id, found in Tempo 200 and Loki), Consul 4 passing"
+    },
+    {
+      "at": "2026-11-20T16:50:44Z",
+      "agent": "leader",
+      "event": "Step 6: openspec validate --strict passed; recorded pass from wave 1 and wave 2 static checks. Status verified"
+    },
+    {
+      "at": "2026-11-20T16:50:44Z",
+      "agent": "leader",
+      "event": "real size: 28 files, +4819 -7 (git diff --shortstat 4bdb0a7...HEAD), incl. ~800 lines of OpenSpec artifacts; estimate was 18 files ~4,000 lines"
+    },
+    {
+      "at": "2026-11-20T17:16:37Z",
+      "agent": "leader",
+      "event": "round 1 triage: R1 accepted (leader confirmed: empty result, noDataState OK, never fires), R2 accepted. Fixed by leader: VERIFY scenario 3 now fires jbh-jvm-heap-high with > 0; heap query ran: 4 values 0.09-0.22. Login body usernameOrEmail confirmed in AuthController.kt"
     }
   ]
 }

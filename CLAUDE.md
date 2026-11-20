@@ -17,6 +17,7 @@ It also holds `README.md`: the system map of all JBH services. The `kkpa-jbh/CLA
 | `Makefile` | `network`, `up`, `deploy s=<svc>`, `rollback s=<svc>`, `caddy-install`, `consul-tunnel`, `db-tunnel`, `backup`, `config`. |
 | `initdb/` | First-start SQL: `jbh_finance`, its schemas, `pgcrypto`, time zone. `02-create-monitor-role.sh` runs `initdb/sql/pg-monitor.sql` (the `jbh_monitor` role and `pg_stat_statements`); it skips itself when `JBH_PG_MONITOR_PASSWORD` is empty (the VPS does not pass it). |
 | `observability/alloy/` | Grafana Alloy config: `local.alloy` (entry file for the local stack) and `modules/` (`otlp`, `jbh-scrape`, `postgres`). Local only for now; no secret in a file. |
+| `observability/grafana/`, `observability/alerts/`, `observability/GUIDE.md`, `observability/VERIFY.md` | Dashboards (JSON, imported by hand in the Grafana UI), alert rules (YAML, created by hand from the files), the beginner guide and the hands-on verification checklist. `observability/README.md` has the import steps. Local only for now. |
 | `initdb/sql/pg-monitor.sql` | Shared, re-runnable SQL for the monitor role. In a subfolder, so the Postgres entrypoint does not run it alone. Used by `02-create-monitor-role.sh` and `local-pg-monitor.sh`. |
 | `local-pg-monitor.sh` | Local only. Checks `shared_preload_libraries` of an existing Postgres, then runs the shared SQL. Called by `make local-pg-monitor`. Never restarts Postgres. |
 | `backup-db.sh` | Daily `pg_dump` of both databases. |

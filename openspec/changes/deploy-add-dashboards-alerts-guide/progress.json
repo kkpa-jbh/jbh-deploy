@@ -5,20 +5,10 @@
   "module": ".",
   "roadmap": null,
   "request": "go section 8 — JBH-55 (from jbh-leader, sub-issue JBH-61): plan section 8 'jbh-deploy — dashboards, alerts, docs and beginner LGTM guide', plus the Faro service.name fix in local.alloy, a README line for the Faro port 12347, and a CSP hand-over note to JBH-84. Done when: every dashboard has a fixed uid and a data source variable; GUIDE.md covers 7 parts; pointer file kkpa-jbh/kkpa/observability.md exists.",
-  "status": "in-progress",
+  "status": "applied",
   "rollup": {
     "current": [],
-    "pending": [
-      "4.1",
-      "5.1",
-      "5.2",
-      "6.1",
-      "7.1",
-      "8.1",
-      "8.2",
-      "8.4",
-      "8.5"
-    ],
+    "pending": [],
     "blocked": [],
     "done": [
       "1.1",
@@ -33,11 +23,20 @@
       "3.5",
       "3.6",
       "3.7",
-      "8.3"
+      "4.1",
+      "5.1",
+      "5.2",
+      "6.1",
+      "7.1",
+      "8.1",
+      "8.2",
+      "8.3",
+      "8.4",
+      "8.5"
     ]
   },
   "created_at": "2026-11-20T13:34:59Z",
-  "updated_at": "2026-11-20T13:40:50Z",
+  "updated_at": "2026-11-20T16:50:25Z",
   "leader": {
     "assistant": "Claude Code",
     "model": "claude-opus-5-5"
@@ -353,14 +352,22 @@
         "3.7"
       ],
       "parallel_ok": false,
-      "status": "pending",
-      "agent": null,
-      "model": null,
-      "started_at": null,
-      "completed_at": null,
-      "duration_seconds": null,
-      "notes": null,
-      "budget": null
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "claude-sonnet-5-5",
+      "started_at": "2026-11-20T16:45:41Z",
+      "completed_at": "2026-11-20T16:50:25Z",
+      "duration_seconds": 284,
+      "notes": "GUIDE.md, 443 lines, 7 numbered parts; name table, X-Trace-Id walk-through, PromQL/LogQL/TraceQL examples with jbh-iam-service, Quarkus and Spring Micrometer examples, manual alert steps.",
+      "budget": {
+        "five_hour_pct_start": 5,
+        "source": "statusline-cache",
+        "approx": true,
+        "note": "wave 2, one serial worker",
+        "five_hour_pct_end": 9,
+        "five_hour_pct_delta": 4,
+        "context_pct_end": 26
+      }
     },
     {
       "id": "5.1",
@@ -370,14 +377,22 @@
         "4.1"
       ],
       "parallel_ok": true,
-      "status": "pending",
-      "agent": null,
-      "model": null,
-      "started_at": null,
-      "completed_at": null,
-      "duration_seconds": null,
-      "notes": null,
-      "budget": null
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "claude-sonnet-5-5",
+      "started_at": "2026-11-20T16:45:41Z",
+      "completed_at": "2026-11-20T16:50:25Z",
+      "duration_seconds": 284,
+      "notes": "observability/README.md: 5 dashboards, 7 alerts table, import and add-rule steps, gateway budget row and totals, Hand-over to JBH-84 (JBH_SERVICE_VERSION, CSP connect-src, uids, remaining alert work).",
+      "budget": {
+        "five_hour_pct_start": 5,
+        "source": "statusline-cache",
+        "approx": true,
+        "note": "wave 2, one serial worker",
+        "five_hour_pct_end": 9,
+        "five_hour_pct_delta": 4,
+        "context_pct_end": 26
+      }
     },
     {
       "id": "5.2",
@@ -388,14 +403,22 @@
         "1.1"
       ],
       "parallel_ok": true,
-      "status": "pending",
-      "agent": null,
-      "model": null,
-      "started_at": null,
-      "completed_at": null,
-      "duration_seconds": null,
-      "notes": null,
-      "budget": null
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "claude-sonnet-5-5",
+      "started_at": "2026-11-20T16:45:41Z",
+      "completed_at": "2026-11-20T16:50:25Z",
+      "duration_seconds": 284,
+      "notes": "README.md: X-Trace-Id bullet and Faro port 12347 line. LOCAL.md: step 5 pointers and X-Trace-Id tip. CLAUDE.md: files-table row.",
+      "budget": {
+        "five_hour_pct_start": 5,
+        "source": "statusline-cache",
+        "approx": true,
+        "note": "wave 2, one serial worker",
+        "five_hour_pct_end": 9,
+        "five_hour_pct_delta": 4,
+        "context_pct_end": 26
+      }
     },
     {
       "id": "6.1",
@@ -406,13 +429,13 @@
         "5.1"
       ],
       "parallel_ok": false,
-      "status": "pending",
-      "agent": null,
-      "model": null,
-      "started_at": null,
-      "completed_at": null,
-      "duration_seconds": null,
-      "notes": null,
+      "status": "done",
+      "agent": "leader",
+      "model": "claude-opus-5-5",
+      "started_at": "2026-11-20T16:50:00Z",
+      "completed_at": "2026-11-20T16:50:25Z",
+      "duration_seconds": 25,
+      "notes": "Leader wrote kkpa-jbh/kkpa/observability.md, 10 lines, links to GUIDE.md, VERIFY.md, README.md. Outside git.",
       "budget": null
     },
     {
@@ -438,13 +461,13 @@
         "6.1"
       ],
       "parallel_ok": false,
-      "status": "pending",
-      "agent": null,
-      "model": null,
-      "started_at": null,
-      "completed_at": null,
-      "duration_seconds": null,
-      "notes": null,
+      "status": "done",
+      "agent": "leader",
+      "model": "claude-opus-5-5",
+      "started_at": "2026-11-20T16:50:00Z",
+      "completed_at": "2026-11-20T16:50:25Z",
+      "duration_seconds": 25,
+      "notes": "Leader ran S1-S9: all pass (S5 with ruby yaml, no PyYAML).",
       "budget": null
     },
     {
@@ -467,14 +490,22 @@
         "4.1"
       ],
       "parallel_ok": true,
-      "status": "pending",
-      "agent": null,
-      "model": null,
-      "started_at": null,
-      "completed_at": null,
-      "duration_seconds": null,
-      "notes": null,
-      "budget": null
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "claude-sonnet-5-5",
+      "started_at": "2026-11-20T16:45:41Z",
+      "completed_at": "2026-11-20T16:50:25Z",
+      "duration_seconds": 284,
+      "notes": "VERIFY.md, 383 lines, 5 scenarios x Do/Look/Query/You should see/Undo; name table; wrong-login body from IAM tests with a fake email; only the user stops containers.",
+      "budget": {
+        "five_hour_pct_start": 5,
+        "source": "statusline-cache",
+        "approx": true,
+        "note": "wave 2, one serial worker",
+        "five_hour_pct_end": 9,
+        "five_hour_pct_delta": 4,
+        "context_pct_end": 26
+      }
     },
     {
       "id": "8.2",
@@ -485,14 +516,22 @@
         "8.1"
       ],
       "parallel_ok": true,
-      "status": "pending",
-      "agent": null,
-      "model": null,
-      "started_at": null,
-      "completed_at": null,
-      "duration_seconds": null,
-      "notes": null,
-      "budget": null
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "claude-sonnet-5-5",
+      "started_at": "2026-11-20T16:45:41Z",
+      "completed_at": "2026-11-20T16:50:25Z",
+      "duration_seconds": 284,
+      "notes": "GUIDE.md links VERIFY.md (part 2, part 6); name table in part 1; part 3 uses jbh-iam-service.",
+      "budget": {
+        "five_hour_pct_start": 5,
+        "source": "statusline-cache",
+        "approx": true,
+        "note": "wave 2, one serial worker",
+        "five_hour_pct_end": 9,
+        "five_hour_pct_delta": 4,
+        "context_pct_end": 26
+      }
     },
     {
       "id": "8.3",
@@ -528,14 +567,22 @@
         "8.1"
       ],
       "parallel_ok": true,
-      "status": "pending",
-      "agent": null,
-      "model": null,
-      "started_at": null,
-      "completed_at": null,
-      "duration_seconds": null,
-      "notes": null,
-      "budget": null
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "claude-sonnet-5-5",
+      "started_at": "2026-11-20T16:45:41Z",
+      "completed_at": "2026-11-20T16:50:25Z",
+      "duration_seconds": 284,
+      "notes": "VERIFY.md linked from observability/README.md intro, Import a dashboard, Add an alert rule.",
+      "budget": {
+        "five_hour_pct_start": 5,
+        "source": "statusline-cache",
+        "approx": true,
+        "note": "wave 2, one serial worker",
+        "five_hour_pct_end": 9,
+        "five_hour_pct_delta": 4,
+        "context_pct_end": 26
+      }
     },
     {
       "id": "8.5",
@@ -548,13 +595,13 @@
         "8.4"
       ],
       "parallel_ok": false,
-      "status": "pending",
-      "agent": null,
-      "model": null,
-      "started_at": null,
-      "completed_at": null,
-      "duration_seconds": null,
-      "notes": null,
+      "status": "done",
+      "agent": "leader",
+      "model": "claude-opus-5-5",
+      "started_at": "2026-11-20T16:50:00Z",
+      "completed_at": "2026-11-20T16:50:25Z",
+      "duration_seconds": 25,
+      "notes": "Leader ran S10 (5 scenarios, links 4/3), S11 (25), S12 (every read-only VERIFY query ran; UI, stop-service, POST and Faro-exception steps not runnable by the assistant). M6 is the user's.",
       "budget": null
     }
   ],
@@ -655,6 +702,26 @@
       "at": "2026-11-20T13:40:50Z",
       "agent": "leader",
       "event": "archive progress.json (notification-service) has an uncommitted edit 'Claude Code X' not made by the pipeline; not staged"
+    },
+    {
+      "at": "2026-11-20T16:45:41Z",
+      "agent": "leader",
+      "event": "wave-1 commit cbbe8f6 had swept in foreign staged removals of openspec/changes and commit 053a1d6 (.gitignore). User chose keep tracked: branch rebuilt, wave 1 re-committed as ae252e5"
+    },
+    {
+      "at": "2026-11-20T16:45:41Z",
+      "agent": "leader",
+      "event": "dispatched wave 2: one worker (4.1, 8.1, 5.1, 5.2, 8.2, 8.4)"
+    },
+    {
+      "at": "2026-11-20T16:50:25Z",
+      "agent": "leader",
+      "event": "wave 2 reconciled; leader did 6.1, 7.1, 8.5"
+    },
+    {
+      "at": "2026-11-20T16:50:25Z",
+      "agent": "leader",
+      "event": "verified by the leader (assistantRunsTests): S1-S11 pass, Complexity-Check exit 0; S12 ran 9 PromQL, 4 TraceQL, 4 LogQL, gateway curl (401 + X-Trace-Id, found in Tempo 200 and Loki), Consul 4 passing"
     }
   ]
 }

@@ -44,6 +44,7 @@ flowchart LR
 - `jbh-app` calls every API with the prefix `/jbh-api`.
 - In local dev, `proxy.conf.json` sends `/jbh-api` to `http://localhost:8080` (the gateway).
 - The app never calls `jbh-iam` or `jbh-personal-finance` directly.
+- Every gateway response carries `X-Trace-Id` (the W3C trace id), also 401, 404, 429 and 5xx. Search it in Grafana → Explore → Tempo.
 
 ### 2. Gateway to services
 
@@ -217,6 +218,7 @@ Locally, Grafana Alloy (`jbh-alloy`, started by `make local-up` or `make local-a
 Services send traces and logs over OTLP to Alloy. Alloy scrapes their metrics and Postgres, then sends everything to the local
 LGTM from `kkpa-docker-lab` (`make lgtm up`, Grafana at http://localhost:3000). A service run from the IDE sends OTLP to `http://localhost:14317`
 (Alloy's dev port; the LGTM keeps `4317`). Details: [`observability/README.md`](observability/README.md) and [`LOCAL.md`](LOCAL.md).
+The browser (`jbh-app`, Faro) sends to the Alloy `faro.receiver` on port `12347` (`http://localhost:12347`).
 Production: JBH-84.
 
 ## Production (Hostinger VPS)

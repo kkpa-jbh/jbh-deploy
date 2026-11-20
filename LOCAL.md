@@ -74,6 +74,9 @@ Design and tools: [`observability/README.md`](observability/README.md).
 2. Start Alloy: `make local-up` (it starts with the rest), or `make local-alloy` (only Alloy, for work in the IDE; Postgres must run).
 3. `make local-alloy-logs` follows the Alloy log. The Alloy UI is http://localhost:12345: every component must be healthy.
 4. See the data in Grafana: http://localhost:3000, then **Explore**. Pick Tempo (traces), Loki (logs) or Prometheus (metrics).
+5. Dashboards and the guide: import the dashboards from `observability/grafana/` (steps in [`observability/README.md`](observability/README.md#import-a-dashboard)).
+   New to Grafana: [`observability/GUIDE.md`](observability/GUIDE.md). To check the stack step by step: [`observability/VERIFY.md`](observability/VERIFY.md).
+   Tip: every gateway response has the header `X-Trace-Id`. Paste it in Explore, Tempo, to find the trace (`curl -si http://localhost:8080/jbh-api/users/userinfo`).
 
 ### A service run from the IDE (c)
 

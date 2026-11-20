@@ -36,36 +36,36 @@ Each file: provisioning format (D4), the uid, threshold, `for`, `noDataState` fr
 
 Depends on: 1 (Faro `service_name="jbh-web"` in LogQL examples), 2 and 3 (file names for parts 5 and 6).
 
-- [ ] 4.1 `observability/GUIDE.md`: 7 parts, design.md D6. Short sentences. Real JBH names. About 450 lines; say in the report that it passes 400.
+- [x] 4.1 `observability/GUIDE.md`: 7 parts, design.md D6. Short sentences. Real JBH names. About 450 lines; say in the report that it passes 400.
 
 ## 5. Reference docs
 
 Depends on: 2, 3, 4 (names and links).
 
-- [ ] 5.1 `observability/README.md` (D7, D8): dashboards table, alerts table, import steps (dashboard UI import; alert rules by hand), status text, gateway series row and totals, "Hand-over to JBH-84", link to `GUIDE.md`.
-- [ ] 5.2 `README.md` (D8): the `X-Trace-Id` bullet in "### 1. Frontend to gateway"; the Faro line in "Observability (local)". `LOCAL.md` (D8): pointer to the guide and dashboards, `X-Trace-Id` tip. `CLAUDE.md`: files table row. Depends on: 4 (guide name), 1.
+- [x] 5.1 `observability/README.md` (D7, D8): dashboards table, alerts table, import steps (dashboard UI import; alert rules by hand), status text, gateway series row and totals, "Hand-over to JBH-84", link to `GUIDE.md`.
+- [x] 5.2 `README.md` (D8): the `X-Trace-Id` bullet in "### 1. Frontend to gateway"; the Faro line in "Observability (local)". `LOCAL.md` (D8): pointer to the guide and dashboards, `X-Trace-Id` tip. `CLAUDE.md`: files table row. Depends on: 4 (guide name), 1.
 
 ## 6. Pointer file (leader)
 
 Depends on: 4, 5.1.
 
-- [ ] 6.1 `/Users/cristianpena/cpena/sw/github/kkpa-jbh/kkpa/observability.md`: 5 to 10 lines, what JBH observability is, links to `jbh-deploy/observability/GUIDE.md` and `README.md`. Written by the leader (outside the repo, not git).
+- [x] 6.1 `/Users/cristianpena/cpena/sw/github/kkpa-jbh/kkpa/observability.md`: 5 to 10 lines, what JBH observability is, links to `jbh-deploy/observability/GUIDE.md` and `README.md`. Written by the leader (outside the repo, not git).
 
 ## 7. Static checks
 
 Depends on: 1-6.
 
-- [ ] 7.1 Run S1-S9 from design.md "Test contract". The leader runs them; the user runs M1-M5 and reports.
+- [x] 7.1 Run S1-S9 from design.md "Test contract". The leader runs them; the user runs M1-M5 and reports.
 
 
 ## 8. Verification checklist (added)
 
 Depends on: 2, 3, 4 (names of dashboards, rules and the guide), 1 (Faro name). Tasks 1-7 are unchanged.
 
-- [ ] 8.1 `observability/VERIFY.md`: 5 scenarios with the sub-headings Do, Look, Query, You should see, Undo (design.md D9); the name table (D10); short sentences, common words, real copy-paste commands. Only the user stops or starts containers. About 400 lines; say in the report if it passes 400.
-- [ ] 8.2 `observability/GUIDE.md`: link to `VERIFY.md` (end of part 2 and in part 6), and the name table (D10) in part 1 or 2; LogQL and TraceQL examples in part 3 use `jbh-iam-service`. Depends on: 4.1, 8.1.
+- [x] 8.1 `observability/VERIFY.md`: 5 scenarios with the sub-headings Do, Look, Query, You should see, Undo (design.md D9); the name table (D10); short sentences, common words, real copy-paste commands. Only the user stops or starts containers. About 400 lines; say in the report if it passes 400.
+- [x] 8.2 `observability/GUIDE.md`: link to `VERIFY.md` (end of part 2 and in part 6), and the name table (D10) in part 1 or 2; LogQL and TraceQL examples in part 3 use `jbh-iam-service`. Depends on: 4.1, 8.1.
 - [x] 8.3 `observability/grafana/jbh-traces.json`: the "3 or more services" panel uses the explicit `&&` query of D10 (not `count_distinct`) and its description says so. Depends on: 2.4.
-- [ ] 8.4 `observability/README.md`: link to `VERIFY.md` in the intro and in "Import a dashboard" and "Add an alert rule". Depends on: 5.1, 8.1.
-- [ ] 8.5 Static checks S10-S12 and manual check M6 (design.md "Addendum"). The leader runs S10-S12; the user runs M6. Depends on: 8.1-8.4.
+- [x] 8.4 `observability/README.md`: link to `VERIFY.md` in the intro and in "Import a dashboard" and "Add an alert rule". Depends on: 5.1, 8.1.
+- [x] 8.5 Static checks S10-S12 and manual check M6 (design.md "Addendum"). The leader runs S10-S12; the user runs M6. Depends on: 8.1-8.4.
 
 Size estimate: 18 files, ~4,000 changed lines (tests and docs included; 4 dashboards ~2,200, 7 alerts ~630, GUIDE ~470, VERIFY ~400, other docs and Alloy ~330; the pointer file is outside the repo)

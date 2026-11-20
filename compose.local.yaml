@@ -92,6 +92,11 @@ services:
       OTEL_TRACES_SAMPLER_ARG: ${OTEL_TRACES_SAMPLER_ARG:-1.0}
       JBH_SERVICE_VERSION: ${JBH_SERVICE_VERSION:-unknown}
       JBH_ENV: local
+    # Every profile except prod writes a log file to ../logs (logback-spring.xml). WORKDIR is /app, so that is /logs,
+    # which user jbh cannot create, and IAM stops at start. The mount puts the file in kkpa-jbh/logs, next to the
+    # one an IDE run writes. Docker Desktop on macOS lets any container user write to a bind mount.
+    volumes:
+      - ../logs:/logs
     ports:
       - "9999:9999"
     depends_on:

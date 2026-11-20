@@ -146,6 +146,9 @@ the link shows real secrets in that repo. If the run configuration has another w
 
 - If you forget `local-swap`, the service in your IDE cannot start: the port is taken. Two copies never run at once.
 - IAM runs with the `local` profile in Docker. The `prod` profile sets Secure cookies, and a browser drops them on `http://localhost`.
+  The `local` profile also writes `jbh-iam.log` to `/logs`. Compose mounts `kkpa-jbh/logs` there, so the file lands in the same folder
+  as an IDE run (`kkpa-jbh/logs/jbh-iam.log`, old days in `archived/`). Without the mount, IAM stops with "Logback configuration error detected".
+  Only IAM writes a log file. The other services log to the console: `make local-logs s=<service>`.
 - The finance image must include the `CONSUL_DISCOVERY_HOSTNAME` change (JBH-63). An older `latest` image saves its container ID in Consul, and the gateway returns 503.
 - `make local-up` does not start `jbh-web`. `ionic serve` stays the frontend.
 - The local LGTM does not scrape the JBH services: its old `jbh-personal-finance` and `jbh-iam` jobs were removed from

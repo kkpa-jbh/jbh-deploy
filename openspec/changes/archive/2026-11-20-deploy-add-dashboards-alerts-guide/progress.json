@@ -5,7 +5,7 @@
   "module": ".",
   "roadmap": null,
   "request": "go section 8 — JBH-55 (from jbh-leader, sub-issue JBH-61): plan section 8 'jbh-deploy — dashboards, alerts, docs and beginner LGTM guide', plus the Faro service.name fix in local.alloy, a README line for the Faro port 12347, and a CSP hand-over note to JBH-84. Done when: every dashboard has a fixed uid and a data source variable; GUIDE.md covers 7 parts; pointer file kkpa-jbh/kkpa/observability.md exists.",
-  "status": "changes-requested",
+  "status": "archived",
   "rollup": {
     "current": [],
     "pending": [],
@@ -36,7 +36,7 @@
     ]
   },
   "created_at": "2026-11-20T13:34:59Z",
-  "updated_at": "2026-11-20T17:16:37Z",
+  "updated_at": "2026-11-20T17:17:28Z",
   "leader": {
     "assistant": "Claude Code",
     "model": "claude-opus-5-5"
@@ -606,7 +606,7 @@
     }
   ],
   "review": {
-    "status": "changes-requested",
+    "status": "approved",
     "agent": "jbh-deploy-reviewer",
     "brief": "JBH-55 section 8 / JBH-61. User decisions: D1 manual UI import only (no script); D2 accept over-cap size; D5 VERIFY.md added via the leader. Check: dashboards follow design D1/D3 (fixed uid, datasource variable first, job label, actuator filter, Tempo/Loki names per D10); alert YAML matches D4 table and Grafana file-provisioning format; D2 Faro OTTL statement is plausible for Alloy otelcol.processor.transform (log context, resource.attributes, ExtractPatterns on log.body.string); GUIDE.md 7 parts; VERIFY.md 5 scenarios x 5 sub-headings, commands safe and real; plan section 8 doc items (X-Trace-Id bullet, gateway budget, JBH_SERVICE_VERSION, CSP note, Faro port line) present; B2 writing rules; no secrets, no HTML comments. Question for you: VERIFY scenario 3 makes the 5xx rule fire with threshold 'above -1': judge if that is clear and correct. Signals: all static checks S1-S12 and the read-only queries were assistant-run (leader); manual checks M1-M6 are user-reported later, not run. Security-Gate: skip (D7). Test-First: off (skipped).",
     "rounds": [
@@ -639,6 +639,19 @@
             "triage": "accepted"
           }
         ]
+      },
+      {
+        "round": 2,
+        "at": "2026-11-20T17:16:52Z",
+        "verdict": "approved",
+        "security": {
+          "status": "skipped",
+          "ran_at": "2026-11-20T17:16:52Z",
+          "scope": "git.base",
+          "findings": [],
+          "note": "Skipped by leader decision D7: round 2 diff touches only observability/VERIFY.md."
+        },
+        "findings": []
       }
     ]
   },
@@ -777,6 +790,11 @@
       "at": "2026-11-20T17:16:37Z",
       "agent": "leader",
       "event": "round 1 triage: R1 accepted (leader confirmed: empty result, noDataState OK, never fires), R2 accepted. Fixed by leader: VERIFY scenario 3 now fires jbh-jvm-heap-high with > 0; heap query ran: 4 values 0.09-0.22. Login body usernameOrEmail confirmed in AuthController.kt"
+    },
+    {
+      "at": "2026-11-20T17:17:28Z",
+      "agent": "leader",
+      "event": "archived as 2026-11-20-deploy-add-dashboards-alerts-guide; specs synced (+12 requirements in 5 specs)"
     }
   ]
 }

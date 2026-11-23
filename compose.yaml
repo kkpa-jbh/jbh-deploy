@@ -313,8 +313,9 @@ services:
       - no-new-privileges:true
     cap_drop:
       - ALL
-    # The caddy binary carries the file capability cap_net_bind_service. With cap_drop ALL the kernel
-    # refuses to exec it ("operation not permitted"), even though we listen on 8080. Magus's Caddy does the same.
+    # Older jbh-web images carry the file capability cap_net_bind_service on the caddy binary. With cap_drop ALL the kernel
+    # refuses to exec it ("operation not permitted"), even though we listen on 8080. Since JBH-86 the image removes it
+    # (setcap -r) and runs as user 10001. Keep cap_add while a rollback image (jbh-web:previous) may still be an old one.
     cap_add:
       - NET_BIND_SERVICE
     read_only: true

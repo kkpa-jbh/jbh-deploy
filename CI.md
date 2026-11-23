@@ -32,6 +32,7 @@ For the deploy commands on the VPS, read [`DEPLOY.md`](DEPLOY.md).
 | `jbh-gateway-client` | `Publish` (`publish.yml`) | yes | no | yes | Maven `jbh-gateway-client` |
 | `jbh-deploy` | `Deploy` (`deploy.yml`) | no | no | yes, or from `jbh-app`'s `Image` | nothing. Deploys one service to the VPS. For this repo's own files, the VPS runs `git pull` |
 | `jbh-deploy` | `Multi-arch image` (`multi-arch-image.yml`) | no | no | no | nothing by itself. A reusable workflow (`on: workflow_call`): the `Image` workflow of each service repo calls it to build the amd64 + arm64 images, publish one tag and delete old images |
+| `jbh-deploy` | `CI` (`ci.yml`) | yes | yes (into `main`) | no | nothing. Lints the workflows, validates the Kubernetes files, checks Pod Security |
 
 "By hand": GitHub → the repo → Actions → the workflow → **Run workflow**.
 
@@ -45,9 +46,9 @@ flowchart TD
     push -. jbh-gateway-client, jbh-commons-lib .-> pub[Publish]
 
     img --> build[Build the jar or the app]
-    build --> docker[Build the Docker image]
+    build --> docker[Build the Docker image<br/>amd64 + arm64]
     docker --> ghcr[(GHCR<br/>tags: git SHA + latest)]
-    ghcr --> clean[Delete old images<br/>keep the 2 newest]
+    ghcr --> clean[Delete old images<br/>keep the 10 newest tagged]
 
     ci --> tests[mvn verify: tests, PMD, SpotBugs]
     tests --> trivy[Trivy scan]
@@ -60,23 +61,23 @@ flowchart TD
 
 ### `Image` (5 service repos)
 
-The same steps in every service repo:
+Two jobs in every service repo (since JBH-86):
 
-1. **Checkout** the code.
-2. **Build**, without tests:
+1. **`package`**: checkout, then build the app once (it does not depend on the CPU type), then upload it as the artifact `app-package`:
    - `jbh-app`: `npm ci`, then `npm run lint:boundary`, then `ng build --configuration production` into `www/`.
      `lint:boundary` fails when a page uses Ionic or ngx-charts directly instead of the `jbh-*` layer. Then no image is built.
-   - `jbh-gateway`: `./gradlew bootJar`.
-   - `jbh-iam`: `./gradlew :jbh-iam-api:bootJar`. Reads `jbh-gateway-client` from GitHub Packages.
+   - `jbh-gateway`: `./gradlew test`, then `./gradlew bootJar`. A failed test stops the image.
+   - `jbh-iam`: `./gradlew test` (one test starts Postgres with Testcontainers), then `./gradlew :jbh-iam-api:bootJar`.
+     Reads `jbh-gateway-client` from GitHub Packages.
    - `jbh-personal-finance`: `mvn -pl jbh-z-assembly -am -DskipTests package`. Reads `jbh-gateway-client` from GitHub Packages.
    - `jbh-notification`: `mvn -B -U -s .github/maven-settings.xml -Pgithub -pl jbh-notification-app -am -DskipTests package`.
      Reads `jbh-commons-lib` from GitHub Packages.
-3. **Log in** to GHCR with `GITHUB_TOKEN`.
-4. **Build and push** the Docker image with two tags: the full git SHA and `latest`.
-5. **Delete old images.** Keep only the 2 newest versions. See "Image retention" below.
-6. **Only `jbh-app`: start `Deploy`** for this commit's image, when `AUTO_DEPLOY` is `true`. See "Auto-deploy" below.
+2. **`image`**: calls `Multi-arch image` (below), pinned to a `jbh-deploy` commit SHA: one image per CPU type (amd64, arm64),
+   one tag (`<git sha>` and `latest`) for both, then the cleanup (keep the 10 newest tagged images).
+3. **Only `jbh-app`: `deploy`** starts `Deploy` for this commit's image, when `AUTO_DEPLOY` is `true`. It waits for `image`,
+   which ends only after the tag exists. See "Auto-deploy" below.
 
-Time: about 2–4 minutes. `jbh-app` runs one `Image` at a time, in push order.
+Time: about 4–8 minutes. Each repo runs one `Image` at a time per branch, in push order.
 
 ### `Multi-arch image` (`jbh-deploy`, reusable)
 
@@ -136,6 +137,17 @@ and publishes Maven `jbh-commons-lib` to GitHub Packages. It needs only `GITHUB_
 Runs on every push to `main`. It runs `mvn deploy` and publishes the library to GitHub Packages.
 The version is `1.0.0-SNAPSHOT`, so each run replaces the previous build.
 
+### `CI` (`jbh-deploy`)
+
+On every PR into `main` and every push to `main`. It needs no cluster. Jobs, fast first:
+
+1. **Lint GitHub workflows**: `actionlint` on every file in `.github/workflows/`.
+2. **Render and validate the Kubernetes files**: `kubectl kustomize` of `k8s/overlays/local` (with a placeholder
+   `.env.k8s` from the example), `kubeconform -strict`, then `scripts/check-k8s-base.sh` (no target value in `k8s/base/`).
+3. **Check the restricted Pod Security policy**: the Kyverno CLI with `k8s/policies/pod-security-restricted.yaml`.
+
+The tools are downloaded at a fixed version and SHA-256 (`.github/scripts/install-tool.sh`).
+
 ### `Deploy` (`jbh-deploy`)
 
 By hand: `jbh-deploy` → Actions → `Deploy` → **Run workflow**, then pick the action and the service.
@@ -187,8 +199,8 @@ Setup: `DEPLOY.md` §1.2.
 
 ## Pull requests
 
-Three repos check a pull request: `jbh-personal-finance` (`CI Pipeline`), `jbh-notification` (`CI`) and
-`jbh-commons-lib` (`CI`). No other repo runs anything on a PR.
+Four repos check a pull request: `jbh-personal-finance` (`CI Pipeline`), `jbh-notification` (`CI`),
+`jbh-commons-lib` (`CI`) and `jbh-deploy` (`CI`). No other repo runs anything on a PR.
 All JBH repos have the ruleset `protect-main` (repo → Settings → Rules → Rulesets):
 
 - No direct push: every change goes through a pull request. 0 approvals, because nobody can approve their own PR.
@@ -213,11 +225,12 @@ If you skip a step, the image is built with the old library. `DEPLOY.md` §2.3 h
 
 ## Image retention
 
-- GitHub Free gives 500 MB for private packages. Public packages do not count.
-- `actions/delete-package-versions` keeps the **2 newest** versions of each image: the one you run and one to roll back to.
-- `provenance: false` keeps one version per push. Without it, build attestations add untagged versions that use up the 2 slots.
-- Deleted images are gone for good. A rollback by commit SHA reaches only one deploy back.
-  The `rollback` action does not need GHCR: it uses an image kept on the VPS.
+- `dataaxiom/ghcr-cleanup-action` (in `Multi-arch image`) keeps the **10 newest tagged images** of each package,
+  with all their per-CPU parts, and deletes the rest. It counts tagged images, not package versions:
+  one multi-arch image is about 3 package versions (the tag + one per CPU type).
+- 10 images are enough to roll back by SHA, and for `kubectl rollout undo` in a cluster.
+- The packages are public (JBH-86), so storage does not count against GitHub Free's 500 MB.
+- Deleted images are gone for good. The VPS `rollback` action does not need GHCR: it uses an image kept on the VPS.
 - Maven packages (commons-lib, contracts, gateway-client) are not cleaned up.
 
 ## Secrets

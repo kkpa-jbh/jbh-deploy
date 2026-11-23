@@ -25,6 +25,8 @@ It also holds `README.md`: the system map of all JBH services. The `kkpa-jbh/CLA
 | `ci-deploy.sh` | Deploy or roll back one app service, wait until healthy, roll back by itself on failure. Forced command of the CI deploy key; `make deploy` / `make rollback` call it too. |
 | `.github/workflows/deploy.yml` | `Deploy` workflow: SSH to the VPS, runs `ci-deploy.sh`. By hand, or from `jbh-app`'s `Image` (auto-deploy of `jbh-web`). |
 | `.github/workflows/multi-arch-image.yml` | Reusable workflow (`on: workflow_call`). Each service's `Image` workflow calls it, pinned to a commit SHA: amd64 + arm64 images, one tag, cleanup (keep 10 tagged). |
+| `.github/workflows/ci.yml`, `.github/scripts/install-tool.sh` | PR check: `actionlint`, render + `kubeconform` of `k8s/overlays/local`, `scripts/check-k8s-base.sh`, Kyverno "restricted" Pod Security. Tools at a fixed version and SHA-256. |
+| `k8s/`, `k8s.mk`, `LOCAL-K8S.md`, `scripts/k8s-pin.sh`, `scripts/check-k8s-base.sh` | Kubernetes (JBH-86): `base/` (same on every target), `components/postgres/`, `overlays/local/` (k3d), `policies/`, `docs/` (learning guides). `make k8s-up` / `k8s-down` / `k8s-pin`. Local only for now. Rule: `k8s/base/` holds no target-specific value (`k8s/README.md`). |
 
 ## Rules
 
@@ -37,7 +39,7 @@ It also holds `README.md`: the system map of all JBH services. The `kkpa-jbh/CLA
 - **`ci-deploy.sh` is a security boundary.** The CI key can run nothing else. Keep its service list strict
   (never `jbh-postgres` or `jbh-consul`), accept only a full 40-character hex SHA as tag, never pass the input
   to `eval` or a shell, and keep the list equal to `deploy.yml`.
-- **Static checks only:** `docker compose --env-file .env.example -f compose.yaml config -q`. Never `up` `compose.yaml` from a laptop.
+- **Static checks only:** `docker compose --env-file .env.example -f compose.yaml config -q`. Kubernetes: `make k8s-render`, `scripts/check-k8s-base.sh` (never `make k8s-up` from an agent: it starts a cluster). Never `up` `compose.yaml` from a laptop.
   `compose.local.yaml` is for a laptop; check it with `--env-file .env.local.example -f compose.local.yaml config -q`.
 
 ## System map sync

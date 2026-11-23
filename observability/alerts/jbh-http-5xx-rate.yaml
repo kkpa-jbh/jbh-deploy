@@ -1,0 +1,64 @@
+apiVersion: 1
+groups:
+  - orgId: 1
+    name: jbh-http
+    folder: JBH
+    interval: 1m
+    rules:
+      - uid: jbh-alert-http-5xx
+        title: JBH HTTP 5xx rate above 5%
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: prometheus
+            model:
+              datasource:
+                type: prometheus
+                uid: prometheus
+              expr: 'sum by (job) (rate(http_server_requests_seconds_count{job=~"jbh-(gateway|iam|personal-finance|notification)",uri!~"/actuator.*|/q/.*",status=~"5.."}[5m])) / sum by (job) (rate(http_server_requests_seconds_count{job=~"jbh-(gateway|iam|personal-finance|notification)",uri!~"/actuator.*|/q/.*"}[5m]))'
+              instant: false
+              range: true
+              refId: A
+          - refId: B
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              datasource:
+                type: __expr__
+                uid: __expr__
+              type: reduce
+              expression: A
+              reducer: last
+              refId: B
+          - refId: C
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              datasource:
+                type: __expr__
+                uid: __expr__
+              type: threshold
+              expression: B
+              conditions:
+                - evaluator:
+                    type: gt
+                    params:
+                      - 0.05
+              refId: C
+        noDataState: OK
+        execErrState: Error
+        for: 5m
+        annotations:
+          summary: "More than 5% of the requests of a JBH service answer with 5xx."
+          description: "The share of 5xx answers (actuator and /q/ URIs excluded) stayed above 5% for 5 minutes. With no traffic the result is empty and the rule stays Normal."
+          what_to_check_first: "Dashboard jbh-overview (panel 5xx %), then jbh-service for the failing job (error rate per uri). Then Explore, Tempo: { status = error }, and Loki: {service_name=\"<service>\"} | detected_level=\"ERROR\"."
+        labels:
+          severity: critical
+          service: jbh

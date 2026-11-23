@@ -1,0 +1,64 @@
+apiVersion: 1
+groups:
+  - orgId: 1
+    name: jbh-jvm
+    folder: JBH
+    interval: 1m
+    rules:
+      - uid: jbh-alert-heap-high
+        title: JBH JVM heap above 90%
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: prometheus
+            model:
+              datasource:
+                type: prometheus
+                uid: prometheus
+              expr: 'sum by (job, instance) (jvm_memory_used_bytes{area="heap"}) / sum by (job, instance) (jvm_memory_max_bytes{area="heap"} > 0)'
+              instant: false
+              range: true
+              refId: A
+          - refId: B
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              datasource:
+                type: __expr__
+                uid: __expr__
+              type: reduce
+              expression: A
+              reducer: last
+              refId: B
+          - refId: C
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              datasource:
+                type: __expr__
+                uid: __expr__
+              type: threshold
+              expression: B
+              conditions:
+                - evaluator:
+                    type: gt
+                    params:
+                      - 0.9
+              refId: C
+        noDataState: OK
+        execErrState: Error
+        for: 10m
+        annotations:
+          summary: "The JVM heap of a JBH service is above 90% of its maximum."
+          description: "Heap used divided by heap max (pools with max -1 are ignored) stayed above 90% for 10 minutes, per instance. The JVM may be close to an OutOfMemoryError or to constant garbage collection."
+          what_to_check_first: "Dashboard jbh-service (pick the job; panels heap, GC pause, threads). Compare with the container memory limit (docker stats) and the -Xmx value. Query: jvm_memory_used_bytes{area=\"heap\",job=\"<job>\"}."
+        labels:
+          severity: warning
+          service: jbh

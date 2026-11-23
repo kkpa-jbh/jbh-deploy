@@ -64,6 +64,23 @@ faro.receiver "app" {
 
 otelcol.receiver.loki "faro" {
   output {
+    logs = [otelcol.processor.transform.faro_service.input]
+  }
+}
+
+// A Loki log entry has no resource service.name, so Loki would show service_name="unknown_service".
+// The line body holds app_name=jbh-web: copy it to the resource. A line without app_name goes on unchanged.
+otelcol.processor.transform "faro_service" {
+  error_mode = "ignore"
+
+  log_statements {
+    context    = "log"
+    statements = [
+      `set(resource.attributes["service.name"], ExtractPatterns(log.body.string, "app_name=(?P<app>[^ ]+)")["app"]) where IsMatch(log.body.string, "app_name=")`,
+    ]
+  }
+
+  output {
     logs = [otelcol.exporter.otlp.lgtm.input]
   }
 }

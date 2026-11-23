@@ -1,0 +1,800 @@
+{
+  "schema_version": 1,
+  "kind": "change",
+  "change": "deploy-add-dashboards-alerts-guide",
+  "module": ".",
+  "roadmap": null,
+  "request": "go section 8 — JBH-55 (from jbh-leader, sub-issue JBH-61): plan section 8 'jbh-deploy — dashboards, alerts, docs and beginner LGTM guide', plus the Faro service.name fix in local.alloy, a README line for the Faro port 12347, and a CSP hand-over note to JBH-84. Done when: every dashboard has a fixed uid and a data source variable; GUIDE.md covers 7 parts; pointer file kkpa-jbh/kkpa/observability.md exists.",
+  "status": "archived",
+  "rollup": {
+    "current": [],
+    "pending": [],
+    "blocked": [],
+    "done": [
+      "1.1",
+      "2.1",
+      "2.2",
+      "2.3",
+      "2.4",
+      "3.1",
+      "3.2",
+      "3.3",
+      "3.4",
+      "3.5",
+      "3.6",
+      "3.7",
+      "4.1",
+      "5.1",
+      "5.2",
+      "6.1",
+      "7.1",
+      "8.1",
+      "8.2",
+      "8.3",
+      "8.4",
+      "8.5"
+    ]
+  },
+  "created_at": "2026-11-20T13:34:59Z",
+  "updated_at": "2026-11-20T17:17:28Z",
+  "leader": {
+    "assistant": "Claude Code",
+    "model": "claude-opus-5-5"
+  },
+  "git": {
+    "strategy": "auto",
+    "branch": "ft/CH4-JBH-61-deploy-add-dashboards-alerts-guide",
+    "base": "main",
+    "ticket": "JBH-61",
+    "ticket_url": "https://linear.app/kkpa/issue/JBH-61/jbh-deploy-grafana-dashboards-alert-rules-docs-and-beginner-lgtm-guide",
+    "ticket_tracker": "linear",
+    "created_at": "2026-11-20T13:34:59Z"
+  },
+  "test_first": {
+    "status": "skipped",
+    "commit": null,
+    "tests": [],
+    "approved_at": null
+  },
+  "tasks": [
+    {
+      "id": "1.1",
+      "title": "local.alloy: Faro service.name transform",
+      "module": ".",
+      "depends_on": [],
+      "parallel_ok": true,
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "claude-sonnet-5-5",
+      "started_at": "2026-11-20T13:37:27Z",
+      "completed_at": "2026-11-20T13:40:50Z",
+      "duration_seconds": 203,
+      "notes": "faro_service transform (log context) between otelcol.receiver.loki faro and the exporter; sets resource service.name from app_name in the body. M1 proves it at run time.",
+      "budget": {
+        "five_hour_pct_start": 31,
+        "source": "statusline-cache",
+        "approx": true,
+        "note": "wave 1, 3 parallel workers",
+        "five_hour_pct_end": 38,
+        "five_hour_pct_delta": 7,
+        "context_pct_end": 24
+      }
+    },
+    {
+      "id": "2.1",
+      "title": "jbh-overview.json",
+      "module": ".",
+      "depends_on": [],
+      "parallel_ok": true,
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "claude-sonnet-5-5",
+      "started_at": "2026-11-20T13:37:27Z",
+      "completed_at": "2026-11-20T13:40:50Z",
+      "duration_seconds": 203,
+      "notes": "jbh-overview.json, 7 panels, vars datasource/loki/env, links to jbh dashboards and Tempo. Up/rate/4xx/p95 had data; 5xx and frontend errors empty (no errors).",
+      "budget": {
+        "five_hour_pct_start": 31,
+        "source": "statusline-cache",
+        "approx": true,
+        "note": "wave 1, 3 parallel workers",
+        "five_hour_pct_end": 38,
+        "five_hour_pct_delta": 7,
+        "context_pct_end": 24
+      }
+    },
+    {
+      "id": "2.2",
+      "title": "jbh-service.json",
+      "module": ".",
+      "depends_on": [],
+      "parallel_ok": true,
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "claude-sonnet-5-5",
+      "started_at": "2026-11-20T13:37:27Z",
+      "completed_at": "2026-11-20T13:40:50Z",
+      "duration_seconds": 203,
+      "notes": "jbh-service.json, 884 lines, 14 panels, vars datasource/service/env/instance. JVM, GC, threads, CPU, pools had data; HTTP panels no data (idle, stale series).",
+      "budget": {
+        "five_hour_pct_start": 31,
+        "source": "statusline-cache",
+        "approx": true,
+        "note": "wave 1, 3 parallel workers",
+        "five_hour_pct_end": 38,
+        "five_hour_pct_delta": 7,
+        "context_pct_end": 24
+      }
+    },
+    {
+      "id": "2.3",
+      "title": "jbh-postgres.json",
+      "module": ".",
+      "depends_on": [],
+      "parallel_ok": true,
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "claude-sonnet-5-5",
+      "started_at": "2026-11-20T13:37:27Z",
+      "completed_at": "2026-11-20T13:40:50Z",
+      "duration_seconds": 203,
+      "notes": "jbh-postgres.json, 654 lines, 10 panels incl. connections vs max_connections and top-10 pg_stat_statements; all queries had data.",
+      "budget": {
+        "five_hour_pct_start": 31,
+        "source": "statusline-cache",
+        "approx": true,
+        "note": "wave 1, 3 parallel workers",
+        "five_hour_pct_end": 38,
+        "five_hour_pct_delta": 7,
+        "context_pct_end": 24
+      }
+    },
+    {
+      "id": "2.4",
+      "title": "jbh-traces.json",
+      "module": ".",
+      "depends_on": [],
+      "parallel_ok": true,
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "claude-sonnet-5-5",
+      "started_at": "2026-11-20T13:37:27Z",
+      "completed_at": "2026-11-20T13:40:50Z",
+      "duration_seconds": 203,
+      "notes": "jbh-traces.json, 6 panels: 3 TraceQL tables, nodeGraph service map, 2 service-graph rate series. Slow query returned a trace; errors 0.",
+      "budget": {
+        "five_hour_pct_start": 31,
+        "source": "statusline-cache",
+        "approx": true,
+        "note": "wave 1, 3 parallel workers",
+        "five_hour_pct_end": 38,
+        "five_hour_pct_delta": 7,
+        "context_pct_end": 24
+      }
+    },
+    {
+      "id": "3.1",
+      "title": "jbh-service-down.yaml",
+      "module": ".",
+      "depends_on": [],
+      "parallel_ok": true,
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "claude-sonnet-5-5",
+      "started_at": "2026-11-20T13:37:27Z",
+      "completed_at": "2026-11-20T13:40:50Z",
+      "duration_seconds": 203,
+      "notes": "Provisioning-format rule per design D4 table (uid, threshold, for, noDataState, what_to_check_first). Query ran once on the local stack; healthy value seen.",
+      "budget": {
+        "five_hour_pct_start": 31,
+        "source": "statusline-cache",
+        "approx": true,
+        "note": "wave 1, 3 parallel workers",
+        "five_hour_pct_end": 38,
+        "five_hour_pct_delta": 7,
+        "context_pct_end": 24
+      }
+    },
+    {
+      "id": "3.2",
+      "title": "jbh-http-5xx-rate.yaml",
+      "module": ".",
+      "depends_on": [],
+      "parallel_ok": true,
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "claude-sonnet-5-5",
+      "started_at": "2026-11-20T13:37:27Z",
+      "completed_at": "2026-11-20T13:40:50Z",
+      "duration_seconds": 203,
+      "notes": "Provisioning-format rule per design D4 table (uid, threshold, for, noDataState, what_to_check_first). Query ran once on the local stack; healthy value seen.",
+      "budget": {
+        "five_hour_pct_start": 31,
+        "source": "statusline-cache",
+        "approx": true,
+        "note": "wave 1, 3 parallel workers",
+        "five_hour_pct_end": 38,
+        "five_hour_pct_delta": 7,
+        "context_pct_end": 24
+      }
+    },
+    {
+      "id": "3.3",
+      "title": "jbh-http-p95-latency.yaml",
+      "module": ".",
+      "depends_on": [],
+      "parallel_ok": true,
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "claude-sonnet-5-5",
+      "started_at": "2026-11-20T13:37:27Z",
+      "completed_at": "2026-11-20T13:40:50Z",
+      "duration_seconds": 203,
+      "notes": "Provisioning-format rule per design D4 table (uid, threshold, for, noDataState, what_to_check_first). Query ran once on the local stack; healthy value seen.",
+      "budget": {
+        "five_hour_pct_start": 31,
+        "source": "statusline-cache",
+        "approx": true,
+        "note": "wave 1, 3 parallel workers",
+        "five_hour_pct_end": 38,
+        "five_hour_pct_delta": 7,
+        "context_pct_end": 24
+      }
+    },
+    {
+      "id": "3.4",
+      "title": "jbh-jvm-heap-high.yaml",
+      "module": ".",
+      "depends_on": [],
+      "parallel_ok": true,
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "claude-sonnet-5-5",
+      "started_at": "2026-11-20T13:37:27Z",
+      "completed_at": "2026-11-20T13:40:50Z",
+      "duration_seconds": 203,
+      "notes": "Provisioning-format rule per design D4 table (uid, threshold, for, noDataState, what_to_check_first). Query ran once on the local stack; healthy value seen.",
+      "budget": {
+        "five_hour_pct_start": 31,
+        "source": "statusline-cache",
+        "approx": true,
+        "note": "wave 1, 3 parallel workers",
+        "five_hour_pct_end": 38,
+        "five_hour_pct_delta": 7,
+        "context_pct_end": 24
+      }
+    },
+    {
+      "id": "3.5",
+      "title": "jbh-frontend-error-spike.yaml",
+      "module": ".",
+      "depends_on": [],
+      "parallel_ok": true,
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "claude-sonnet-5-5",
+      "started_at": "2026-11-20T13:37:27Z",
+      "completed_at": "2026-11-20T13:40:50Z",
+      "duration_seconds": 203,
+      "notes": "Provisioning-format rule per design D4 table (uid, threshold, for, noDataState, what_to_check_first). Query ran once on the local stack; healthy value seen.",
+      "budget": {
+        "five_hour_pct_start": 31,
+        "source": "statusline-cache",
+        "approx": true,
+        "note": "wave 1, 3 parallel workers",
+        "five_hour_pct_end": 38,
+        "five_hour_pct_delta": 7,
+        "context_pct_end": 24
+      }
+    },
+    {
+      "id": "3.6",
+      "title": "jbh-postgres-connections-high.yaml",
+      "module": ".",
+      "depends_on": [],
+      "parallel_ok": true,
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "claude-sonnet-5-5",
+      "started_at": "2026-11-20T13:37:27Z",
+      "completed_at": "2026-11-20T13:40:50Z",
+      "duration_seconds": 203,
+      "notes": "Provisioning-format rule per design D4 table (uid, threshold, for, noDataState, what_to_check_first). Query ran once on the local stack; healthy value seen.",
+      "budget": {
+        "five_hour_pct_start": 31,
+        "source": "statusline-cache",
+        "approx": true,
+        "note": "wave 1, 3 parallel workers",
+        "five_hour_pct_end": 38,
+        "five_hour_pct_delta": 7,
+        "context_pct_end": 24
+      }
+    },
+    {
+      "id": "3.7",
+      "title": "jbh-postgres-deadlock.yaml",
+      "module": ".",
+      "depends_on": [],
+      "parallel_ok": true,
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "claude-sonnet-5-5",
+      "started_at": "2026-11-20T13:37:27Z",
+      "completed_at": "2026-11-20T13:40:50Z",
+      "duration_seconds": 203,
+      "notes": "Provisioning-format rule per design D4 table (uid, threshold, for, noDataState, what_to_check_first). Query ran once on the local stack; healthy value seen.",
+      "budget": {
+        "five_hour_pct_start": 31,
+        "source": "statusline-cache",
+        "approx": true,
+        "note": "wave 1, 3 parallel workers",
+        "five_hour_pct_end": 38,
+        "five_hour_pct_delta": 7,
+        "context_pct_end": 24
+      }
+    },
+    {
+      "id": "4.1",
+      "title": "observability/GUIDE.md (7 parts)",
+      "module": ".",
+      "depends_on": [
+        "1.1",
+        "2.1",
+        "2.2",
+        "2.3",
+        "2.4",
+        "3.1",
+        "3.2",
+        "3.3",
+        "3.4",
+        "3.5",
+        "3.6",
+        "3.7"
+      ],
+      "parallel_ok": false,
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "claude-sonnet-5-5",
+      "started_at": "2026-11-20T16:45:41Z",
+      "completed_at": "2026-11-20T16:50:25Z",
+      "duration_seconds": 284,
+      "notes": "GUIDE.md, 443 lines, 7 numbered parts; name table, X-Trace-Id walk-through, PromQL/LogQL/TraceQL examples with jbh-iam-service, Quarkus and Spring Micrometer examples, manual alert steps.",
+      "budget": {
+        "five_hour_pct_start": 5,
+        "source": "statusline-cache",
+        "approx": true,
+        "note": "wave 2, one serial worker",
+        "five_hour_pct_end": 9,
+        "five_hour_pct_delta": 4,
+        "context_pct_end": 26
+      }
+    },
+    {
+      "id": "5.1",
+      "title": "observability/README.md: dashboards, alerts, import, budget, hand-over to JBH-84",
+      "module": ".",
+      "depends_on": [
+        "4.1"
+      ],
+      "parallel_ok": true,
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "claude-sonnet-5-5",
+      "started_at": "2026-11-20T16:45:41Z",
+      "completed_at": "2026-11-20T16:50:25Z",
+      "duration_seconds": 284,
+      "notes": "observability/README.md: 5 dashboards, 7 alerts table, import and add-rule steps, gateway budget row and totals, Hand-over to JBH-84 (JBH_SERVICE_VERSION, CSP connect-src, uids, remaining alert work).",
+      "budget": {
+        "five_hour_pct_start": 5,
+        "source": "statusline-cache",
+        "approx": true,
+        "note": "wave 2, one serial worker",
+        "five_hour_pct_end": 9,
+        "five_hour_pct_delta": 4,
+        "context_pct_end": 26
+      }
+    },
+    {
+      "id": "5.2",
+      "title": "README.md, LOCAL.md, CLAUDE.md doc edits",
+      "module": ".",
+      "depends_on": [
+        "4.1",
+        "1.1"
+      ],
+      "parallel_ok": true,
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "claude-sonnet-5-5",
+      "started_at": "2026-11-20T16:45:41Z",
+      "completed_at": "2026-11-20T16:50:25Z",
+      "duration_seconds": 284,
+      "notes": "README.md: X-Trace-Id bullet and Faro port 12347 line. LOCAL.md: step 5 pointers and X-Trace-Id tip. CLAUDE.md: files-table row.",
+      "budget": {
+        "five_hour_pct_start": 5,
+        "source": "statusline-cache",
+        "approx": true,
+        "note": "wave 2, one serial worker",
+        "five_hour_pct_end": 9,
+        "five_hour_pct_delta": 4,
+        "context_pct_end": 26
+      }
+    },
+    {
+      "id": "6.1",
+      "title": "Pointer file kkpa-jbh/kkpa/observability.md (leader)",
+      "module": ".",
+      "depends_on": [
+        "4.1",
+        "5.1"
+      ],
+      "parallel_ok": false,
+      "status": "done",
+      "agent": "leader",
+      "model": "claude-opus-5-5",
+      "started_at": "2026-11-20T16:50:00Z",
+      "completed_at": "2026-11-20T16:50:25Z",
+      "duration_seconds": 25,
+      "notes": "Leader wrote kkpa-jbh/kkpa/observability.md, 10 lines, links to GUIDE.md, VERIFY.md, README.md. Outside git.",
+      "budget": null
+    },
+    {
+      "id": "7.1",
+      "title": "Static checks S1-S9 (leader)",
+      "module": ".",
+      "depends_on": [
+        "1.1",
+        "2.1",
+        "2.2",
+        "2.3",
+        "2.4",
+        "3.1",
+        "3.2",
+        "3.3",
+        "3.4",
+        "3.5",
+        "3.6",
+        "3.7",
+        "4.1",
+        "5.1",
+        "5.2",
+        "6.1"
+      ],
+      "parallel_ok": false,
+      "status": "done",
+      "agent": "leader",
+      "model": "claude-opus-5-5",
+      "started_at": "2026-11-20T16:50:00Z",
+      "completed_at": "2026-11-20T16:50:25Z",
+      "duration_seconds": 25,
+      "notes": "Leader ran S1-S9: all pass (S5 with ruby yaml, no PyYAML).",
+      "budget": null
+    },
+    {
+      "id": "8.1",
+      "title": "observability/VERIFY.md (5 scenarios)",
+      "module": ".",
+      "depends_on": [
+        "1.1",
+        "2.1",
+        "2.2",
+        "2.3",
+        "2.4",
+        "3.1",
+        "3.2",
+        "3.3",
+        "3.4",
+        "3.5",
+        "3.6",
+        "3.7",
+        "4.1"
+      ],
+      "parallel_ok": true,
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "claude-sonnet-5-5",
+      "started_at": "2026-11-20T16:45:41Z",
+      "completed_at": "2026-11-20T16:50:25Z",
+      "duration_seconds": 284,
+      "notes": "VERIFY.md, 383 lines, 5 scenarios x Do/Look/Query/You should see/Undo; name table; wrong-login body from IAM tests with a fake email; only the user stops containers.",
+      "budget": {
+        "five_hour_pct_start": 5,
+        "source": "statusline-cache",
+        "approx": true,
+        "note": "wave 2, one serial worker",
+        "five_hour_pct_end": 9,
+        "five_hour_pct_delta": 4,
+        "context_pct_end": 26
+      }
+    },
+    {
+      "id": "8.2",
+      "title": "GUIDE.md: VERIFY.md link and name table",
+      "module": ".",
+      "depends_on": [
+        "4.1",
+        "8.1"
+      ],
+      "parallel_ok": true,
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "claude-sonnet-5-5",
+      "started_at": "2026-11-20T16:45:41Z",
+      "completed_at": "2026-11-20T16:50:25Z",
+      "duration_seconds": 284,
+      "notes": "GUIDE.md links VERIFY.md (part 2, part 6); name table in part 1; part 3 uses jbh-iam-service.",
+      "budget": {
+        "five_hour_pct_start": 5,
+        "source": "statusline-cache",
+        "approx": true,
+        "note": "wave 2, one serial worker",
+        "five_hour_pct_end": 9,
+        "five_hour_pct_delta": 4,
+        "context_pct_end": 26
+      }
+    },
+    {
+      "id": "8.3",
+      "title": "jbh-traces.json: explicit && query for 3+ services",
+      "module": ".",
+      "depends_on": [
+        "2.4"
+      ],
+      "parallel_ok": true,
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "claude-sonnet-5-5",
+      "started_at": "2026-11-20T13:37:27Z",
+      "completed_at": "2026-11-20T13:40:50Z",
+      "duration_seconds": 203,
+      "notes": "3+ services panel uses the explicit && span-set query; description names the count_distinct parse error. Returned 0 traces in the default window: M2 checks it.",
+      "budget": {
+        "five_hour_pct_start": 31,
+        "source": "statusline-cache",
+        "approx": true,
+        "note": "wave 1, 3 parallel workers",
+        "five_hour_pct_end": 38,
+        "five_hour_pct_delta": 7,
+        "context_pct_end": 24
+      }
+    },
+    {
+      "id": "8.4",
+      "title": "observability/README.md: VERIFY.md links",
+      "module": ".",
+      "depends_on": [
+        "5.1",
+        "8.1"
+      ],
+      "parallel_ok": true,
+      "status": "done",
+      "agent": "jbh-deploy",
+      "model": "claude-sonnet-5-5",
+      "started_at": "2026-11-20T16:45:41Z",
+      "completed_at": "2026-11-20T16:50:25Z",
+      "duration_seconds": 284,
+      "notes": "VERIFY.md linked from observability/README.md intro, Import a dashboard, Add an alert rule.",
+      "budget": {
+        "five_hour_pct_start": 5,
+        "source": "statusline-cache",
+        "approx": true,
+        "note": "wave 2, one serial worker",
+        "five_hour_pct_end": 9,
+        "five_hour_pct_delta": 4,
+        "context_pct_end": 26
+      }
+    },
+    {
+      "id": "8.5",
+      "title": "Static checks S10-S12 (leader), M6 (user)",
+      "module": ".",
+      "depends_on": [
+        "8.1",
+        "8.2",
+        "8.3",
+        "8.4"
+      ],
+      "parallel_ok": false,
+      "status": "done",
+      "agent": "leader",
+      "model": "claude-opus-5-5",
+      "started_at": "2026-11-20T16:50:00Z",
+      "completed_at": "2026-11-20T16:50:25Z",
+      "duration_seconds": 25,
+      "notes": "Leader ran S10 (5 scenarios, links 4/3), S11 (25), S12 (every read-only VERIFY query ran; UI, stop-service, POST and Faro-exception steps not runnable by the assistant). M6 is the user's.",
+      "budget": null
+    }
+  ],
+  "review": {
+    "status": "approved",
+    "agent": "jbh-deploy-reviewer",
+    "brief": "JBH-55 section 8 / JBH-61. User decisions: D1 manual UI import only (no script); D2 accept over-cap size; D5 VERIFY.md added via the leader. Check: dashboards follow design D1/D3 (fixed uid, datasource variable first, job label, actuator filter, Tempo/Loki names per D10); alert YAML matches D4 table and Grafana file-provisioning format; D2 Faro OTTL statement is plausible for Alloy otelcol.processor.transform (log context, resource.attributes, ExtractPatterns on log.body.string); GUIDE.md 7 parts; VERIFY.md 5 scenarios x 5 sub-headings, commands safe and real; plan section 8 doc items (X-Trace-Id bullet, gateway budget, JBH_SERVICE_VERSION, CSP note, Faro port line) present; B2 writing rules; no secrets, no HTML comments. Question for you: VERIFY scenario 3 makes the 5xx rule fire with threshold 'above -1': judge if that is clear and correct. Signals: all static checks S1-S12 and the read-only queries were assistant-run (leader); manual checks M1-M6 are user-reported later, not run. Security-Gate: skip (D7). Test-First: off (skipped).",
+    "rounds": [
+      {
+        "round": 1,
+        "at": "2026-11-20T17:15:45Z",
+        "verdict": "changes-requested",
+        "security": {
+          "status": "skipped",
+          "ran_at": "2026-11-20T17:15:45Z",
+          "scope": "git.base",
+          "findings": [],
+          "note": "Skipped by leader decision D7 (scope review:security-gate): docs, dashboard JSON, alert YAML, one Alloy transform; no secrets, auth, ports, dependencies or CI."
+        },
+        "findings": [
+          {
+            "id": "R1",
+            "lens": "intent",
+            "severity": "major",
+            "status": "fixed",
+            "note": "observability/VERIFY.md scenario 3 (Do step 3, ~line 185-190, and 'You should see'): the 'force the 5xx rule to fire' test does not work. With no 5xx request, the numerator of the rule query has no series, so the division is an empty result (checked read only on Prometheus: both the 5xx rate and the ratio return []). Empty + noDataState OK = the rule stays Normal even with threshold 'IS ABOVE -1'. The text 'the 5xx share is 0' is wrong. Spec scenario 'Forced firing' and the brief question: not met. Fix: force a rule that always has data (jbh-jvm-heap-high with '> 0', as GUIDE part 6 already does; or jbh-postgres-connections-high), and fix the 'share is 0' sentence, the Undo text and the Query block.",
+            "triage": "accepted"
+          },
+          {
+            "id": "R2",
+            "lens": "conventions",
+            "severity": "minor",
+            "status": "fixed",
+            "note": "observability/GUIDE.md part 3 ('With no traffic the result is empty') is correct, but VERIFY.md scenario 3 contradicts it. Align both after R1.",
+            "triage": "accepted"
+          }
+        ]
+      },
+      {
+        "round": 2,
+        "at": "2026-11-20T17:16:52Z",
+        "verdict": "approved",
+        "security": {
+          "status": "skipped",
+          "ran_at": "2026-11-20T17:16:52Z",
+          "scope": "git.base",
+          "findings": [],
+          "note": "Skipped by leader decision D7: round 2 diff touches only observability/VERIFY.md."
+        },
+        "findings": []
+      }
+    ]
+  },
+  "decisions": [
+    {
+      "id": "D1",
+      "at": "2026-11-20T13:34:59Z",
+      "scope": "change",
+      "made_by": "user",
+      "decision": "Dashboards and alert rules are imported by hand in the Grafana UI; no script, make target or API call",
+      "why": "User choice at the Step 2 interview over a make target via the Grafana API",
+      "covered_by": null
+    },
+    {
+      "id": "D2",
+      "at": "2026-11-20T13:34:59Z",
+      "scope": "change",
+      "made_by": "user",
+      "decision": "Accept the size: ~3,600 lines, 17 files, over the 500/15 cap",
+      "why": "Plan defines section 8 as one unit; most lines are dashboard JSON boilerplate. Cut-scope options rejected",
+      "covered_by": null
+    },
+    {
+      "id": "D3",
+      "at": "2026-11-20T13:34:59Z",
+      "scope": "concurrency",
+      "made_by": "leader",
+      "decision": "No race or sync risk in any task",
+      "why": "Static JSON, YAML, Alloy config and Markdown only; one user imports by hand",
+      "covered_by": null
+    },
+    {
+      "id": "D4",
+      "at": "2026-11-20T13:34:59Z",
+      "scope": "change",
+      "made_by": "leader",
+      "decision": "test_first skipped",
+      "why": "No unit tests: the plan excludes them (user decision) and the change has no code",
+      "covered_by": "plan JBH-55 'Unit tests: excluded'"
+    },
+    {
+      "id": "D5",
+      "at": "2026-11-20T13:36:52Z",
+      "scope": "change",
+      "made_by": "user",
+      "decision": "Add observability/VERIFY.md (5 scenarios) to scope, via jbh-leader",
+      "why": "User request relayed by the leader after the briefing; appended as task group 8; size now ~4,000 lines, 18 files",
+      "covered_by": "D2"
+    },
+    {
+      "id": "D6",
+      "at": "2026-11-20T13:37:27Z",
+      "scope": "change",
+      "made_by": "leader",
+      "decision": "Wave 1 runs as 3 parallel workers: A=1.1+3.x, B=2.1+2.4+8.3, C=2.2+2.3",
+      "why": "~3,000 lines of disjoint files; one serial worker risks its context. Bucket at 31%.",
+      "covered_by": null
+    },
+    {
+      "id": "D7",
+      "at": "2026-11-20T16:50:44Z",
+      "scope": "review:security-gate",
+      "made_by": "leader",
+      "decision": "Skip /security-review",
+      "why": "Diff is docs, dashboard JSON, alert YAML and one Alloy log-transform step; no secrets, auth, ports, dependencies or CI",
+      "covered_by": null
+    }
+  ],
+  "events": [
+    {
+      "at": "2026-11-20T13:34:59Z",
+      "agent": "leader",
+      "event": "artifacts written by jbh-deploy worker; openspec validate --strict passed; design briefing and size cap answered by the user"
+    },
+    {
+      "at": "2026-11-20T13:36:52Z",
+      "agent": "leader",
+      "event": "artifacts appended (group 8, D9-D10) by the worker; openspec validate --strict passed"
+    },
+    {
+      "at": "2026-11-20T13:37:27Z",
+      "agent": "leader",
+      "event": "dispatched wave 1: A (1.1, 3.1-3.7), B (2.1, 2.4, 8.3), C (2.2, 2.3)"
+    },
+    {
+      "at": "2026-11-20T13:37:27Z",
+      "agent": "leader",
+      "event": ".gitignore has an uncommitted new line openspec/changes/** not made by the leader; left unstaged, user to decide"
+    },
+    {
+      "at": "2026-11-20T13:40:50Z",
+      "agent": "leader",
+      "event": "wave 1 reconciled. Worker timestamps were approximate (A said 13:00-13:20, C said 14:05-14:30); leader used dispatch time and completion time instead"
+    },
+    {
+      "at": "2026-11-20T13:40:50Z",
+      "agent": "leader",
+      "event": "verified by the leader (assistantRunsTests): S1 json.tool 0 BAD; S2 no fixed uid; S3/S4 uids and datasource first var OK; S5 (ruby yaml, no PyYAML) 7 rules OK; S6 = 2; S7 Complexity-Check exit 0; no HTML comments"
+    },
+    {
+      "at": "2026-11-20T13:40:50Z",
+      "agent": "leader",
+      "event": "archive progress.json (notification-service) has an uncommitted edit 'Claude Code X' not made by the pipeline; not staged"
+    },
+    {
+      "at": "2026-11-20T16:45:41Z",
+      "agent": "leader",
+      "event": "wave-1 commit cbbe8f6 had swept in foreign staged removals of openspec/changes and commit 053a1d6 (.gitignore). User chose keep tracked: branch rebuilt, wave 1 re-committed as ae252e5"
+    },
+    {
+      "at": "2026-11-20T16:45:41Z",
+      "agent": "leader",
+      "event": "dispatched wave 2: one worker (4.1, 8.1, 5.1, 5.2, 8.2, 8.4)"
+    },
+    {
+      "at": "2026-11-20T16:50:25Z",
+      "agent": "leader",
+      "event": "wave 2 reconciled; leader did 6.1, 7.1, 8.5"
+    },
+    {
+      "at": "2026-11-20T16:50:25Z",
+      "agent": "leader",
+      "event": "verified by the leader (assistantRunsTests): S1-S11 pass, Complexity-Check exit 0; S12 ran 9 PromQL, 4 TraceQL, 4 LogQL, gateway curl (401 + X-Trace-Id, found in Tempo 200 and Loki), Consul 4 passing"
+    },
+    {
+      "at": "2026-11-20T16:50:44Z",
+      "agent": "leader",
+      "event": "Step 6: openspec validate --strict passed; recorded pass from wave 1 and wave 2 static checks. Status verified"
+    },
+    {
+      "at": "2026-11-20T16:50:44Z",
+      "agent": "leader",
+      "event": "real size: 28 files, +4819 -7 (git diff --shortstat 4bdb0a7...HEAD), incl. ~800 lines of OpenSpec artifacts; estimate was 18 files ~4,000 lines"
+    },
+    {
+      "at": "2026-11-20T17:16:37Z",
+      "agent": "leader",
+      "event": "round 1 triage: R1 accepted (leader confirmed: empty result, noDataState OK, never fires), R2 accepted. Fixed by leader: VERIFY scenario 3 now fires jbh-jvm-heap-high with > 0; heap query ran: 4 values 0.09-0.22. Login body usernameOrEmail confirmed in AuthController.kt"
+    },
+    {
+      "at": "2026-11-20T17:17:28Z",
+      "agent": "leader",
+      "event": "archived as 2026-11-20-deploy-add-dashboards-alerts-guide; specs synced (+12 requirements in 5 specs)"
+    }
+  ]
+}

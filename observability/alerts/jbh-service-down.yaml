@@ -1,0 +1,64 @@
+apiVersion: 1
+groups:
+  - orgId: 1
+    name: jbh-availability
+    folder: JBH
+    interval: 1m
+    rules:
+      - uid: jbh-alert-service-down
+        title: JBH service down
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: prometheus
+            model:
+              datasource:
+                type: prometheus
+                uid: prometheus
+              expr: 'up{job=~"jbh-(gateway|iam|personal-finance|notification)"}'
+              instant: false
+              range: true
+              refId: A
+          - refId: B
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              datasource:
+                type: __expr__
+                uid: __expr__
+              type: reduce
+              expression: A
+              reducer: last
+              refId: B
+          - refId: C
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              datasource:
+                type: __expr__
+                uid: __expr__
+              type: threshold
+              expression: B
+              conditions:
+                - evaluator:
+                    type: lt
+                    params:
+                      - 1
+              refId: C
+        noDataState: Alerting
+        execErrState: Error
+        for: 5m
+        annotations:
+          summary: "A JBH service is down or its metrics are missing."
+          description: "The scrape of a JBH backend returned 0 or no data for 5 minutes. Services: jbh-gateway, jbh-iam, jbh-personal-finance, jbh-notification. Postgres is not covered here: see the jbh-postgres dashboard (pg_up)."
+          what_to_check_first: "Open the Alloy UI http://localhost:12345 (scrape target health), then run make local-ps and make local-logs s=<service>. Dashboard: jbh-overview (panel Up). Query: up{job=~\"jbh-.*\"}."
+        labels:
+          severity: critical
+          service: jbh

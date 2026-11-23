@@ -67,3 +67,15 @@ It SHALL run `/etc/alloy/local.alloy` and SHALL NOT mount the Docker socket.
 - **WHEN** `compose.local.yaml` is rendered with `.env.local.example`, and again with `JBH_PG_MONITOR_DSN=postgresql://jbh_monitor:x@host.docker.internal:5432/postgres?sslmode=disable` added
 - **THEN** the first render shows the `@jbh-postgres:5432/postgres?sslmode=disable` DSN and the second shows the override value
 
+### Requirement: Faro logs carry service.name
+`local.alloy` SHALL set the resource attribute `service.name` on Faro logs from the `app_name` field of the log line, before the logs reach `otelcol.exporter.otlp "lgtm"`,
+using `otelcol.processor.transform` between `otelcol.receiver.loki "faro"` and the exporter. The Faro traces path SHALL NOT change.
+
+#### Scenario: Faro log in Loki
+- **WHEN** the browser app sends a Faro event with `app_name=jbh-web` and Alloy has restarted
+- **THEN** Loki shows the line with `service_name="jbh-web"` and not `unknown_service`
+
+#### Scenario: Line without app_name
+- **WHEN** a Faro log line has no `app_name`
+- **THEN** the line is still forwarded (`error_mode = "ignore"`) and Loki keeps `unknown_service` for it
+

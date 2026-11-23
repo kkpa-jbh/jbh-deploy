@@ -24,6 +24,7 @@ It also holds `README.md`: the system map of all JBH services. The `kkpa-jbh/CLA
 | `local-db.sh` | Local only. `make local-db-backup` / `make local-db-restore d=<dir>`: dumps to and restores from `backups/local/`. Restore takes a safety backup first and restarts only the services it stopped. |
 | `ci-deploy.sh` | Deploy or roll back one app service, wait until healthy, roll back by itself on failure. Forced command of the CI deploy key; `make deploy` / `make rollback` call it too. |
 | `.github/workflows/deploy.yml` | `Deploy` workflow: SSH to the VPS, runs `ci-deploy.sh`. By hand, or from `jbh-app`'s `Image` (auto-deploy of `jbh-web`). |
+| `.github/workflows/multi-arch-image.yml` | Reusable workflow (`on: workflow_call`). Each service's `Image` workflow calls it, pinned to a commit SHA: amd64 + arm64 images, one tag, cleanup (keep 10 tagged). |
 
 ## Rules
 

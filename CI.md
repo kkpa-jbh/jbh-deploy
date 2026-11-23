@@ -31,6 +31,7 @@ For the deploy commands on the VPS, read [`DEPLOY.md`](DEPLOY.md).
 | `jbh-commons-lib` | `Publish` (`publish.yml`) | yes | no | yes | Maven `jbh-commons-lib` |
 | `jbh-gateway-client` | `Publish` (`publish.yml`) | yes | no | yes | Maven `jbh-gateway-client` |
 | `jbh-deploy` | `Deploy` (`deploy.yml`) | no | no | yes, or from `jbh-app`'s `Image` | nothing. Deploys one service to the VPS. For this repo's own files, the VPS runs `git pull` |
+| `jbh-deploy` | `Multi-arch image` (`multi-arch-image.yml`) | no | no | no | nothing by itself. A reusable workflow (`on: workflow_call`): the `Image` workflow of each service repo calls it to build the amd64 + arm64 images, publish one tag and delete old images |
 
 "By hand": GitHub → the repo → Actions → the workflow → **Run workflow**.
 
@@ -76,6 +77,22 @@ The same steps in every service repo:
 6. **Only `jbh-app`: start `Deploy`** for this commit's image, when `AUTO_DEPLOY` is `true`. See "Auto-deploy" below.
 
 Time: about 2–4 minutes. `jbh-app` runs one `Image` at a time, in push order.
+
+### `Multi-arch image` (`jbh-deploy`, reusable)
+
+A reusable workflow (`on: workflow_call`). It never runs by itself: a service's `Image` workflow calls it with
+`uses: kkpa-jbh/jbh-deploy/.github/workflows/multi-arch-image.yml@<jbh-deploy commit SHA>`, after its own job
+`package` uploaded the built app as the artifact `app-package`. Inputs: `image`, `package-name`, `context`, `app-package-path`.
+
+1. **`Build image (amd64)`** and **`Build image (arm64)`**: one job per CPU type, each on a native runner
+   (`ubuntu-latest`, `ubuntu-24.04-arm`). Each pushes its image by digest only, with no tag.
+2. **`Publish multi-arch tag (amd64 + arm64)`**: one tag (`<git-sha>` and `latest`) for both images, only when both exist.
+   It fails if the tag does not list `linux/amd64` and `linux/arm64`.
+3. **`Delete old images (keep 10 tagged)`**: `dataaxiom/ghcr-cleanup-action`. It counts tagged images, not package versions,
+   and keeps each kept image's per-CPU parts.
+
+Why: the VPS is amd64, a Mac (k3d) is arm64, AWS can be both. Each machine pulls its own type from the same tag.
+A change here reaches the services only when each caller bumps the pinned SHA.
 
 ### `CI Pipeline` (`jbh-personal-finance` only)
 

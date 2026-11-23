@@ -4,3 +4,6 @@ backups/
 .DS_Store
 .idea/
 jbh.env
+
+# Secrets of the local Kubernetes cluster (k8s/overlays/local/.env.k8s.example is the template).
+k8s/overlays/local/.env.k8s

@@ -1,0 +1,64 @@
+# Kustomize "overlay" for the LOCAL cluster (k3d on a laptop): the base + Postgres + the laptop-only values.
+# A later target (the VPS in JBH-88, maybe AWS) gets its own overlay folder next to this one; the base stays the same.
+#
+# Render it (prints the final YAML; it starts nothing):
+#   kubectl kustomize --load-restrictor LoadRestrictionsNone k8s/overlays/local     (or: make k8s-render)
+# Apply it to the cluster: make k8s-up (see LOCAL-K8S.md).
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# The same namespace as the base. Needed here too: the Secret and the Postgres objects are made at this level,
+# and Kustomize links names (jbh-secrets -> jbh-secrets-<hash>) only between objects in the same namespace.
+# The PersistentVolume belongs to no namespace; Kustomize leaves it alone.
+namespace: jbh
+
+resources:
+  - ../../base
+  # A fixed disk for Postgres, so the data survives "make k8s-down" (see the file).
+  - postgres-pv.yaml
+
+components:
+  # Postgres runs inside the local cluster.
+  - ../../components/postgres
+
+# The image version of each service, in one place. Changing a tag here and applying it starts a rollout:
+# Kubernetes replaces the pods one by one with the new image.
+# "make k8s-pin" (scripts/k8s-pin.sh) writes the newest git SHA of each image into the newTag lines.
+# Use a SHA, not "latest": with "latest" Kubernetes cannot see that a new image exists, and you cannot tell what runs.
+images:
+  - name: ghcr.io/kkpa-jbh/jbh-iam
+    newTag: latest
+  - name: ghcr.io/kkpa-jbh/jbh-personal-finance
+    newTag: latest
+  - name: ghcr.io/kkpa-jbh/jbh-notification
+    newTag: latest
+  - name: ghcr.io/kkpa-jbh/jbh-gateway
+    newTag: latest
+  - name: ghcr.io/kkpa-jbh/jbh-web
+    newTag: latest
+
+# Makes the Secret "jbh-secrets" from the file .env.k8s (KEY=value lines, git-ignored, never committed).
+# Copy .env.k8s.example to .env.k8s and fill it. Kustomize adds a hash to the Secret's name and updates every
+# reference, so a changed secret restarts the pods that use it.
+secretGenerator:
+  - name: jbh-secrets
+    envs:
+      - .env.k8s
+
+patches:
+  # Which Ingress controller applies the rules: Traefik, built into k3s.
+  - path: patches/ingress-traefik.yaml
+  # jbh-iam: the "local" profile (HTTP cookies) and a place for its log file.
+  - path: patches/jbh-iam-config.yaml
+  - path: patches/jbh-iam-logs.yaml
+  # The gateway: the "local" profile and the trusted proxy range.
+  - path: patches/jbh-gateway-config.yaml
+  # The link in invitation emails.
+  - path: patches/jbh-notification-config.yaml
+  # The environment label, for every Java service.
+  - path: patches/jbh-personal-finance-config.yaml
+  # Postgres: use the fixed local disk (postgres-pv.yaml) instead of a new empty one.
+  - path: patches/postgres-local-disk.yaml
+    target:
+      kind: StatefulSet
+      name: jbh-postgres

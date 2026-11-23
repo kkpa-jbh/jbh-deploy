@@ -1,0 +1,7 @@
+# Laptop values for jbh-personal-finance (merged into the base ConfigMap).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: jbh-personal-finance-config
+data:
+  JBH_ENV: k8s-local

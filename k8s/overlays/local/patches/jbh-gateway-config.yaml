@@ -1,0 +1,11 @@
+# Laptop values for jbh-gateway (merged into the base ConfigMap).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: jbh-gateway-config
+data:
+  SPRING_PROFILES_ACTIVE: local
+  # The gateway trusts X-Forwarded-For only from these addresses (rate limit per client IP).
+  # Traefik runs as a pod; 10.42.0.0/16 is the k3s pod network. On the VPS it was the Docker "edge" subnet.
+  JBH_TRUSTED_PROXIES: 10.42.0.0/16
+  JBH_ENV: k8s-local

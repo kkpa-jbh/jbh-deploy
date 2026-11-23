@@ -1,0 +1,8 @@
+# The Ingress controller of k3s is Traefik. k3d sends laptop port 8081 to it (k8s.mk: --port 8081:80@loadbalancer).
+# No host rule: every request on http://localhost:8081 uses the base rules.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: jbh
+spec:
+  ingressClassName: traefik

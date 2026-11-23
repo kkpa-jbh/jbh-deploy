@@ -1,0 +1,12 @@
+# Laptop values for jbh-iam (merged into the base ConfigMap).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: jbh-iam-config
+data:
+  # "local", not "prod": prod sets Secure cookies, and those need HTTPS. The local cluster is plain HTTP.
+  SPRING_PROFILES_ACTIVE: local
+  # The browser's origin. IAM checks CORS, and behind the Ingress and the gateway it sees another host.
+  CORS_ALLOWED_ORIGINS: http://localhost:8081
+  # Only a label (metric tag, resource attribute). Nothing is exported: OTEL_SDK_DISABLED stays unset.
+  JBH_ENV: k8s-local

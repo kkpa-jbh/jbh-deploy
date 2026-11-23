@@ -1,0 +1,93 @@
+# Deployment for jbh-gateway: keeps one pod of the service running.
+# Same shape as jbh-iam/deployment.yaml; read that file for why each setting is there.
+# It validates the same JWT as jbh-iam, so both read JBH_JWT_SECRET from the same Secret key.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jbh-gateway
+  labels:
+    app.kubernetes.io/name: jbh-gateway
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: jbh-gateway
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: jbh-gateway
+    spec:
+      automountServiceAccountToken: false
+      # No Service env vars (they would clash with app properties). Names come from DNS.
+      enableServiceLinks: false
+      # Required by the "restricted" Pod Security Standard. 10001 = the image's numeric user.
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: jbh-gateway
+          # The tag comes from the overlay ("images:" in its kustomization.yaml).
+          image: ghcr.io/kkpa-jbh/jbh-gateway
+          ports:
+            - name: http
+              containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: jbh-gateway-config
+          env:
+            - name: JBH_JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: jbh-secrets
+                  key: JBH_JWT_SECRET
+          # Memory limit = the one in compose.local.yaml. No CPU limit: it would slow the JVM start.
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              memory: 512Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          # startup: up to 5 s x 36 = 3 minutes for the JVM start. liveness: restart if stuck. readiness: traffic only when ready.
+          startupProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: http
+            periodSeconds: 5
+            failureThreshold: 36
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: http
+            periodSeconds: 10
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: http
+            periodSeconds: 5
+            failureThreshold: 3
+          volumeMounts:
+            # Temp files of the JVM. The root file system is read-only.
+            - name: tmp
+              mountPath: /tmp
+            # The simple-discovery map (discovery-configmap.yaml), read through SPRING_CONFIG_ADDITIONAL_LOCATION.
+            - name: discovery
+              mountPath: /etc/jbh
+              readOnly: true
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        # A ConfigMap as files: each key becomes a file (here /etc/jbh/application.yml).
+        - name: discovery
+          configMap:
+            name: jbh-gateway-discovery

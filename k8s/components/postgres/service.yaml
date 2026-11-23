@@ -1,0 +1,16 @@
+# Service: the DNS name "jbh-postgres" (port 5432). jbh-iam (DB_HOST) and the Quarkus services (DATABASE_URL) use it.
+# ClusterIP: only reachable inside the cluster. No host port, like compose.yaml.
+apiVersion: v1
+kind: Service
+metadata:
+  name: jbh-postgres
+  labels:
+    app.kubernetes.io/name: jbh-postgres
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: jbh-postgres
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: postgres

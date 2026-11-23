@@ -1,0 +1,77 @@
+# Deployment for jbh-web: Caddy serving the built Angular app (the jbh-app repo's image).
+# Same shape as jbh-iam/deployment.yaml, but no JVM: tiny memory, fast start, so no startupProbe.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jbh-web
+  labels:
+    app.kubernetes.io/name: jbh-web
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: jbh-web
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: jbh-web
+    spec:
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      # Required by the "restricted" Pod Security Standard. 10001 = the image's numeric user (jbh-app Dockerfile).
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: jbh-web
+          image: ghcr.io/kkpa-jbh/jbh-web
+          ports:
+            - name: http
+              containerPort: 8080
+          # Same limit as compose.yaml (64M). Caddy serving static files needs very little.
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              memory: 64Mi
+          # The image's caddy binary has no file capability (setcap -r), so it starts with ALL capabilities dropped.
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          # "/" answers index.html when Caddy runs.
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            periodSeconds: 10
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            periodSeconds: 5
+            failureThreshold: 3
+          volumeMounts:
+            # Caddy's config and data folders (XDG_CONFIG_HOME, XDG_DATA_HOME in the caddy image), and /tmp.
+            # Nothing there must survive a restart (admin off, no HTTPS inside the cluster).
+            - name: config
+              mountPath: /config
+            - name: data
+              mountPath: /data
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: config
+          emptyDir: {}
+        - name: data
+          emptyDir: {}
+        - name: tmp
+          emptyDir: {}

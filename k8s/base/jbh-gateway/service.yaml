@@ -1,0 +1,17 @@
+# Service: the stable DNS name "jbh-gateway" (port 8080) for the jbh-gateway pods.
+# Same idea as jbh-iam/service.yaml.
+# The Ingress sends /jbh-api/... here. jbh-iam and jbh-personal-finance call it at http://jbh-gateway:8080.
+apiVersion: v1
+kind: Service
+metadata:
+  name: jbh-gateway
+  labels:
+    app.kubernetes.io/name: jbh-gateway
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: jbh-gateway
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http

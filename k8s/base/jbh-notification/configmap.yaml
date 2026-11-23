@@ -1,0 +1,15 @@
+# Plain settings for jbh-notification, as env vars (envFrom). Secrets come from "jbh-secrets".
+# Same values as compose.local.yaml, except: the Service DNS name of Postgres, Consul off, no OTEL_* variables.
+# JBH_FRONTEND_URL (the link in invitation emails) differs per target, so the overlay sets it.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: jbh-notification-config
+data:
+  JAVA_OPTS: -Xmx192m
+  # Database jbh_finance, schema notifications (the datasource adds ?currentSchema=notifications).
+  DATABASE_URL: jdbc:postgresql://jbh-postgres:5432/jbh_finance
+  DATABASE_USERNAME: jbh_admin
+  CONSUL_ENABLED: "false"
+  GMAIL_HOST: smtp.gmail.com
+  GMAIL_PORT: "465"

@@ -1,0 +1,13 @@
+# Plain settings for jbh-gateway, as env vars (envFrom). The JWT key comes from "jbh-secrets".
+# JBH_TRUSTED_PROXIES (who may set X-Forwarded-For) differs per target, so the overlay sets it.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: jbh-gateway-config
+data:
+  JAVA_OPTS: -Xmx256m
+  # No Consul in the cluster. The routes still say lb://<name>; discovery-configmap.yaml maps the names.
+  SPRING_CLOUD_CONSUL_ENABLED: "false"
+  SPRING_CLOUD_CONSUL_DISCOVERY_ENABLED: "false"
+  # Also read /etc/jbh/application.yml (the mounted discovery-configmap.yaml). "optional:" = no error if missing.
+  SPRING_CONFIG_ADDITIONAL_LOCATION: optional:file:/etc/jbh/

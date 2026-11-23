@@ -1,0 +1,27 @@
+# The replacement for Consul inside the cluster (JBH-86, k8s/docs/consul-vs-kubernetes.md).
+#
+# The gateway routes (jbh-gateway application.yml) send traffic to lb://jbh-iam-service, lb://jbh-personal-finance
+# and lb://jbh-notification. With Consul, the gateway asked Consul where those names live.
+# Here Spring Cloud's "simple discovery" gets one fixed address per name: the Kubernetes Service URL.
+# The Service then picks a ready pod. Proved by KubernetesRoutingIntegrationTest in jbh-gateway.
+#
+# Why a file and not env vars: env var names cannot keep the dashes of the map keys ("jbh-iam-service").
+# These URLs are the same on every target (same Service names), so this file is in the base.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: jbh-gateway-discovery
+data:
+  application.yml: |
+    spring:
+      cloud:
+        discovery:
+          client:
+            simple:
+              instances:
+                jbh-iam-service:
+                  - uri: http://jbh-iam:9999
+                jbh-personal-finance:
+                  - uri: http://jbh-personal-finance:7777
+                jbh-notification:
+                  - uri: http://jbh-notification:7778

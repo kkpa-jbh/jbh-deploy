@@ -1,0 +1,23 @@
+# Plain settings for jbh-personal-finance, as env vars (envFrom). Secrets come from "jbh-secrets".
+# Same values as compose.local.yaml, except: Service DNS names instead of host.docker.internal, Consul off,
+# and no OTEL_* variables (nothing is exported from the cluster).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: jbh-personal-finance-config
+data:
+  JAVA_OPTS: -Xmx384m
+  # No query string: each datasource adds ?currentSchema=<schema> itself.
+  DATABASE_URL: jdbc:postgresql://jbh-postgres:5432/jbh_finance
+  DATABASE_USERNAME: jbh_admin
+  # Finance asks jbh-iam for the user id through the gateway (jbh-gateway-client).
+  JBH_GATEWAY_URL: http://jbh-gateway:8080
+  # The app's own Consul registration (ConsulServiceRegistration) is off. Kubernetes Services replace it.
+  CONSUL_ENABLED: "false"
+  # Bank statement import: read the PDF locally (pdfbox), classify with OpenRouter. Same defaults as compose.
+  STATEMENT_TEXT_SOURCE: pdfbox
+  STATEMENT_LLM: openrouter
+  AZURE_DI_PAGES_PER_REQUEST: "2"
+  GEMINI_MODEL: gemini-flash-latest
+  STATEMENT_IMPORT_STALE_AFTER: 10m
+  STATEMENT_LLM_COMPARE: "false"

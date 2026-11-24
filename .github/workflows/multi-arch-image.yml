@@ -22,7 +22,8 @@
 # 2. publish-tag         - joins both digests under the tag <git-sha>. Then it moves latest to it,
 #                          but only when the caller's commit is still the newest on main.
 #                          The tag appears only when both CPU types exist, so a failed build never leaves a half-made tag.
-# 3. cleanup-old-images  - keeps the 10 newest tagged images (with their per-CPU parts), deletes the rest.
+# 3. cleanup-old-images  - keeps the 10 newest tagged images (with their per-CPU parts) and the image of latest,
+#                          deletes the rest.
 #
 # In a reusable workflow, the "github" context is the CALLER's: actions/checkout downloads the caller's repo,
 # github.sha is the caller's commit, and GITHUB_TOKEN is the caller's token.
@@ -248,6 +249,9 @@ jobs:
       # Pinned to v1.2.2 (2026-06-06): a release older than 2 weeks, by commit SHA.
       # - package           -> the GHCR package to clean (input package-name).
       # - keep-n-tagged: 10 -> keep the 10 newest tagged images.
+      # - exclude-tags      -> never delete the image of latest. A branch build does not move latest, so after
+      #                        10 branch builds the main image can fall out of the 10 newest. Without this, cleanup
+      #                        would delete it and "docker pull ...:latest" would fail.
       # - delete-untagged   -> also delete untagged leftovers that belong to no kept image.
       # - validate: true    -> after cleanup, check every kept multi-arch image still has all its parts.
       - name: Delete old images
@@ -256,5 +260,6 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           package: ${{ inputs.package-name }}
           keep-n-tagged: 10
+          exclude-tags: latest
           delete-untagged: true
           validate: true

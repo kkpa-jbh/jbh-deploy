@@ -27,7 +27,7 @@ Why each piece:
 - **Push by digest first.** Each build pushes its image with no tag. `publish-tag` creates the tag only when both
   exist. So a failed arm64 build never leaves a tag with only amd64.
 - **Cleanup by tagged images.** `dataaxiom/ghcr-cleanup-action` keeps the 10 newest tagged images with all
-  their parts. The old action counted package versions and would break multi-arch images.
+  their parts, and always the image of `latest`. The old action counted package versions and would break multi-arch images.
 - **Pinned to a commit SHA.** The callers pin the reusable workflow like an action. A change in `jbh-deploy`
   reaches a service only when its SHA is bumped.
 - `jbh-app`'s auto-deploy waits for the job `image`, which ends only after the tag exists.

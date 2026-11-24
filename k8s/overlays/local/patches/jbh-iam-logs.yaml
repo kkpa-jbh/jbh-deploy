@@ -1,0 +1,18 @@
+# The "local" profile makes jbh-iam write ../logs/jbh-iam.log (logback-spring.xml). With WORKDIR /app that is /logs.
+# The root file system is read-only, so /logs must be a volume, or IAM stops at start.
+# The file is lost with the pod. The same lines are on the console: kubectl logs -n jbh deploy/jbh-iam
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jbh-iam
+spec:
+  template:
+    spec:
+      containers:
+        - name: jbh-iam
+          volumeMounts:
+            - name: logs
+              mountPath: /logs
+      volumes:
+        - name: logs
+          emptyDir: {}

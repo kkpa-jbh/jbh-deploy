@@ -5,6 +5,8 @@
 -include .env
 # Local dev stack commands (make local-up, local-swap, ...). Kept apart from the VPS commands.
 -include local.mk
+# Local Kubernetes cluster commands (make k8s-up, k8s-down, ...). LOCAL-K8S.md.
+-include k8s.mk
 
 COMPOSE = docker compose --env-file .env -f compose.yaml
 SUBNET  = 10.231.0.0/24
@@ -26,6 +28,10 @@ help:
 	@echo "make local-logs s=<svc>                 Follow one local service's logs"
 	@echo "make local-swap s=<svc>                 Stop that container, print the env vars for your IDE"
 	@echo "make local-restore s=<svc>              Start the container again"
+	@echo "make k8s-up | k8s-down | k8s-status     Local Kubernetes cluster (LOCAL-K8S.md): start / delete (data kept) / status"
+	@echo "make k8s-pin                            Pin the newest image SHA of each service in the local overlay"
+	@echo "make k8s-reset-db                       Delete the local cluster and its Postgres data (asks first)"
+	@echo "make k8s-render                         Print the YAML that k8s-up applies"
 
 network:
 	docker network inspect edge >/dev/null 2>&1 || docker network create --subnet $(SUBNET) edge

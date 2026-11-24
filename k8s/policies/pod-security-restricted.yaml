@@ -1,0 +1,25 @@
+# A Kyverno policy, used ONLY in CI (jbh-deploy ci.yml, through the Kyverno CLI). It is never applied to a cluster.
+#
+# It checks the rendered manifests against the "restricted" Pod Security Standard: the same rules the namespace
+# label (k8s/base/namespace.yaml) enforces inside a real cluster. So a missing runAsNonRoot or a kept capability
+# fails the PR, before anyone starts k3d.
+# Kyverno writes the rule for Pods; it applies it to Deployments and StatefulSets too ("auto-gen").
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: pod-security-restricted
+spec:
+  background: true
+  rules:
+    - name: restricted
+      match:
+        any:
+          - resources:
+              kinds:
+                - Pod
+      validate:
+        # Enforce: a violation is an error, not a warning.
+        failureAction: Enforce
+        podSecurity:
+          level: restricted
+          version: latest

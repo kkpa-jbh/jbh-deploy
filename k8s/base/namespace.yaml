@@ -1,0 +1,14 @@
+# Namespace: a named area of the cluster. All JBH objects live in "jbh", so one command can list,
+# or delete, all of them, and they never clash with objects of other apps.
+#
+# The three labels turn on the "restricted" Pod Security Standard for this namespace:
+# Kubernetes refuses (enforce), warns about (warn) and logs (audit) any pod that could run as root,
+# keeps Linux capabilities, or can raise its privileges. That is why every image runs as user 10001.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: jbh
+  labels:
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/warn: restricted
+    pod-security.kubernetes.io/audit: restricted

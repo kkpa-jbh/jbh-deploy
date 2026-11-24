@@ -1,0 +1,21 @@
+# Kustomize "component": an optional block an overlay can switch on (components: [../../components/postgres]).
+# Postgres is a component, not part of the base, because a target may use a managed database instead
+# (for example RDS on AWS). Then its overlay just leaves this component out and points DB_HOST/DATABASE_URL elsewhere.
+#
+# The init script lives in jbh-deploy/initdb/, outside this folder (Compose uses the same file).
+# Kustomize blocks files outside the folder by default, so every render passes:
+#   kubectl kustomize --load-restrictor LoadRestrictionsNone <overlay>
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+
+resources:
+  - statefulset.yaml
+  - service.yaml
+
+# Makes a ConfigMap from the file. Kustomize adds a hash to its name (jbh-postgres-initdb-<hash>) and
+# updates the reference in statefulset.yaml, so a changed script gives a new name.
+# Only 01-create-databases.sh: 02-create-monitor-role.sh is for the observability monitor role (not in the cluster).
+configMapGenerator:
+  - name: jbh-postgres-initdb
+    files:
+      - 01-create-databases.sh=../../../initdb/01-create-databases.sh

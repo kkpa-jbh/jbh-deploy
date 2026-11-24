@@ -1,0 +1,114 @@
+# StatefulSet: like a Deployment, but for an app with data. Each pod keeps a fixed name (jbh-postgres-0)
+# and its own disk (a PersistentVolumeClaim from volumeClaimTemplates), also after a restart.
+#
+# The databases come from initdb/01-create-databases.sh on the FIRST start only (empty data folder):
+# jbh (IAM), jbh_finance with the schemas finance, preferences, notifications, and pgcrypto.
+# Each service runs its own Liquibase migrations when it starts.
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: jbh-postgres
+  labels:
+    app.kubernetes.io/name: jbh-postgres
+spec:
+  # The Service that gives the pods their DNS names (service.yaml).
+  serviceName: jbh-postgres
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: jbh-postgres
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: jbh-postgres
+    spec:
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      # "restricted" Pod Security: not root. 70 is the "postgres" user and group of the Alpine image,
+      # so the entrypoint runs Postgres directly (it needs no root to switch user).
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 70
+        runAsGroup: 70
+        fsGroup: 70
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: postgres
+          # Same image as compose.yaml and compose.local.yaml.
+          image: postgres:16-alpine
+          ports:
+            - name: postgres
+              containerPort: 5432
+          env:
+            # The admin user. Liquibase in jbh-iam checks for this name.
+            - name: POSTGRES_USER
+              value: jbh_admin
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: jbh-secrets
+                  key: POSTGRES_PASSWORD
+            # The first database. 01-create-databases.sh connects to it and creates jbh_finance.
+            - name: POSTGRES_DB
+              value: jbh
+            # A sub-folder of the volume: the volume root may hold other files (for example lost+found),
+            # and Postgres needs an empty folder for its first start.
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          # Same memory limit as compose (512M).
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              memory: 512Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          # pg_isready asks the server "do you accept connections?". An exec probe: it runs inside the container.
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "jbh_admin", "-d", "jbh"]
+            periodSeconds: 5
+            failureThreshold: 6
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", "jbh_admin", "-d", "jbh"]
+            periodSeconds: 10
+            failureThreshold: 6
+          volumeMounts:
+            # The data. It survives pod restarts (and, locally, even a deleted cluster: see the local overlay).
+            - name: data
+              mountPath: /var/lib/postgresql/data
+            # The entrypoint runs every script in this folder on the first start.
+            - name: initdb
+              mountPath: /docker-entrypoint-initdb.d
+              readOnly: true
+            # The Unix socket folder and temp files. The root file system is read-only.
+            - name: run
+              mountPath: /var/run/postgresql
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: initdb
+          configMap:
+            name: jbh-postgres-initdb
+        - name: run
+          emptyDir: {}
+        - name: tmp
+          emptyDir: {}
+  # One claim per pod, named data-jbh-postgres-0. No storageClassName here: each target has its own storage
+  # (local-path on k3s, gp3 on EKS). The local overlay binds it to a fixed volume instead.
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 2Gi

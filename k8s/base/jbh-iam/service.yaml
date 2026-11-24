@@ -1,0 +1,23 @@
+# Service: a stable name and address for the pods of jbh-iam.
+# Pods come and go (each new pod gets a new IP). The Service keeps one DNS name, "jbh-iam"
+# (full name jbh-iam.jbh.svc.cluster.local), and sends each connection to a ready pod.
+# This is what Consul did for us before: find a service by name, and only send traffic to healthy instances.
+#
+# The gateway reaches IAM at http://jbh-iam:9999 (jbh-gateway/discovery-configmap.yaml).
+apiVersion: v1
+kind: Service
+metadata:
+  name: jbh-iam
+  labels:
+    app.kubernetes.io/name: jbh-iam
+spec:
+  # ClusterIP: reachable only inside the cluster. From outside, traffic comes through the Ingress and the gateway.
+  type: ClusterIP
+  # The pods this Service sends traffic to: the label set in deployment.yaml.
+  selector:
+    app.kubernetes.io/name: jbh-iam
+  ports:
+    - name: http
+      port: 9999
+      # The container's named port "http" (deployment.yaml).
+      targetPort: http

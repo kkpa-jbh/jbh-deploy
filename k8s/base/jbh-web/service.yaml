@@ -1,0 +1,17 @@
+# Service: the stable DNS name "jbh-web" (port 8080) for the jbh-web pods.
+# Same idea as jbh-iam/service.yaml.
+# The Ingress sends every path that is not /jbh-api here.
+apiVersion: v1
+kind: Service
+metadata:
+  name: jbh-web
+  labels:
+    app.kubernetes.io/name: jbh-web
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: jbh-web
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http

@@ -1,0 +1,5 @@
+# A JSON patch (op/path/value): sets storageClassName "" on the Postgres claim template.
+# With "" the claim does not ask k3s for a new volume; it binds to postgres-pv.yaml (claimRef data-jbh-postgres-0).
+- op: add
+  path: /spec/volumeClaimTemplates/0/spec/storageClassName
+  value: ""

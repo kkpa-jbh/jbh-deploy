@@ -212,6 +212,14 @@ Check http://localhost:8500 : `jbh-iam-service`, `jbh-personal-finance`, `jbh-no
 container (`make local-swap s=<service>`) and run it from the IDE. Steps: [`LOCAL.md`](LOCAL.md).
 The images hold no config: compose passes the env vars from `.env.local` (locally) or `.env` (VPS) at start (`LOCAL.md`, "How a container gets its config").
 
+## Kubernetes (local)
+
+A second way to run everything on a laptop, to learn Kubernetes (JBH-86): `make k8s-up` in `jbh-deploy` starts a
+k3d cluster with all services and Postgres. The app is at http://localhost:8081. Inside the cluster Consul is off:
+Kubernetes Services give the names, and the gateway maps `lb://<name>` to them (simple discovery).
+Steps: [`LOCAL-K8S.md`](LOCAL-K8S.md). Files and the portability rule: [`k8s/README.md`](k8s/README.md).
+The VPS still runs Compose (JBH-88 moves it).
+
 ## Observability (local)
 
 Locally, Grafana Alloy (`jbh-alloy`, started by `make local-up` or `make local-alloy`) is the one collector.

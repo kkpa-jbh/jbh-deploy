@@ -1,0 +1,16 @@
+# Service: the stable DNS name "jbh-notification" (port 7778) for the jbh-notification pods.
+# Same idea as jbh-iam/service.yaml.
+apiVersion: v1
+kind: Service
+metadata:
+  name: jbh-notification
+  labels:
+    app.kubernetes.io/name: jbh-notification
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: jbh-notification
+  ports:
+    - name: http
+      port: 7778
+      targetPort: http

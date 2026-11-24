@@ -1,0 +1,9 @@
+# Laptop values for jbh-notification (merged into the base ConfigMap).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: jbh-notification-config
+data:
+  # The app's address. Invitation emails link to it.
+  JBH_FRONTEND_URL: http://localhost:8081
+  JBH_ENV: k8s-local

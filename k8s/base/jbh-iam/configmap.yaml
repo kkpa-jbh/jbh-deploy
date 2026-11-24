@@ -1,0 +1,22 @@
+# ConfigMap: plain (non-secret) settings for jbh-iam, given to the container as environment variables
+# (envFrom in deployment.yaml). Secrets (passwords, the JWT key) come from the Secret "jbh-secrets" instead.
+#
+# These values are the same on every target. Target-only values (SPRING_PROFILES_ACTIVE, CORS_ALLOWED_ORIGINS,
+# JBH_ENV) are added by the overlay. The rest of IAM's settings keep their defaults (application.yml).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: jbh-iam-config
+data:
+  # Heap cap. The Dockerfile's entrypoint passes JAVA_OPTS to java. Same value as compose.local.yaml.
+  JAVA_OPTS: -Xmx384m
+  # "jbh-postgres" is the DNS name of the Postgres Service (components/postgres). Kubernetes DNS resolves it.
+  DB_HOST: jbh-postgres
+  DB_NAME: jbh
+  # Liquibase checks that the DB user is jbh_admin (a runningAs precondition in the master changelog).
+  DB_USERNAME: jbh_admin
+  # IAM calls jbh-notification through the gateway (jbh-gateway-client). "jbh-gateway" is the gateway's Service name.
+  JBH_GATEWAY_URL: http://jbh-gateway:8080
+  # No Consul in the cluster: Kubernetes Services give names and health. Both switches, like the IAM tests.
+  SPRING_CLOUD_CONSUL_ENABLED: "false"
+  SPRING_CLOUD_CONSUL_DISCOVERY_ENABLED: "false"

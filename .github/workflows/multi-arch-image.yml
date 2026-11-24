@@ -1,0 +1,223 @@
+# Multi-arch image: a REUSABLE workflow. Each JBH service repo calls it from its own "Image" workflow.
+# It builds the service's Docker image for two CPU types (amd64 and arm64), pushes both to GHCR
+# (GitHub Container Registry) under ONE tag, then deletes old images.
+#
+# When it runs: never by itself. A caller job starts it with "uses:" (on: workflow_call),
+# inside the caller's run. Callers: the Image workflow of jbh-iam, jbh-gateway, jbh-personal-finance,
+# jbh-notification and jbh-app. They pin this file to a jbh-deploy commit SHA.
+#
+# What it changes: the caller's GHCR package (for example ghcr.io/kkpa-jbh/jbh-iam). It deploys nothing.
+# Each image gets two tags: the git SHA of the caller's commit (jbh-deploy pins it, so a deploy is exact) and "latest".
+#
+# Why two CPU types: the VPS is amd64, a Mac (and k3d on it) is arm64, AWS can be both.
+# One tag holds both images (a "manifest list"). Each machine pulls its own type by itself.
+#
+# Before it runs, the caller's job "package" must upload its built app (the jar, quarkus-app/ or www/) as an
+# artifact named "app-package". The app does not depend on the CPU type, so it is built and tested only once.
+#
+# Jobs, in order:
+# 1. build-image         - one job per CPU type, each on a native runner (no emulation).
+#                          Pushes the image by digest only (sha256:...), with no tag yet.
+# 2. publish-tag         - joins both digests under the tags <git-sha> and latest.
+#                          The tag appears only when both CPU types exist, so a failed build never leaves a half-made tag.
+# 3. cleanup-old-images  - keeps the 10 newest tagged images (with their per-CPU parts), deletes the rest.
+#
+# In a reusable workflow, the "github" context is the CALLER's: actions/checkout downloads the caller's repo,
+# github.sha is the caller's commit, and GITHUB_TOKEN is the caller's token.
+# More: CI.md and k8s/docs/github-actions-for-kubernetes.md.
+
+# The name shown in the GitHub "Actions" tab (inside the caller's run).
+name: Multi-arch image
+
+on:
+  workflow_call:
+    inputs:
+      # Full image name, without a tag. Example: ghcr.io/kkpa-jbh/jbh-iam
+      image:
+        required: true
+        type: string
+      # The GHCR package to clean. Usually the last part of the image name. Example: jbh-iam
+      package-name:
+        required: true
+        type: string
+      # The folder Docker builds from. It holds the Dockerfile. Example: "." or jbh-z-assembly
+      context:
+        required: false
+        type: string
+        default: .
+      # Where the Dockerfile expects the app package. The artifact "app-package" is downloaded here.
+      # Example: jbh-iam-api/build/libs or jbh-z-assembly/target/quarkus-app
+      app-package-path:
+        required: true
+        type: string
+
+# The token gets no permission at the top. Each job asks only for what it needs.
+# A called workflow can only get the same or fewer permissions than the caller's job gives.
+permissions: {}
+
+# No "concurrency" here: the caller's workflow sets it. Two concurrency groups for one run could block each other.
+
+jobs:
+  # Builds and pushes the image for one CPU type. The matrix makes two jobs: "Build image (amd64)" and
+  # "Build image (arm64)". Each runs on a runner of its own CPU type, so no emulation (QEMU) is needed.
+  build-image:
+    name: Build image (${{ matrix.arch }})
+    strategy:
+      # If one CPU type fails, stop the other one too: the tag needs both.
+      fail-fast: true
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-latest
+          # Free for public repos. A native arm64 VM.
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    # Copying the app onto a base image takes about 2 minutes. 15 leaves room for a slow registry.
+    timeout-minutes: 15
+    permissions:
+      # contents: read -> download the caller's code (the Dockerfile). packages: write -> push the image to GHCR.
+      contents: read
+      packages: write
+    steps:
+      # The Dockerfile lives in the caller's repo, so its code is needed here.
+      # Actions are pinned to a full commit SHA (the version is in the comment), so a moved tag cannot change them.
+      - name: Check out the code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # Puts the app back where the Dockerfile copies it from (input app-package-path).
+      # The artifact was uploaded by the caller's job "package" in the same run.
+      - name: Download the app package
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: app-package
+          path: ${{ inputs.app-package-path }}
+
+      # Buildx is the Docker builder that can push an image by digest only (with no tag).
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      # Logs Docker in to GHCR, so the next step can push.
+      # GITHUB_TOKEN: GitHub creates it for each run; it is not a secret you add by hand.
+      - name: Log in to GHCR
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Builds the image for this CPU type and pushes it with NO tag, only by its digest.
+      # - platforms: linux/<arch>   -> the CPU type of this job (the runner's own type).
+      # - provenance: false         -> no attestation yet (that is JBH-87).
+      # - outputs push-by-digest    -> push the image under its sha256 digest only. publish-tag adds the tags.
+      # - name-canonical            -> use the full image name for the digest.
+      - name: Build and push the ${{ matrix.arch }} image (by digest)
+        id: build
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: ${{ inputs.context }}
+          platforms: linux/${{ matrix.arch }}
+          provenance: false
+          outputs: type=image,name=${{ inputs.image }},push-by-digest=true,name-canonical=true,push=true
+
+      # Writes the digest as an empty file named after it (without "sha256:").
+      # publish-tag reads the file names to know both digests.
+      - name: Save the image digest
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          mkdir -p /tmp/digests
+          touch "/tmp/digests/${DIGEST#sha256:}"
+
+      # One artifact per CPU type: digest-amd64 and digest-arm64.
+      # retention-days: 1 -> only needed during this run.
+      - name: Upload the digest
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: digest-${{ matrix.arch }}
+          path: /tmp/digests/*
+          retention-days: 1
+
+  # Creates the tags <git-sha> and latest, pointing to both images. Machine: a GitHub-hosted Ubuntu VM.
+  # needs: build-image -> runs only when BOTH CPU types were pushed. If one failed, no tag is created.
+  publish-tag:
+    name: Publish multi-arch tag (amd64 + arm64)
+    needs: build-image
+    runs-on: ubuntu-latest
+    # Creating a tag is one registry call. 5 minutes is plenty.
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      # Write the tags in GHCR.
+      packages: write
+    env:
+      IMAGE: ${{ inputs.image }}
+    steps:
+      # pattern + merge-multiple: put digest-amd64 and digest-arm64 into one folder.
+      - name: Download both digests
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          path: /tmp/digests
+          pattern: digest-*
+          merge-multiple: true
+
+      # imagetools (next step) is part of Buildx.
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - name: Log in to GHCR
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Creates ONE tag that points to both images (a "manifest list").
+      # printf turns each file name into "$IMAGE@sha256:<digest>", one per CPU type.
+      # The word splitting of $(printf ...) is wanted: one argument per digest. So SC2046 is turned off.
+      - name: Create the multi-arch tag
+        working-directory: /tmp/digests
+        run: |
+          # shellcheck disable=SC2046
+          docker buildx imagetools create \
+            -t "$IMAGE:$GITHUB_SHA" \
+            -t "$IMAGE:latest" \
+            $(printf "$IMAGE@sha256:%s " *)
+
+      # Fails the run if one CPU type is missing from the tag. The output also shows in the log.
+      - name: Check the tag holds amd64 and arm64
+        run: |
+          out=$(docker buildx imagetools inspect "$IMAGE:$GITHUB_SHA")
+          echo "$out"
+          grep -q 'linux/amd64' <<< "$out"
+          grep -q 'linux/arm64' <<< "$out"
+
+  # Deletes old images. It counts tagged IMAGES, not package versions: one multi-arch image is about
+  # 3 package versions (the tag + one per CPU type), and the old "keep 2 versions" cleanup would have
+  # deleted parts of the image just pushed. 10 images are enough to roll back (also kubectl rollout undo).
+  # needs: publish-tag -> clean up only after the new tag exists.
+  cleanup-old-images:
+    name: Delete old images (keep 10 tagged)
+    needs: publish-tag
+    runs-on: ubuntu-latest
+    # Listing and deleting package versions takes under a minute. 10 leaves room for a slow API.
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      # Delete package versions in GHCR.
+      packages: write
+    steps:
+      # dataaxiom/ghcr-cleanup-action understands multi-arch images: it keeps each kept image's platform parts.
+      # Pinned to v1.2.2 (2026-06-06): a release older than 2 weeks, by commit SHA.
+      # - package           -> the GHCR package to clean (input package-name).
+      # - keep-n-tagged: 10 -> keep the 10 newest tagged images.
+      # - delete-untagged   -> also delete untagged leftovers that belong to no kept image.
+      # - validate: true    -> after cleanup, check every kept multi-arch image still has all its parts.
+      - name: Delete old images
+        uses: dataaxiom/ghcr-cleanup-action@d52806a0dc70b430571a37da1fde39733ffd640f # v1.2.2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          package: ${{ inputs.package-name }}
+          keep-n-tagged: 10
+          delete-untagged: true
+          validate: true

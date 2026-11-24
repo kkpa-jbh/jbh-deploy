@@ -94,7 +94,7 @@ A reusable workflow (`on: workflow_call`). It never runs by itself: a service's 
    A run by hand on another branch, or an older run that GitHub starts late, keeps only its SHA tag.
    Output `moved-latest` (`true` or `false`) tells the caller what happened.
 3. **`Delete old images (keep 10 tagged)`**: `dataaxiom/ghcr-cleanup-action`. It counts tagged images, not package versions,
-   and keeps each kept image's per-CPU parts.
+   and keeps each kept image's per-CPU parts. It never deletes the image of `latest` (`exclude-tags: latest`).
 
 Why: the VPS is amd64, a Mac (k3d) is arm64, AWS can be both. Each machine pulls its own type from the same tag.
 A change here reaches the services only when each caller bumps the pinned SHA.
@@ -233,6 +233,8 @@ If you skip a step, the image is built with the old library. `DEPLOY.md` §2.3 h
 - `dataaxiom/ghcr-cleanup-action` (in `Multi-arch image`) keeps the **10 newest tagged images** of each package,
   with all their per-CPU parts, and deletes the rest. It counts tagged images, not package versions:
   one multi-arch image is about 3 package versions (the tag + one per CPU type).
+- The image of `latest` is always kept (`exclude-tags: latest`). A branch build does not move `latest`, so after
+  10 branch builds the `main` image can be older than the 10 newest. Without the rule, `docker pull ...:latest` would fail.
 - 10 images are enough to roll back by SHA, and for `kubectl rollout undo` in a cluster.
 - The packages are public (JBH-86), so storage does not count against GitHub Free's 500 MB.
 - Deleted images are gone for good. The VPS `rollback` action does not need GHCR: it uses an image kept on the VPS.

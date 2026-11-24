@@ -67,17 +67,18 @@ Two jobs in every service repo (since JBH-86):
    - `jbh-app`: `npm ci`, then `npm run lint:boundary`, then `ng build --configuration production` into `www/`.
      `lint:boundary` fails when a page uses Ionic or ngx-charts directly instead of the `jbh-*` layer. Then no image is built.
    - `jbh-gateway`: `./gradlew test`, then `./gradlew bootJar`. A failed test stops the image.
-   - `jbh-iam`: `./gradlew test` (one test starts Postgres with Testcontainers), then `./gradlew :jbh-iam-api:bootJar`.
+   - `jbh-iam`: `./gradlew test` (two tests start Postgres with Testcontainers), then `./gradlew :jbh-iam-api:bootJar`.
      Reads `jbh-gateway-client` from GitHub Packages.
    - `jbh-personal-finance`: `mvn -pl jbh-z-assembly -am -DskipTests package`. Reads `jbh-gateway-client` from GitHub Packages.
    - `jbh-notification`: `mvn -B -U -s .github/maven-settings.xml -Pgithub -pl jbh-notification-app -am -DskipTests package`.
      Reads `jbh-commons-lib` from GitHub Packages.
 2. **`image`**: calls `Multi-arch image` (below), pinned to a `jbh-deploy` commit SHA: one image per CPU type (amd64, arm64),
-   one tag (`<git sha>` and `latest`) for both, then the cleanup (keep the 10 newest tagged images).
-3. **Only `jbh-app`: `deploy`** starts `Deploy` for this commit's image, when `AUTO_DEPLOY` is `true`. It waits for `image`,
-   which ends only after the tag exists. See "Auto-deploy" below.
+   one tag `<git sha>` for both (and `latest`, only for the newest commit on `main`), then the cleanup (keep the 10 newest tagged images).
+3. **Only `jbh-app`: `deploy`** starts `Deploy` for this commit's image, when `AUTO_DEPLOY` is `true` and `image` moved `latest`.
+   It waits for `image`, which ends only after the tag exists. See "Auto-deploy" below.
 
-Time: about 4–8 minutes. Each repo runs one `Image` at a time per branch, in push order.
+Time: about 4–8 minutes. Each repo runs one `Image` at a time. All branches share one queue (`queue: max`), so no run is dropped.
+GitHub does not promise the order of waiting runs. That is why `latest` moves only for the newest commit on `main`.
 
 ### `Multi-arch image` (`jbh-deploy`, reusable)
 
@@ -87,8 +88,11 @@ A reusable workflow (`on: workflow_call`). It never runs by itself: a service's 
 
 1. **`Build image (amd64)`** and **`Build image (arm64)`**: one job per CPU type, each on a native runner
    (`ubuntu-latest`, `ubuntu-24.04-arm`). Each pushes its image by digest only, with no tag.
-2. **`Publish multi-arch tag (amd64 + arm64)`**: one tag (`<git-sha>` and `latest`) for both images, only when both exist.
+2. **`Publish multi-arch tag (amd64 + arm64)`**: the tag `<git-sha>` for both images, only when both exist.
    It fails if the tag does not list `linux/amd64` and `linux/arm64`.
+   Then it moves `latest` to the same image, but only when the run's commit is still the newest on `main`.
+   A run by hand on another branch, or an older run that GitHub starts late, keeps only its SHA tag.
+   Output `moved-latest` (`true` or `false`) tells the caller what happened.
 3. **`Delete old images (keep 10 tagged)`**: `dataaxiom/ghcr-cleanup-action`. It counts tagged images, not package versions,
    and keeps each kept image's per-CPU parts.
 
@@ -189,8 +193,9 @@ GitHub emails you when a run you started fails, and the token is yours, so you g
 - **The token** is a fine-grained personal access token: only the repo `jbh-deploy`, only "Actions: Read and write".
   It can only manage workflow runs in `jbh-deploy` (start, cancel, delete). It cannot change code or read secrets.
   If it leaks, the worst case is a deploy or rollback of an image that is already in GHCR.
-- **The exact commit, not `latest`:** two quick merges cannot mix up versions. `Image` runs one at a time,
-  and `Deploy` keeps only the newest waiting run per service.
+- **The exact commit, not `latest`:** two quick merges cannot mix up versions. `deploy` runs only when `image`
+  moved `latest` (output `moved-latest`), so an older run that GitHub starts late never deploys over a newer one.
+  `Deploy` keeps only the newest waiting run per service.
 - **Why only `jbh-web`:** it has no database, so a rollback undoes everything. `jbh-iam` and
   `jbh-personal-finance` run migrations that a rollback does not undo. And in the 4 back-end repos, tests do not
   block the image yet.

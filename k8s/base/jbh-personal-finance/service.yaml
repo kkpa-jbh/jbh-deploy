@@ -1,0 +1,16 @@
+# Service: the stable DNS name "jbh-personal-finance" (port 7777) for the jbh-personal-finance pods.
+# Same idea as jbh-iam/service.yaml.
+apiVersion: v1
+kind: Service
+metadata:
+  name: jbh-personal-finance
+  labels:
+    app.kubernetes.io/name: jbh-personal-finance
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: jbh-personal-finance
+  ports:
+    - name: http
+      port: 7777
+      targetPort: http

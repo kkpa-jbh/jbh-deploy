@@ -1,0 +1,120 @@
+# CI: checks this repo's GitHub workflows and Kubernetes files on every pull request and every push to main.
+# It needs no cluster and starts nothing: it only renders YAML and checks it.
+#
+# Jobs (fast first; each can fail on its own):
+# 1. lint-workflows   - actionlint on .github/workflows/*.yml (also checks the shell in run: blocks).
+# 2. render-manifests - renders k8s/overlays/local, validates it against the Kubernetes API schemas (kubeconform),
+#                       and checks that k8s/base holds no target-specific value (scripts/check-k8s-base.sh).
+# 3. pod-security     - checks the rendered pods against the "restricted" Pod Security Standard (Kyverno CLI,
+#                       k8s/policies/pod-security-restricted.yaml), the same rules the namespace enforces in a cluster.
+#
+# What it changes: nothing. More: CI.md ("CI (jbh-deploy)") and k8s/docs/github-actions-for-kubernetes.md.
+
+# The name shown in the GitHub "Actions" tab.
+name: CI
+
+on:
+  # Every pull request into main: the check shows on the PR.
+  pull_request:
+    branches: [ main ]
+  # After a merge into main: the files on main stay checked.
+  push:
+    branches: [ main ]
+
+# The automatic GITHUB_TOKEN gets no permission at the top. Each job asks only to read the code.
+permissions: {}
+
+# Only the newest run of a branch matters: a new push cancels the old, unfinished check.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Lints every workflow file. Machine: a GitHub-hosted Ubuntu VM, deleted after the run.
+  lint-workflows:
+    name: Lint GitHub workflows
+    runs-on: ubuntu-latest
+    # A download and a lint take under a minute.
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      # Actions are pinned to a full commit SHA (the version is in the comment), so a moved tag cannot change them.
+      - name: Check out the code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # actionlint 1.7.12 (2026-03-30). The SHA-256 is the one in the release's actionlint_1.7.12_checksums.txt.
+      - name: Install actionlint
+        run: >-
+          .github/scripts/install-tool.sh actionlint
+          https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz
+          8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8
+
+      # With no file argument, actionlint checks every file in .github/workflows/.
+      - name: Lint the workflows
+        run: actionlint -color
+
+  # Renders the local overlay and checks it. kubectl is already installed on GitHub's Ubuntu runners.
+  render-manifests:
+    name: Render and validate the Kubernetes files
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # The real .env.k8s is git-ignored. The example file has every key, with placeholders, so the
+      # secretGenerator can build the Secret. No real secret is ever in CI.
+      - name: Make a placeholder .env.k8s
+        run: cp k8s/overlays/local/.env.k8s.example k8s/overlays/local/.env.k8s
+
+      # --load-restrictor LoadRestrictionsNone: the Postgres component reads initdb/ from outside its folder.
+      - name: Render the local overlay
+        run: kubectl kustomize --load-restrictor LoadRestrictionsNone k8s/overlays/local > rendered.yaml
+
+      # kubeconform 0.8.0 (2026-06-04). The SHA-256 is the one in the release's CHECKSUMS file.
+      - name: Install kubeconform
+        run: >-
+          .github/scripts/install-tool.sh kubeconform
+          https://github.com/yannh/kubeconform/releases/download/v0.8.0/kubeconform-linux-amd64.tar.gz
+          9bc2bffbf71f261128533edaf912153948b7ff238f9a531ae6d34466ec287883
+
+      # Checks every object against the Kubernetes API schema. -strict: unknown fields (typos) are errors.
+      - name: Validate against the Kubernetes schemas
+        run: kubeconform -strict -summary rendered.yaml
+
+      # Fails if k8s/base holds a storage class, an Ingress class, a host, an IP range or localhost.
+      - name: Check that the base is target-neutral
+        run: scripts/check-k8s-base.sh
+
+  # Checks the pods against the "restricted" Pod Security Standard.
+  # needs: render-manifests -> only when the files render and are valid; otherwise this check would only repeat that error.
+  pod-security:
+    name: Check the restricted Pod Security policy
+    needs: render-manifests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # Same placeholder Secret file and the same render as the job before (each job has its own VM).
+      - name: Render the local overlay
+        run: |
+          cp k8s/overlays/local/.env.k8s.example k8s/overlays/local/.env.k8s
+          kubectl kustomize --load-restrictor LoadRestrictionsNone k8s/overlays/local > rendered.yaml
+
+      # Kyverno CLI 1.19.2 (2026-10-20). The SHA-256 is the one in the release's checksums.txt.
+      - name: Install the Kyverno CLI
+        run: >-
+          .github/scripts/install-tool.sh kyverno
+          https://github.com/kyverno/kyverno/releases/download/v1.19.2/kyverno-cli_v1.19.2_linux_x86_64.tar.gz
+          357eaf1df8bc24ddd5a73979fadeaae6a032e8710f11af264229756e4956bf4a
+
+      # Exits with an error if any pod breaks the policy (for example runAsNonRoot missing or false).
+      - name: Check the pods
+        run: kyverno apply k8s/policies/pod-security-restricted.yaml --resource rendered.yaml

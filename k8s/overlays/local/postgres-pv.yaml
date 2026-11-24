@@ -1,0 +1,29 @@
+# PersistentVolume: a piece of disk the cluster can hand to a claim (PersistentVolumeClaim).
+#
+# Normally k3s makes a new, empty volume for each claim (the "local-path" storage class). Then a new cluster
+# means an empty database. To keep the data when you delete the cluster (make k8s-down), this volume is fixed:
+#   laptop: Docker volume "jbh-k8s-pgdata"  ->  k3d node: /var/lib/jbh/pgdata  ->  this PersistentVolume
+# make k8s-up creates the Docker volume and mounts it into the k3d node (k8s.mk). make k8s-reset-db deletes it.
+#
+# The pod still uses a claim, not this hostPath directly, so the "restricted" Pod Security Standard is met.
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: jbh-pgdata-local
+spec:
+  capacity:
+    storage: 2Gi
+  accessModes:
+    - ReadWriteOnce
+  # Keep the data when the claim is deleted.
+  persistentVolumeReclaimPolicy: Retain
+  # No storage class: only a claim that asks for this volume by name binds to it.
+  storageClassName: ""
+  # Bind only to the Postgres claim (volumeClaimTemplates "data" + pod jbh-postgres-0).
+  claimRef:
+    namespace: jbh
+    name: data-jbh-postgres-0
+  hostPath:
+    # A path inside the k3d node container (the Docker volume is mounted here).
+    path: /var/lib/jbh/pgdata
+    type: Directory

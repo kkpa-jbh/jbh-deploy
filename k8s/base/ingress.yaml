@@ -1,0 +1,33 @@
+# Ingress: the HTTP entry from outside the cluster. The same two rules as Caddy on the VPS (jbh.caddy):
+#   /jbh-api/...  -> jbh-gateway (all API calls; the gateway checks the token and routes)
+#   everything else -> jbh-web (the Angular app)
+#
+# An Ingress is only a set of rules. An "Ingress controller" (a proxy running in the cluster) applies them.
+# Which controller differs per target: Traefik on k3s (laptop, VPS), the AWS Load Balancer Controller on EKS.
+# So this base file names no controller (no ingressClassName), no host and no TLS. The overlay adds them.
+#
+# The prefix /jbh-api stays on the request: the gateway routes need it (like "handle", not "handle_path", in Caddy).
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: jbh
+spec:
+  rules:
+    - http:
+        paths:
+          # Prefix: matches /jbh-api and every path under it.
+          - path: /jbh-api
+            pathType: Prefix
+            backend:
+              service:
+                name: jbh-gateway
+                port:
+                  number: 8080
+          # The longest matching prefix wins, so this one catches only what /jbh-api did not.
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: jbh-web
+                port:
+                  number: 8080

@@ -7,7 +7,8 @@
 # jbh-notification and jbh-app. They pin this file to a jbh-deploy commit SHA.
 #
 # What it changes: the caller's GHCR package (for example ghcr.io/kkpa-jbh/jbh-iam). It deploys nothing.
-# Each image gets two tags: the git SHA of the caller's commit (jbh-deploy pins it, so a deploy is exact) and "latest".
+# Each image gets the tag <git SHA> of the caller's commit (jbh-deploy pins it, so a deploy is exact).
+# It also gets "latest", but only when that commit is still the newest on main (output moved-latest).
 #
 # Why two CPU types: the VPS is amd64, a Mac (and k3d on it) is arm64, AWS can be both.
 # One tag holds both images (a "manifest list"). Each machine pulls its own type by itself.
@@ -18,7 +19,8 @@
 # Jobs, in order:
 # 1. build-image         - one job per CPU type, each on a native runner (no emulation).
 #                          Pushes the image by digest only (sha256:...), with no tag yet.
-# 2. publish-tag         - joins both digests under the tags <git-sha> and latest.
+# 2. publish-tag         - joins both digests under the tag <git-sha>. Then it moves latest to it,
+#                          but only when the caller's commit is still the newest on main.
 #                          The tag appears only when both CPU types exist, so a failed build never leaves a half-made tag.
 # 3. cleanup-old-images  - keeps the 10 newest tagged images (with their per-CPU parts), deletes the rest.
 #
@@ -50,6 +52,12 @@ on:
       app-package-path:
         required: true
         type: string
+    outputs:
+      # "true" when this run moved "latest" (its commit is the newest on main), otherwise "false".
+      # jbh-app deploys only when it is "true", so an older image never deploys after a newer one.
+      moved-latest:
+        description: true when this run moved the latest tag to its image
+        value: ${{ jobs.publish-tag.outputs.moved-latest }}
 
 # The token gets no permission at the top. Each job asks only for what it needs.
 # A called workflow can only get the same or fewer permissions than the caller's job gives.
@@ -150,6 +158,9 @@ jobs:
       contents: read
       # Write the tags in GHCR.
       packages: write
+    # Passed to the caller through on.workflow_call.outputs (top of the file).
+    outputs:
+      moved-latest: ${{ steps.latest.outputs.moved }}
     env:
       IMAGE: ${{ inputs.image }}
     steps:
@@ -172,7 +183,8 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # Creates ONE tag that points to both images (a "manifest list").
+      # Creates ONE tag, <git-sha>, that points to both images (a "manifest list").
+      # "latest" comes in a later step, after the check, so a failed check never costs the SHA tag.
       # printf turns each file name into "$IMAGE@sha256:<digest>", one per CPU type.
       # The word splitting of $(printf ...) is wanted: one argument per digest. So SC2046 is turned off.
       - name: Create the multi-arch tag
@@ -181,7 +193,6 @@ jobs:
           # shellcheck disable=SC2046
           docker buildx imagetools create \
             -t "$IMAGE:$GITHUB_SHA" \
-            -t "$IMAGE:latest" \
             $(printf "$IMAGE@sha256:%s " *)
 
       # Fails the run if one CPU type is missing from the tag. The output also shows in the log.
@@ -191,6 +202,32 @@ jobs:
           echo "$out"
           grep -q 'linux/amd64' <<< "$out"
           grep -q 'linux/arm64' <<< "$out"
+
+      # Decides if this run may move "latest". Only the newest commit on main may.
+      # GitHub does not promise the order of waiting runs, so an older run can start after a newer one.
+      # A run started by hand on another branch must not move it either: compose.local.yaml pulls "latest" as main.
+      # gh api .../commits/main -> the SHA that main points to now. GH_TOKEN: the caller's GITHUB_TOKEN
+      # (GitHub creates it for each run; contents: read is enough). Output "moved": true or false.
+      # When it is false, the run's summary page says why.
+      - name: Decide if this run moves latest
+        id: latest
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          main_sha=$(gh api "repos/$REPO/commits/main" --jq .sha)
+          if [ "$GITHUB_REF" = refs/heads/main ] && [ "$GITHUB_SHA" = "$main_sha" ]; then
+            echo "moved=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "moved=false" >> "$GITHUB_OUTPUT"
+            echo "latest not moved: this run is $GITHUB_SHA on $GITHUB_REF, main is at $main_sha." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      # Points "latest" to the same image as <git-sha>. Runs only when the step above said "true".
+      # With one source that is already a manifest list, imagetools makes an exact copy. Nothing is rebuilt.
+      - name: Move latest to this image
+        if: steps.latest.outputs.moved == 'true'
+        run: docker buildx imagetools create -t "$IMAGE:latest" "$IMAGE:$GITHUB_SHA"
 
   # Deletes old images. It counts tagged IMAGES, not package versions: one multi-arch image is about
   # 3 package versions (the tag + one per CPU type), and the old "keep 2 versions" cleanup would have

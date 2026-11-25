@@ -32,7 +32,7 @@ For the deploy commands on the VPS, read [`DEPLOY.md`](DEPLOY.md).
 | `jbh-gateway-client` | `Publish` (`publish.yml`) | yes | no | yes | Maven `jbh-gateway-client` |
 | `jbh-deploy` | `Deploy` (`deploy.yml`) | no | no | yes, or from `jbh-app`'s `Image` | nothing. Deploys one service to the VPS. For this repo's own files, the VPS runs `git pull` |
 | `jbh-deploy` | `Multi-arch image` (`multi-arch-image.yml`) | no | no | no | nothing by itself. A reusable workflow (`on: workflow_call`): the `Image` workflow of each service repo calls it to build the amd64 + arm64 images, publish one tag and delete old images |
-| `jbh-deploy` | `CI` (`ci.yml`) | yes | yes (into `main`) | no | nothing. Lints the workflows, validates the Kubernetes files, checks Pod Security |
+| `jbh-deploy` | `CI` (`ci.yml`) | yes | yes (into `main`) | no | nothing. Lints the workflows, validates the Kubernetes files and the Alloy config, checks Pod Security |
 
 "By hand": GitHub → the repo → Actions → the workflow → **Run workflow**.
 
@@ -147,7 +147,9 @@ On every PR into `main` and every push to `main`. It needs no cluster. Jobs, fas
 
 1. **Lint GitHub workflows**: `actionlint` on every file in `.github/workflows/`.
 2. **Render and validate the Kubernetes files**: `kubectl kustomize` of `k8s/overlays/local` (with a placeholder
-   `.env.k8s` from the example), `kubeconform -strict`, then `scripts/check-k8s-base.sh` (no target value in `k8s/base/`).
+   `.env.k8s` from the example), `kubeconform -strict`, then `scripts/check-k8s-base.sh` (no target value in `k8s/base/`),
+   `scripts/check-k8s-observability.sh` (the in-cluster Alloy, OTLP keys, Faro route, Postgres monitor and web runtime config
+   are in the render), and `alloy fmt` on every file in `observability/alloy/` (syntax; image pinned to a digest).
 3. **Check the restricted Pod Security policy**: the Kyverno CLI with `k8s/policies/pod-security-restricted.yaml`.
 
 The tools are downloaded at a fixed version and SHA-256 (`.github/scripts/install-tool.sh`).

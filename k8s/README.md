@@ -18,8 +18,11 @@ k8s/
     jbh-web/                    deployment, service
   components/
     postgres/                   StatefulSet + Service + initdb ConfigMap (optional: a target with RDS leaves it out)
+    observability/              Alloy (Deployment, Service, RBAC, modules), OTLP keys, Faro route, Postgres monitor,
+                                jbh-web runtime config. A component: one line in an overlay turns telemetry on or off
   overlays/
-    local/                      k3d on a laptop: image tags, Secret, Traefik, local values, fixed Postgres disk
+    local/                      k3d on a laptop: image tags, Secret, Traefik, local values, fixed Postgres disk,
+                                Alloy entry file (LGTM via host.k3d.internal), Faro runtime values
   policies/
     pod-security-restricted.yaml   Kyverno policy, CI only (ci.yml)
   docs/                         the learning guides
@@ -47,7 +50,8 @@ make k8s-render
 # = kubectl kustomize --load-restrictor LoadRestrictionsNone k8s/overlays/local
 ```
 
-`--load-restrictor LoadRestrictionsNone` is needed because the Postgres component reads `../../../initdb/`.
+`--load-restrictor LoadRestrictionsNone` is needed because the Postgres and observability components read `../../../initdb/`
+and `../../../observability/alloy/`. `scripts/check-k8s-observability.sh` checks the rendered observability objects (CI runs it).
 Rendering needs `k8s/overlays/local/.env.k8s` (copy it from `.env.k8s.example`).
 
 ## Docs

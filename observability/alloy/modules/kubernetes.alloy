@@ -9,7 +9,10 @@
 //   metrics_output  list(MetricsReceiver)  for example [prometheus.remote_write.lgtm.receiver]
 //   logs_output     otelcol.Consumer       for example otelcol.exporter.otlp.lgtm.input
 // Java services send their logs over OTLP too, so they appear twice in Loki. On purpose: stdout also shows a crash
-// before the OTel SDK starts, and the logs of jbh-web and Postgres. Filter with log_source="kubernetes-stdout".
+// before the OTel SDK starts, and the logs of jbh-web and Postgres.
+// In Loki (OTLP intake), resource attributes become stream labels and log attributes become structured metadata.
+// So a stdout line has the labels k8s_namespace_name, k8s_pod_name, k8s_container_name and service_name, and the
+// metadata log_source="kubernetes-stdout". Query: {k8s_namespace_name="jbh"} | log_source="kubernetes-stdout".
 declare "kubernetes" {
   argument "namespace" {
     comment = "Namespace to collect pod logs and pod metrics from."
@@ -80,8 +83,9 @@ declare "kubernetes" {
     }
   }
 
-  // A Loki entry has no resource service.name, so Loki would show service_name="unknown_service".
-  // Copy the pod label to the resource, and set the environment like modules/otlp.alloy does.
+  // A Loki entry has no resource attributes, so Loki would show service_name="unknown_service" and no pod.
+  // Copy the labels to the resource (Loki indexes service.name and the k8s.* names), and set the environment
+  // like modules/otlp.alloy does.
   otelcol.processor.transform "pods" {
     error_mode = "ignore"
 
@@ -89,6 +93,9 @@ declare "kubernetes" {
       context    = "log"
       statements = [
         `set(resource.attributes["service.name"], log.attributes["service_name"]) where log.attributes["service_name"] != nil`,
+        `set(resource.attributes["k8s.namespace.name"], log.attributes["namespace"]) where log.attributes["namespace"] != nil`,
+        `set(resource.attributes["k8s.pod.name"], log.attributes["pod"]) where log.attributes["pod"] != nil`,
+        `set(resource.attributes["k8s.container.name"], log.attributes["container"]) where log.attributes["container"] != nil`,
         "set(resource.attributes[\"deployment.environment.name\"], \"" + argument.environment.value + "\")",
       ]
     }

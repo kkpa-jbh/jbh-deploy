@@ -217,6 +217,7 @@ The images hold no config: compose passes the env vars from `.env.local` (locall
 A second way to run everything on a laptop, to learn Kubernetes (JBH-86): `make k8s-up` in `jbh-deploy` starts a
 k3d cluster with all services and Postgres. The app is at http://localhost:8081. Inside the cluster Consul is off:
 Kubernetes Services give the names, and the gateway maps `lb://<name>` to them (simple discovery).
+An Alloy inside the cluster sends traces, logs and metrics to the local LGTM (`k8s/components/observability`).
 Steps: [`LOCAL-K8S.md`](LOCAL-K8S.md). Files and the portability rule: [`k8s/README.md`](k8s/README.md).
 The VPS still runs Compose (JBH-88 moves it).
 
@@ -227,6 +228,7 @@ Services send traces and logs over OTLP to Alloy. Alloy scrapes their metrics an
 LGTM from `kkpa-docker-lab` (`make lgtm up`, Grafana at http://localhost:3000). A service run from the IDE sends OTLP to `http://localhost:14317`
 (Alloy's dev port; the LGTM keeps `4317`). Details: [`observability/README.md`](observability/README.md) and [`LOCAL.md`](LOCAL.md).
 The browser (`jbh-app`, Faro) sends to the Alloy `faro.receiver` on port `12347` (`http://localhost:12347`).
+In the local Kubernetes cluster, an in-cluster `jbh-alloy` does the same job and the browser sends to `http://localhost:8081/collect` (`LOCAL-K8S.md`).
 Production: JBH-84.
 
 ## Production (Hostinger VPS)

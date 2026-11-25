@@ -16,7 +16,7 @@ It also holds `README.md`: the system map of all JBH services. The `kkpa-jbh/CLA
 | `.env.example` | Every variable, with placeholders. The real `.env` exists only on the VPS. |
 | `Makefile` | `network`, `up`, `deploy s=<svc>`, `rollback s=<svc>`, `caddy-install`, `consul-tunnel`, `db-tunnel`, `backup`, `config`. |
 | `initdb/` | First-start SQL: `jbh_finance`, its schemas, `pgcrypto`, time zone. `02-create-monitor-role.sh` runs `initdb/sql/pg-monitor.sql` (the `jbh_monitor` role and `pg_stat_statements`); it skips itself when `JBH_PG_MONITOR_PASSWORD` is empty (the VPS does not pass it). |
-| `observability/alloy/` | Grafana Alloy config: `local.alloy` (entry file for the local stack) and `modules/` (`otlp`, `jbh-scrape`, `postgres`). Local only for now; no secret in a file. |
+| `observability/alloy/` | Grafana Alloy config: `local.alloy` (entry file for the local stack), `k8s-local.alloy` (entry file for the local cluster) and `modules/` (`otlp`, `jbh-scrape`, `postgres`, `kubernetes`). Local only for now; no secret in a file. |
 | `observability/grafana/`, `observability/alerts/`, `observability/GUIDE.md`, `observability/VERIFY.md` | Dashboards (JSON, imported by hand in the Grafana UI), alert rules (YAML, created by hand from the files), the beginner guide and the hands-on verification checklist. `observability/README.md` has the import steps. Local only for now. |
 | `initdb/sql/pg-monitor.sql` | Shared, re-runnable SQL for the monitor role. In a subfolder, so the Postgres entrypoint does not run it alone. Used by `02-create-monitor-role.sh` and `local-pg-monitor.sh`. |
 | `local-pg-monitor.sh` | Local only. Checks `shared_preload_libraries` of an existing Postgres, then runs the shared SQL. Called by `make local-pg-monitor`. Never restarts Postgres. |
@@ -25,8 +25,8 @@ It also holds `README.md`: the system map of all JBH services. The `kkpa-jbh/CLA
 | `ci-deploy.sh` | Deploy or roll back one app service, wait until healthy, roll back by itself on failure. Forced command of the CI deploy key; `make deploy` / `make rollback` call it too. |
 | `.github/workflows/deploy.yml` | `Deploy` workflow: SSH to the VPS, runs `ci-deploy.sh`. By hand, or from `jbh-app`'s `Image` (auto-deploy of `jbh-web`). |
 | `.github/workflows/multi-arch-image.yml` | Reusable workflow (`on: workflow_call`). Each service's `Image` workflow calls it, pinned to a commit SHA: amd64 + arm64 images, one tag, cleanup (keep 10 tagged). |
-| `.github/workflows/ci.yml`, `.github/scripts/install-tool.sh` | PR check: `actionlint`, render + `kubeconform` of `k8s/overlays/local`, `scripts/check-k8s-base.sh`, Kyverno "restricted" Pod Security. Tools at a fixed version and SHA-256. |
-| `k8s/`, `k8s.mk`, `LOCAL-K8S.md`, `scripts/k8s-pin.sh`, `scripts/k8s-ghcr-secret.sh`, `scripts/check-k8s-base.sh` | Kubernetes (JBH-86): `base/` (same on every target), `components/postgres/`, `overlays/local/` (k3d), `policies/`, `docs/` (learning guides). `make k8s-up` / `k8s-down` / `k8s-pin`. Local only for now. Rule: `k8s/base/` holds no target-specific value (`k8s/README.md`). |
+| `.github/workflows/ci.yml`, `.github/scripts/install-tool.sh` | PR check: `actionlint`, render + `kubeconform` of `k8s/overlays/local`, `scripts/check-k8s-base.sh`, `scripts/check-k8s-observability.sh`, `alloy fmt` on `observability/alloy/`, Kyverno "restricted" Pod Security. Tools at a fixed version and SHA-256. |
+| `k8s/`, `k8s.mk`, `LOCAL-K8S.md`, `scripts/k8s-pin.sh`, `scripts/k8s-ghcr-secret.sh`, `scripts/check-k8s-base.sh`, `scripts/check-k8s-observability.sh` | Kubernetes (JBH-86): `base/` (same on every target), `components/postgres/`, `components/observability/` (in-cluster Alloy to the LGTM), `overlays/local/` (k3d), `policies/`, `docs/` (learning guides). `make k8s-up` / `k8s-down` / `k8s-pin` / `k8s-pg-monitor`. Local only for now. Rule: `k8s/base/` holds no target-specific value (`k8s/README.md`). |
 
 ## Rules
 

@@ -76,7 +76,14 @@ Each JSON file in `grafana/` is one dashboard.
 | `grafana/jbh-postgres.json` (`jbh-postgres`) | Connections against `max_connections`, transactions, locks, deadlocks, cache hit ratio, size, top queries by total time | `pg_stat_*`, `pg_locks_count`, `pg_settings_max_connections`, `pg_stat_statements_*` |
 | `grafana/jbh-traces.json` (`jbh-traces`) | Tempo tables (slowest traces, traces with errors, traces with 3 services), service graph, call rate per client and server | Tempo (TraceQL), `traces_service_graph_request_*` |
 | `grafana/jbh-circuit-breakers.json` | Circuit breakers of `jbh-gateway-client`: state, failure rate, calls, rejected calls | `resilience4j_circuitbreaker_*` |
-| `grafana/jbh-statement-import.json` (`jbh-statement-import`) | Bank statement import in `jbh-personal-finance`: p95 of PDF to text (PDFBox or Azure), LLM (OpenRouter or Gemini) and Jev, plus the slowest step spans. Only a `tempo` variable. Empty when trace export is off | Tempo (TraceQL metrics, `quantile_over_time`) on the `ai.*` spans |
+| `grafana/jbh-statement-import.json` (`jbh-statement-import`) | Bank statement import in `jbh-personal-finance`: p95 of PDF to text (PDFBox or Azure), LLM (OpenRouter or Gemini) and Jev, plus the slowest step spans. Only a `tempo` variable. Empty when trace export is off | Tempo (TraceQL metrics, `quantile_over_time`) on the `ai.*` spans. Needs the Tempo processor `local-blocks` (below) |
+
+**TraceQL metrics need `local-blocks`.** The p95 panels of `jbh-statement-import` use `quantile_over_time`.
+Tempo answers it only when its metrics-generator runs the processor `local-blocks`, with `filter_server_spans: false`
+(the `ai.*` spans are not server spans). Without it, the panels fail with `localblocks processor not found`.
+The local LGTM sets it in `kkpa-docker-lab/lgtm/tempo-config.yaml`. Do not rely on the image default:
+`grafana/otel-lgtm` 0.29.0 and newer drop `local-blocks`. Another local Tempo needs the same processor.
+In Grafana Cloud, check it when JBH-84 sets up production.
 
 Every dashboard has a fixed `uid` (the file name without `.json`) and a `datasource` variable. No panel has a fixed data source,
 so the same file works in the local LGTM and in Grafana Cloud. The services are chosen by the Prometheus `job` label.

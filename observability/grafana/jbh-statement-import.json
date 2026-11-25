@@ -1,7 +1,7 @@
 {
   "title": "JBH - Statement import",
   "uid": "jbh-statement-import",
-  "description": "p95 duration of each step of the bank statement import (POST /jbh-api/finance/statements/extract), from Tempo spans (TraceQL metrics). Empty when trace export is off (OTEL_SDK_DISABLED=true).",
+  "description": "p95 duration of each step of the bank statement import (POST /jbh-api/finance/statements/extract), from Tempo spans (TraceQL metrics). Empty when trace export is off (OTEL_SDK_DISABLED=true). Needs the Tempo processor local-blocks (observability/README.md).",
   "tags": [
     "jbh",
     "traces",

@@ -307,6 +307,40 @@ Env vars set by `compose.yaml` inside Docker:
 First deploy (order): DNS `A` record `jbh` → VPS IP · `make network` · Magus `up -d caddy` · `cp .env.example .env`
 and fill it · `docker login ghcr.io` · `make up` · `make caddy-install`.
 
+## Service boundaries (no distributed monolith)
+
+Goal: each service can change, deploy and fail **alone**.
+If one change needs releases of several services together, or one service down stops the others,
+we pay the cost of microservices and get none of the benefits. That is a distributed monolith.
+
+Rules for every new design:
+
+1. **Each service owns its data.** It reads and writes only its own schema.
+   Never read, join or migrate another service's tables. Need its data? Call its API, or keep a local copy.
+2. **Keep sync calls few and short.** One user request makes at most one sync call to another service.
+   No chains (A → B → C). Data that the JWT already carries (user id, roles) comes from the token, not from a call.
+3. **Plan for the other service being down.** Every call goes through `jbh-gateway-client` (timeout and circuit breaker).
+   Write down what the caller does when the circuit is open. Only that feature fails, never the whole service.
+4. **Contracts change in a compatible way.** Add fields; never rename or remove them in one release.
+   A consumer works with the old and the new version. A breaking change gets a new path (`/v2`).
+5. **No deploy order for a normal change.** Services deploy in any order. If a change needs an order,
+   split it into steps: add the new thing, move the consumers, then remove the old thing.
+6. **Shared libraries hold technical code only** (errors, logging, HTTP client).
+   Never put domain models or business rules in `jbh-commons-lib`. A shared domain type is a contract:
+   it lives in a `*-contracts` module owned by the service that provides it.
+7. **Split by business capability, not by layer.** No service that only forwards calls or only holds tables.
+8. **Do not split too early.** A new service needs a reason: other scaling needs, other release speed,
+   or failure isolation. Otherwise add a module to an existing service (`jbh-personal-finance` is a modular monolith).
+
+**Design check.** Every cross-service plan answers these four questions:
+
+- Can each changed service deploy alone, in any order?
+- If service X is down, what still works?
+- Does any service read another service's tables?
+- How many sync calls does one user request make?
+
+A design that copies a "Coupling debt" item below needs the user's approval first.
+
 ## Add a new API route (checklist)
 
 1. Add the endpoint in the service (`jbh-iam` or `jbh-personal-finance`).
@@ -325,6 +359,19 @@ These are real config problems, not doc problems:
 - `/jbh-api/notifications/**` is blocked only at Caddy (production). Locally, any logged-in user can call `jbh-notification` through
   the gateway and send email. A real fix needs a service-to-service credential in `jbh-gateway-client`.
 - `jbh-iam` and `jbh-personal-finance` use the same Postgres admin user. One user per service, with fewer rights, is better.
+
+### Coupling debt (do not copy)
+
+These break the "Service boundaries" rules today. Do not fix them as a side effect. Do not copy them in a new design.
+
+- `jbh-personal-finance` calls `jbh-iam` (`find-user-id`) to get the user id from the JWT (`BaseRestAdapter`).
+  If IAM is down, finance cannot serve users. The gateway already validated the token, so the id could come from it.
+- Team preferences call `jbh-iam` (`findUserGroup`) to check team membership. Same risk: IAM down stops this feature.
+- `jbh-personal-finance` and `jbh-notification` share the database `jbh_finance` (own schemas, same instance).
+  Heavy load or a long migration in one service slows the other.
+- `jbh-iam` sends invitation emails with a sync call to `jbh-notification`. A slow notification service makes the invite request slow.
+- The move of the notification module out of finance needed a release order (see "Release order" in Production).
+  Later changes to these two services must not need one.
 
 ## Keep this file in sync
 

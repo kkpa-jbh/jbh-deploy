@@ -1,0 +1,155 @@
+// What: custom component "kubernetes". Collects two things from a Kubernetes cluster, for one namespace:
+//   1. Pod logs (stdout and stderr of every container), read through the Kubernetes API.
+//   2. Pod CPU, memory, OOM and network metrics from cAdvisor (in the kubelet), read through the API server proxy.
+// Imported by: k8s-local.alloy (import.file "jbh"), used as jbh.kubernetes. A cluster entry file can reuse it later.
+// Env vars read: none. The pod's ServiceAccount token gives access (k8s/components/observability/alloy-rbac.yaml).
+// Arguments:
+//   namespace       string                 for example "jbh". Only this namespace is collected.
+//   environment     string                 value for deployment.environment.name on the logs, for example "k8s-local".
+//   metrics_output  list(MetricsReceiver)  for example [prometheus.remote_write.lgtm.receiver]
+//   logs_output     otelcol.Consumer       for example otelcol.exporter.otlp.lgtm.input
+// Java services send their logs over OTLP too, so they appear twice in Loki. On purpose: stdout also shows a crash
+// before the OTel SDK starts, and the logs of jbh-web and Postgres. Filter with log_source="kubernetes-stdout".
+declare "kubernetes" {
+  argument "namespace" {
+    comment = "Namespace to collect pod logs and pod metrics from."
+  }
+
+  argument "environment" {
+    comment = "Value for deployment.environment.name on the pod logs."
+  }
+
+  argument "metrics_output" {
+    comment = "Metrics receivers that get the cAdvisor samples."
+  }
+
+  argument "logs_output" {
+    comment = "otelcol consumer that receives the pod logs."
+  }
+
+  // ---- Pod logs ----
+
+  discovery.kubernetes "pods" {
+    role = "pod"
+
+    namespaces {
+      names = [argument.namespace.value]
+    }
+  }
+
+  // Keeps a few readable labels. The __meta_* labels stay too: loki.source.kubernetes needs them to find the pod.
+  discovery.relabel "pods" {
+    targets = discovery.kubernetes.pods.targets
+
+    rule {
+      source_labels = ["__meta_kubernetes_namespace"]
+      target_label  = "namespace"
+    }
+
+    rule {
+      source_labels = ["__meta_kubernetes_pod_name"]
+      target_label  = "pod"
+    }
+
+    rule {
+      source_labels = ["__meta_kubernetes_pod_container_name"]
+      target_label  = "container"
+    }
+
+    // Every JBH pod has the label app.kubernetes.io/name (jbh-iam, jbh-web, jbh-postgres, ...).
+    rule {
+      source_labels = ["__meta_kubernetes_pod_label_app_kubernetes_io_name"]
+      target_label  = "service_name"
+    }
+
+    rule {
+      target_label = "log_source"
+      replacement  = "kubernetes-stdout"
+    }
+  }
+
+  loki.source.kubernetes "pods" {
+    targets    = discovery.relabel.pods.output
+    forward_to = [otelcol.receiver.loki.pods.receiver]
+  }
+
+  // The local LGTM does not publish Loki's port, so the logs go as OTLP, like the Faro logs in local.alloy.
+  otelcol.receiver.loki "pods" {
+    output {
+      logs = [otelcol.processor.transform.pods.input]
+    }
+  }
+
+  // A Loki entry has no resource service.name, so Loki would show service_name="unknown_service".
+  // Copy the pod label to the resource, and set the environment like modules/otlp.alloy does.
+  otelcol.processor.transform "pods" {
+    error_mode = "ignore"
+
+    log_statements {
+      context    = "log"
+      statements = [
+        `set(resource.attributes["service.name"], log.attributes["service_name"]) where log.attributes["service_name"] != nil`,
+        "set(resource.attributes[\"deployment.environment.name\"], \"" + argument.environment.value + "\")",
+      ]
+    }
+
+    output {
+      logs = [argument.logs_output.value]
+    }
+  }
+
+  // ---- Pod metrics (cAdvisor) ----
+
+  discovery.kubernetes "nodes" {
+    role = "node"
+  }
+
+  // The API server forwards the request to the kubelet of each node, so Alloy needs no access to the node itself.
+  discovery.relabel "cadvisor" {
+    targets = discovery.kubernetes.nodes.targets
+
+    rule {
+      target_label = "__address__"
+      replacement  = "kubernetes.default.svc:443"
+    }
+
+    rule {
+      source_labels = ["__meta_kubernetes_node_name"]
+      regex         = "(.+)"
+      target_label  = "__metrics_path__"
+      replacement   = "/api/v1/nodes/$1/proxy/metrics/cadvisor"
+    }
+  }
+
+  prometheus.scrape "cadvisor" {
+    job_name          = "kubernetes-cadvisor"
+    targets           = discovery.relabel.cadvisor.output
+    scheme            = "https"
+    scrape_interval   = "30s"
+    scrape_timeout    = "10s"
+    bearer_token_file = "/var/run/secrets/kubernetes.io/serviceaccount/token"
+
+    tls_config {
+      ca_file = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+    }
+
+    forward_to = [prometheus.relabel.cadvisor.receiver]
+  }
+
+  // cAdvisor exposes thousands of series for every pod in the cluster. Keep one namespace and 6 metric names.
+  prometheus.relabel "cadvisor" {
+    rule {
+      source_labels = ["namespace"]
+      regex         = argument.namespace.value
+      action        = "keep"
+    }
+
+    rule {
+      source_labels = ["__name__"]
+      regex         = "container_cpu_usage_seconds_total|container_memory_working_set_bytes|container_spec_memory_limit_bytes|container_oom_events_total|container_network_receive_bytes_total|container_network_transmit_bytes_total"
+      action        = "keep"
+    }
+
+    forward_to = argument.metrics_output.value
+  }
+}

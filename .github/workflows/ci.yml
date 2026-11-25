@@ -4,7 +4,9 @@
 # Jobs (fast first; each can fail on its own):
 # 1. lint-workflows   - actionlint on .github/workflows/*.yml (also checks the shell in run: blocks).
 # 2. render-manifests - renders k8s/overlays/local, validates it against the Kubernetes API schemas (kubeconform),
-#                       and checks that k8s/base holds no target-specific value (scripts/check-k8s-base.sh).
+#                       checks that k8s/base holds no target-specific value (scripts/check-k8s-base.sh),
+#                       checks the observability objects (scripts/check-k8s-observability.sh),
+#                       and checks the syntax of the Grafana Alloy config (observability/alloy/, alloy fmt).
 # 3. pod-security     - checks the rendered pods against the "restricted" Pod Security Standard (Kyverno CLI,
 #                       k8s/policies/pod-security-restricted.yaml), the same rules the namespace enforces in a cluster.
 #
@@ -88,6 +90,23 @@ jobs:
       # Fails if k8s/base holds a storage class, an Ingress class, a host, an IP range or localhost.
       - name: Check that the base is target-neutral
         run: scripts/check-k8s-base.sh
+
+      # Fails if the overlay lost the OTLP keys, Alloy, the Faro route, the Postgres monitor setup or the web runtime config.
+      - name: Check the observability objects
+        run: scripts/check-k8s-observability.sh
+
+      # "alloy fmt" parses each file and exits non-zero on a syntax error. It changes no file (no -w).
+      # Same Alloy version as compose.local.yaml and the cluster. Pinned to the image digest, so a moved tag
+      # cannot change the check. Docker is already installed on GitHub's Ubuntu runners.
+      - name: Check the Alloy config syntax
+        env:
+          ALLOY_IMAGE: grafana/alloy:v1.22.0@sha256:9acc2529bc1edb7f5b2bd801dd8334ebc80c158e3a9e5526ecd7c9a273d43189
+        run: |
+          cd observability/alloy
+          for f in local.alloy k8s-local.alloy modules/*.alloy; do
+            echo "alloy fmt $f"
+            docker run --rm -v "$PWD:/etc/alloy:ro" "$ALLOY_IMAGE" fmt "/etc/alloy/$f" > /dev/null
+          done
 
   # Checks the pods against the "restricted" Pod Security Standard.
   # needs: render-manifests -> only when the files render and are valid; otherwise this check would only repeat that error.

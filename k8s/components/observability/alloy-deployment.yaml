@@ -1,0 +1,115 @@
+# Deployment for jbh-alloy: Grafana Alloy, the one telemetry collector of the cluster (same role as jbh-alloy in compose.local.yaml).
+# The services send OTLP to it (http://jbh-alloy:4317). It scrapes their metrics and Postgres, reads pod logs and cAdvisor,
+# receives the browser's Faro data, and sends everything to the LGTM named in the entry file (overlay: jbh-alloy-entry).
+# One copy, not a DaemonSet: pod logs come through the Kubernetes API, so Alloy does not need to run on every node.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jbh-alloy
+  labels:
+    app.kubernetes.io/name: jbh-alloy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: jbh-alloy
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: jbh-alloy
+    spec:
+      # The identity with read access to pod logs and cAdvisor (alloy-rbac.yaml).
+      serviceAccountName: jbh-alloy
+      # Alloy calls the Kubernetes API, so it needs the token. The other JBH pods keep false.
+      automountServiceAccountToken: true
+      enableServiceLinks: false
+      # "restricted" Pod Security. 473 = the alloy user of the image (same as user: 473:473 in compose.local.yaml).
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 473
+        runAsGroup: 473
+        fsGroup: 473
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: alloy
+          # Same version as compose.local.yaml and the CI syntax check.
+          image: grafana/alloy:v1.22.0
+          args:
+            - run
+            # The UI and the /-/ready endpoint. 0.0.0.0, so the kubelet probes and port-forward reach it.
+            - --server.http.listen-addr=0.0.0.0:12345
+            - --storage.path=/var/lib/alloy/data
+            - /etc/alloy/entry/config.alloy
+          ports:
+            - name: otlp-grpc
+              containerPort: 4317
+            - name: otlp-http
+              containerPort: 4318
+            - name: faro
+              containerPort: 12347
+            - name: ui
+              containerPort: 12345
+          env:
+            # Optional: without the key, Postgres metrics fail and everything else still works.
+            - name: JBH_PG_MONITOR_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: jbh-secrets
+                  key: JBH_PG_MONITOR_PASSWORD
+                  optional: true
+            # Kubernetes fills $(VAR) from an env var listed above. The password must be URL-safe (it sits in a URL).
+            - name: JBH_PG_MONITOR_DSN
+              value: postgresql://jbh_monitor:$(JBH_PG_MONITOR_PASSWORD)@jbh-postgres:5432/postgres?sslmode=disable
+          # Same memory limit as compose.local.yaml (256M). memory_limiter in modules/otlp.alloy works in percent of it.
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 256Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          # /-/ready answers 200 once the config is loaded. Not /-/healthy: one broken pipeline (for example the LGTM
+          # is down) makes it fail, and a restart would only stop the pipelines that still work (Alloy docs).
+          readinessProbe:
+            httpGet:
+              path: /-/ready
+              port: ui
+            periodSeconds: 10
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /-/ready
+              port: ui
+            initialDelaySeconds: 30
+            periodSeconds: 20
+            failureThreshold: 3
+          volumeMounts:
+            - name: modules
+              mountPath: /etc/alloy/modules
+              readOnly: true
+            - name: entry
+              mountPath: /etc/alloy/entry
+              readOnly: true
+            # Alloy's working data (write-ahead log of remote_write). Lost on restart, like a fresh container.
+            - name: data
+              mountPath: /var/lib/alloy/data
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: modules
+          configMap:
+            name: jbh-alloy-modules
+        # Made by the overlay: the entry file holds the target's destinations.
+        - name: entry
+          configMap:
+            name: jbh-alloy-entry
+        - name: data
+          emptyDir: {}
+        - name: tmp
+          emptyDir: {}

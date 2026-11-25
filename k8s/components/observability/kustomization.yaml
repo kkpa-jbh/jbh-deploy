@@ -1,0 +1,44 @@
+# Kustomize "component": an optional block an overlay can switch on (components: [../../components/observability]).
+# It sends traces, logs and metrics from the cluster to an LGTM stack, through one Grafana Alloy (jbh-alloy):
+# - turns on OTLP export in the 4 Java services (otel-env.yaml),
+# - runs Alloy with its RBAC, Service and modules (alloy-*.yaml, the jbh-alloy-modules ConfigMap),
+# - routes the browser's Faro data (/collect) to Alloy (faro-ingress.yaml),
+# - loads pg_stat_statements and the monitor role in Postgres (postgres-monitor.yaml, the merged initdb files),
+# - lets jbh-web read a runtime config file (web-runtime-config.yaml).
+# Everything here is the same on every target. The overlay adds what is target-only:
+# - the ConfigMap jbh-alloy-entry (the Alloy entry file: where the data goes),
+# - the ConfigMap jbh-web-runtime (the browser's collector URL),
+# - the Ingress class of jbh-faro (Traefik on k3s).
+# The overlay must list this component AFTER ../../components/postgres: it patches the Postgres objects.
+#
+# The Alloy modules and init scripts live outside this folder (Compose uses the same files), so every render passes:
+#   kubectl kustomize --load-restrictor LoadRestrictionsNone <overlay>
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+
+resources:
+  - alloy-rbac.yaml
+  - alloy-deployment.yaml
+  - alloy-service.yaml
+  - faro-ingress.yaml
+
+configMapGenerator:
+  # The Alloy modules (custom components). The entry file imports this whole folder (/etc/alloy/modules).
+  - name: jbh-alloy-modules
+    files:
+      - otlp.alloy=../../../observability/alloy/modules/otlp.alloy
+      - jbh-scrape.alloy=../../../observability/alloy/modules/jbh-scrape.alloy
+      - postgres.alloy=../../../observability/alloy/modules/postgres.alloy
+      - kubernetes.alloy=../../../observability/alloy/modules/kubernetes.alloy
+  # Adds the monitor role script and its SQL to the Postgres init ConfigMap of components/postgres.
+  # "merge": one ConfigMap with all keys, not a second one. postgres-monitor.yaml puts the SQL in a subfolder.
+  - name: jbh-postgres-initdb
+    behavior: merge
+    files:
+      - 02-create-monitor-role.sh=../../../initdb/02-create-monitor-role.sh
+      - pg-monitor.sql=../../../initdb/sql/pg-monitor.sql
+
+patches:
+  - path: otel-env.yaml
+  - path: postgres-monitor.yaml
+  - path: web-runtime-config.yaml

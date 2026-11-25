@@ -1,0 +1,95 @@
+// What: entry file for the local Kubernetes cluster (k3d, k8s/overlays/local, make k8s-up).
+//   OTLP intake, scrape of the four backends, Postgres metrics, a Faro receiver for the browser app,
+//   and pod logs + pod metrics (modules/kubernetes.alloy). Everything goes to the local LGTM (kkpa-docker-lab/lgtm).
+// Imports: modules/ (jbh.otlp, jbh.jbh_scrape, jbh.postgres, jbh.kubernetes).
+// Env vars read: JBH_PG_MONITOR_DSN.
+// The LGTM runs in Docker on the laptop, outside the cluster. k3d adds host.k3d.internal to the cluster DNS:
+// it points to the laptop, so the published LGTM ports (4317, 9090) are reachable from a pod.
+// Backends are reached by their Kubernetes Service names. The overlay mounts this file as /etc/alloy/entry/config.alloy.
+import.file "jbh" {
+  filename = "/etc/alloy/modules"
+}
+
+// Traces and logs: OTLP gRPC to the local LGTM. No auth.
+otelcol.exporter.otlp "lgtm" {
+  client {
+    endpoint = "host.k3d.internal:4317"
+
+    tls {
+      insecure = true
+    }
+  }
+}
+
+// Metrics: remote write keeps metric names as the services expose them.
+prometheus.remote_write "lgtm" {
+  endpoint {
+    url = "http://host.k3d.internal:9090/api/v1/write"
+  }
+}
+
+jbh.otlp "intake" {
+  environment = "k8s-local"
+  output      = otelcol.exporter.otlp.lgtm.input
+}
+
+jbh.jbh_scrape "backends" {
+  hosts = {
+    "jbh-iam"              = "jbh-iam",
+    "jbh-gateway"          = "jbh-gateway",
+    "jbh-personal-finance" = "jbh-personal-finance",
+    "jbh-notification"     = "jbh-notification",
+  }
+  forward_to = [prometheus.remote_write.lgtm.receiver]
+}
+
+jbh.postgres "db" {
+  dsn        = sys.env("JBH_PG_MONITOR_DSN")
+  forward_to = [prometheus.remote_write.lgtm.receiver]
+}
+
+// Browser telemetry. The browser sends to http://localhost:8081/collect (the same origin as the app);
+// the Ingress jbh-faro forwards it here. Loki's own port is not published by the local LGTM, so Faro logs go as OTLP.
+faro.receiver "app" {
+  server {
+    listen_address       = "0.0.0.0"
+    listen_port          = 12347
+    cors_allowed_origins = ["http://localhost:8081"]
+  }
+
+  output {
+    logs   = [otelcol.receiver.loki.faro.receiver]
+    traces = [otelcol.exporter.otlp.lgtm.input]
+  }
+}
+
+otelcol.receiver.loki "faro" {
+  output {
+    logs = [otelcol.processor.transform.faro_service.input]
+  }
+}
+
+// A Loki log entry has no resource service.name, so Loki would show service_name="unknown_service".
+// The line body holds app_name=jbh-web: copy it to the resource. A line without app_name goes on unchanged.
+otelcol.processor.transform "faro_service" {
+  error_mode = "ignore"
+
+  log_statements {
+    context    = "log"
+    statements = [
+      `set(resource.attributes["service.name"], ExtractPatterns(log.body.string, "app_name=(?P<app>[^ ]+)")["app"]) where IsMatch(log.body.string, "app_name=")`,
+    ]
+  }
+
+  output {
+    logs = [otelcol.exporter.otlp.lgtm.input]
+  }
+}
+
+// Pod logs and pod CPU/memory for the namespace jbh.
+jbh.kubernetes "cluster" {
+  namespace      = "jbh"
+  environment    = "k8s-local"
+  metrics_output = [prometheus.remote_write.lgtm.receiver]
+  logs_output    = otelcol.exporter.otlp.lgtm.input
+}

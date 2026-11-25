@@ -1,0 +1,21 @@
+# jbh-web: puts the runtime config file over the empty default of the image (/srv/runtime-config.js, from jbh-app).
+# The page loads it before the Angular code, so Faro reads it at start (enabled, collector URL, environment).
+# The file comes from the ConfigMap jbh-web-runtime, made by the overlay. subPath: only this one file is replaced.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jbh-web
+spec:
+  template:
+    spec:
+      containers:
+        - name: jbh-web
+          volumeMounts:
+            - name: runtime-config
+              mountPath: /srv/runtime-config.js
+              subPath: runtime-config.js
+              readOnly: true
+      volumes:
+        - name: runtime-config
+          configMap:
+            name: jbh-web-runtime

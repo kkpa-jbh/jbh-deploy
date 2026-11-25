@@ -1,0 +1,41 @@
+# Who jbh-alloy is (ServiceAccount) and what it may read in the Kubernetes API (ClusterRole), joined by a ClusterRoleBinding.
+# Alloy reads pod logs (pods/log) and the kubelet's cAdvisor metrics through the API server proxy (nodes/proxy).
+# Read-only: get, list, watch. Nothing can be changed with this role.
+# A ClusterRole, not a Role: nodes are cluster-wide objects. Pods are only read in the namespace the entry file names.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: jbh-alloy
+  labels:
+    app.kubernetes.io/name: jbh-alloy
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: jbh-alloy
+  labels:
+    app.kubernetes.io/name: jbh-alloy
+rules:
+  # Find the pods and nodes (discovery.kubernetes).
+  - apiGroups: [""]
+    resources: ["pods", "nodes"]
+    verbs: ["get", "list", "watch"]
+  # Read container logs (loki.source.kubernetes) and node metrics (cAdvisor, through the API server proxy).
+  - apiGroups: [""]
+    resources: ["pods/log", "nodes/proxy", "nodes/metrics"]
+    verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: jbh-alloy
+  labels:
+    app.kubernetes.io/name: jbh-alloy
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: jbh-alloy
+subjects:
+  - kind: ServiceAccount
+    name: jbh-alloy
+    namespace: jbh

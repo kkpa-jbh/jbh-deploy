@@ -20,6 +20,9 @@ resources:
 components:
   # Postgres runs inside the local cluster.
   - ../../components/postgres
+  # Traces, logs and metrics to the local LGTM (kkpa-docker-lab), through an Alloy in the cluster.
+  # Remove this line to turn it all off. It must come after postgres: it patches the Postgres objects.
+  - ../../components/observability
 
 # The image version of each service, in one place. Changing a tag here and applying it starts a rollout:
 # Kubernetes replaces the pods one by one with the new image.
@@ -37,6 +40,16 @@ images:
   - name: ghcr.io/kkpa-jbh/jbh-web
     newTag: c1223e45319bfcd640e1a444afb1c114f846a646
 
+# Target-only values of the observability component: where Alloy sends the data (the LGTM on the laptop,
+# through host.k3d.internal), and the browser's Faro settings (collector on the same origin as the app).
+configMapGenerator:
+  - name: jbh-alloy-entry
+    files:
+      - config.alloy=../../../observability/alloy/k8s-local.alloy
+  - name: jbh-web-runtime
+    files:
+      - runtime-config.js=jbh-web-runtime-config.js
+
 # Makes the Secret "jbh-secrets" from the file .env.k8s (KEY=value lines, git-ignored, never committed).
 # Copy .env.k8s.example to .env.k8s and fill it. Kustomize adds a hash to the Secret's name and updates every
 # reference, so a changed secret restarts the pods that use it.
@@ -48,6 +61,8 @@ secretGenerator:
 patches:
   # Which Ingress controller applies the rules: Traefik, built into k3s.
   - path: patches/ingress-traefik.yaml
+  # The same for the Faro route (/collect -> jbh-alloy) of the observability component.
+  - path: patches/ingress-traefik-faro.yaml
   # jbh-iam: the "local" profile (HTTP cookies) and a place for its log file.
   - path: patches/jbh-iam-config.yaml
   - path: patches/jbh-iam-logs.yaml

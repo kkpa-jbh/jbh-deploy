@@ -14,7 +14,8 @@ resources:
 
 # Makes a ConfigMap from the file. Kustomize adds a hash to its name (jbh-postgres-initdb-<hash>) and
 # updates the reference in statefulset.yaml, so a changed script gives a new name.
-# Only 01-create-databases.sh: 02-create-monitor-role.sh is for the observability monitor role (not in the cluster).
+# Only 01-create-databases.sh here. k8s/components/observability merges in 02-create-monitor-role.sh and its SQL
+# (the jbh_monitor role for Postgres metrics) when an overlay turns it on.
 configMapGenerator:
   - name: jbh-postgres-initdb
     files:

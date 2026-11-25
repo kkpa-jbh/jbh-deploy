@@ -1,0 +1,38 @@
+# Postgres for metrics: loads pg_stat_statements (query statistics) and creates the jbh_monitor role on the first start.
+# Same settings as the jbh-postgres command in compose.local.yaml.
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: jbh-postgres
+spec:
+  template:
+    spec:
+      containers:
+        - name: postgres
+          # The image entrypoint puts "postgres" in front of args that start with "-".
+          args:
+            - -c
+            - shared_preload_libraries=pg_stat_statements
+            - -c
+            - pg_stat_statements.track=top
+          env:
+            # Read by initdb/02-create-monitor-role.sh. Optional: without it, the script skips itself.
+            - name: JBH_PG_MONITOR_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: jbh-secrets
+                  key: JBH_PG_MONITOR_PASSWORD
+                  optional: true
+      volumes:
+        # The entrypoint runs every script at the top of /docker-entrypoint-initdb.d. The SQL goes in the subfolder sql/,
+        # so it runs only through 02-create-monitor-role.sh (which reads /docker-entrypoint-initdb.d/sql/pg-monitor.sql).
+        - name: initdb
+          configMap:
+            name: jbh-postgres-initdb
+            items:
+              - key: 01-create-databases.sh
+                path: 01-create-databases.sh
+              - key: 02-create-monitor-role.sh
+                path: 02-create-monitor-role.sh
+              - key: pg-monitor.sql
+                path: sql/pg-monitor.sql

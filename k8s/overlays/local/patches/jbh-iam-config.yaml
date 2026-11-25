@@ -8,5 +8,6 @@ data:
   SPRING_PROFILES_ACTIVE: local
   # The browser's origin. IAM checks CORS, and behind the Ingress and the gateway it sees another host.
   CORS_ALLOWED_ORIGINS: http://localhost:8081
-  # Only a label (metric tag, resource attribute). Nothing is exported: OTEL_SDK_DISABLED stays unset.
+  # The environment label (metric tag, resource attribute deployment.environment.name). The OTEL_* keys that turn
+  # export on come from k8s/components/observability.
   JBH_ENV: k8s-local

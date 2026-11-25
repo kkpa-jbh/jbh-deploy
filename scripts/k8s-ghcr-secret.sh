@@ -8,7 +8,8 @@
 # The token needs only "read:packages". Best: a classic personal access token with only that scope
 # (GHCR does not accept fine-grained tokens):
 #   export GHCR_TOKEN=<token>          # optional: GHCR_USER=<github user>, default: the gh login
-# Without GHCR_TOKEN the script uses your gh CLI token. It works, but it has more rights (repo, workflow).
+# GHCR_TOKEN is required. The script never falls back to your gh CLI token: that token has more rights
+# (repo, workflow), and anyone who can read Secrets in the cluster could take it.
 # Never put the token in .env.k8s: that file becomes "jbh-secrets", and every service reads it as env vars.
 #
 # The token never goes into a command line (ps would show it) or into the output: it goes through a pipe.
@@ -17,13 +18,13 @@ set -euo pipefail
 namespace="${1:-jbh}"
 name="jbh-ghcr-pull"
 
-user="${GHCR_USER:-$(gh api user --jq .login)}"
-if [ -n "${GHCR_TOKEN:-}" ]; then
-  token="$GHCR_TOKEN"
-else
-  echo "GHCR_TOKEN is not set: using your gh token. For least rights, use a token with only read:packages." >&2
-  token="$(gh auth token)"
+if [ -z "${GHCR_TOKEN:-}" ]; then
+  echo "GHCR_TOKEN is not set. Create a classic token with only read:packages, then run:" >&2
+  echo "  export GHCR_TOKEN=<token>   (LOCAL-K8S.md, \"Before you start\")" >&2
+  exit 1
 fi
+token="$GHCR_TOKEN"
+user="${GHCR_USER:-$(gh api user --jq .login)}"
 
 # A docker-registry Secret holds one JSON file (.dockerconfigjson) with "user:token" in Base64.
 auth="$(printf '%s:%s' "$user" "$token" | base64 | tr -d '\n')"

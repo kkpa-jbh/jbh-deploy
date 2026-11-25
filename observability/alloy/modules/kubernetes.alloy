@@ -111,20 +111,15 @@ declare "kubernetes" {
     role = "node"
   }
 
-  // The API server forwards the request to the kubelet of each node, so Alloy needs no access to the node itself.
+  // Each target is the kubelet of one node (its InternalIP and port 10250, from the node object).
+  // Alloy calls the kubelet directly on /metrics/cadvisor. The kubelet checks nodes/metrics for that path.
+  // The API server proxy path (/api/v1/nodes/<n>/proxy/...) would need nodes/proxy, which also allows exec.
   discovery.relabel "cadvisor" {
     targets = discovery.kubernetes.nodes.targets
 
     rule {
-      target_label = "__address__"
-      replacement  = "kubernetes.default.svc:443"
-    }
-
-    rule {
-      source_labels = ["__meta_kubernetes_node_name"]
-      regex         = "(.+)"
-      target_label  = "__metrics_path__"
-      replacement   = "/api/v1/nodes/$1/proxy/metrics/cadvisor"
+      target_label = "__metrics_path__"
+      replacement  = "/metrics/cadvisor"
     }
   }
 
@@ -136,6 +131,7 @@ declare "kubernetes" {
     scrape_timeout    = "10s"
     bearer_token_file = "/var/run/secrets/kubernetes.io/serviceaccount/token"
 
+    // The kubelet's serving certificate is checked against the cluster CA. Never insecure_skip_verify.
     tls_config {
       ca_file = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
     }

@@ -121,7 +121,7 @@ Production is not built yet.
 | `jbh-iam` | `:9999/actuator/prometheus` | `service=jbh-iam`, `env` |
 | `jbh-gateway` | `:8080/actuator/prometheus` | `service=jbh-gateway` (added by Alloy) |
 | Postgres (`jbh-postgres`) | Alloy's built-in Postgres exporter, role `jbh_monitor`, with `pg_stat_statements` | `service=jbh-postgres` |
-| Kubernetes pods (cluster only) | cAdvisor in the kubelet, through the API server proxy; namespace `jbh`, 6 metric names | `namespace`, `pod`, `container`, job `kubernetes-cadvisor` |
+| Kubernetes pods (cluster only) | cAdvisor, read straight from the kubelet (`:10250/metrics/cadvisor`, RBAC `nodes/metrics` only); namespace `jbh`, 6 metric names | `namespace`, `pod`, `container`, job `kubernetes-cadvisor` |
 
 Caddy and the gateway forward only `/jbh-api/...`, so these endpoints are reachable only on a private network.
 Traces and logs do not come from a scrape: the services push them over OTLP to Alloy (`localhost:14317` from the IDE).

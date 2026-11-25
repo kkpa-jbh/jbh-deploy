@@ -1,7 +1,10 @@
-# Who jbh-alloy is (ServiceAccount) and what it may read in the Kubernetes API (ClusterRole), joined by a ClusterRoleBinding.
-# Alloy reads pod logs (pods/log) and the kubelet's cAdvisor metrics through the API server proxy (nodes/proxy).
-# Read-only: get, list, watch. Nothing can be changed with this role.
-# A ClusterRole, not a Role: nodes are cluster-wide objects. Pods are only read in the namespace the entry file names.
+# Who jbh-alloy is (ServiceAccount) and what it may read in the Kubernetes API.
+# Read-only: get, list, watch. Nothing can be changed with these roles.
+# Least privilege, in two parts:
+# - ClusterRole: nodes are cluster-wide objects. Alloy may list them and read the kubelet's /metrics/* path
+#   (cAdvisor) with nodes/metrics. No nodes/proxy: the kubelet maps every other path (exec, run, attach)
+#   to nodes/proxy, so a stolen token with it could run commands in any pod of the cluster.
+# - Role: pods and their logs, only in this namespace (the overlay sets it).
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -16,13 +19,13 @@ metadata:
   labels:
     app.kubernetes.io/name: jbh-alloy
 rules:
-  # Find the pods and nodes (discovery.kubernetes).
+  # Find the nodes (discovery.kubernetes, role "node").
   - apiGroups: [""]
-    resources: ["pods", "nodes"]
+    resources: ["nodes"]
     verbs: ["get", "list", "watch"]
-  # Read container logs (loki.source.kubernetes) and node metrics (cAdvisor, through the API server proxy).
+  # Read cAdvisor at https://<node>:10250/metrics/cadvisor. The kubelet checks nodes/metrics for /metrics/*.
   - apiGroups: [""]
-    resources: ["pods/log", "nodes/proxy", "nodes/metrics"]
+    resources: ["nodes/metrics"]
     verbs: ["get"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -34,6 +37,36 @@ metadata:
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
+  name: jbh-alloy
+subjects:
+  - kind: ServiceAccount
+    name: jbh-alloy
+    namespace: jbh
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: jbh-alloy
+  labels:
+    app.kubernetes.io/name: jbh-alloy
+rules:
+  # Find the pods (discovery.kubernetes, role "pod") and read their logs (loki.source.kubernetes).
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["pods/log"]
+    verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: jbh-alloy
+  labels:
+    app.kubernetes.io/name: jbh-alloy
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
   name: jbh-alloy
 subjects:
   - kind: ServiceAccount

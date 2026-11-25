@@ -34,6 +34,14 @@ expect() {
   fi
 }
 
+# reject <object text> <fixed text> <why>: the text must NOT be there. Prints the problem and returns 1.
+reject() {
+  if grep -qF -- "$2" <<< "$1"; then
+    echo "  must not contain '$2' -> $3" >&2
+    return 1
+  fi
+}
+
 # expect_object <kind> <name> <file>: the object must exist. Prints the object, or a message and returns 1.
 expect_object() {
   local found
@@ -81,9 +89,24 @@ check_alloy_service() {
 check_alloy_rbac() {
   local rc=0 o f="$component/alloy-rbac.yaml"
   expect_object ServiceAccount jbh-alloy "$f" >/dev/null || rc=1
+  # Cluster-wide: only nodes, and only the kubelet's /metrics path. nodes/proxy would allow exec in any pod.
   if o=$(expect_object ClusterRole jbh-alloy "$f"); then
-    expect "$o" 'nodes/proxy' "$f (ClusterRole)" || rc=1
-    expect "$o" 'pods/log' "$f (ClusterRole)" || rc=1
+    expect "$o" 'nodes/metrics' "$f (ClusterRole)" || rc=1
+    reject "$o" 'nodes/proxy' "$f (ClusterRole): kubelet exec in every pod" || rc=1
+    reject "$o" 'pods' "$f (ClusterRole): pods belong in the namespaced Role" || rc=1
+  else
+    rc=1
+  fi
+  # Pods and their logs only in the jbh namespace.
+  if o=$(expect_object Role jbh-alloy "$f"); then
+    expect "$o" 'pods/log' "$f (Role)" || rc=1
+    expect "$o" 'namespace: jbh' "$f (Role)" || rc=1
+  else
+    rc=1
+  fi
+  if o=$(expect_object RoleBinding jbh-alloy "$f"); then
+    expect "$o" 'kind: Role' "$f (RoleBinding roleRef)" || rc=1
+    expect "$o" 'kind: ServiceAccount' "$f (RoleBinding subject)" || rc=1
   else
     rc=1
   fi

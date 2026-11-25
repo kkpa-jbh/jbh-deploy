@@ -1,0 +1,247 @@
+{
+  "title": "JBH - Statement import",
+  "uid": "jbh-statement-import",
+  "description": "p95 duration of each step of the bank statement import (POST /jbh-api/finance/statements/extract), from Tempo spans (TraceQL metrics). Empty when trace export is off (OTEL_SDK_DISABLED=true).",
+  "tags": [
+    "jbh",
+    "traces",
+    "finance"
+  ],
+  "editable": true,
+  "graphTooltip": 1,
+  "refresh": "1m",
+  "schemaVersion": 39,
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "links": [],
+  "templating": {
+    "list": [
+      {
+        "name": "tempo",
+        "label": "Tempo",
+        "type": "datasource",
+        "query": "tempo",
+        "current": {},
+        "hide": 0
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "PDF to text - p95",
+      "description": "p95 of step 1a, one line per text source. ai.pdfbox.extract-text: PDFBox, local (default). ai.azure.extract-text: Azure Document Intelligence, one span for all page parts of one statement. Normal: PDFBox well under 1 s.",
+      "gridPos": {
+        "h": 9,
+        "w": 8,
+        "x": 0,
+        "y": 0
+      },
+      "datasource": {
+        "type": "tempo",
+        "uid": "${tempo}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "tempo",
+            "uid": "${tempo}"
+          },
+          "queryType": "traceql",
+          "metricsQueryType": "range",
+          "query": "{ resource.service.name = \"jbh-personal-finance\" && (span:name = \"ai.pdfbox.extract-text\" || span:name = \"ai.azure.extract-text\") } | quantile_over_time(span:duration, .95) by (span:name)",
+          "limit": 20,
+          "tableType": "traces"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "auto",
+            "spanNulls": true
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "LLM - p95",
+      "description": "p95 of step 1b (the LLM reads the statement text), one line per provider: ai.openrouter.answer (default) or ai.gemini.answer. Includes retries.",
+      "gridPos": {
+        "h": 9,
+        "w": 8,
+        "x": 8,
+        "y": 0
+      },
+      "datasource": {
+        "type": "tempo",
+        "uid": "${tempo}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "tempo",
+            "uid": "${tempo}"
+          },
+          "queryType": "traceql",
+          "metricsQueryType": "range",
+          "query": "{ resource.service.name = \"jbh-personal-finance\" && (span:name = \"ai.openrouter.answer\" || span:name = \"ai.gemini.answer\") } | quantile_over_time(span:duration, .95) by (span:name)",
+          "limit": 20,
+          "tableType": "traces"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "auto",
+            "spanNulls": true
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Jev - p95",
+      "description": "p95 of step 4 (Jev classifies the movements). One span per batch (jbh.statement.jev.batch-size), not per statement. Includes retries.",
+      "gridPos": {
+        "h": 9,
+        "w": 8,
+        "x": 16,
+        "y": 0
+      },
+      "datasource": {
+        "type": "tempo",
+        "uid": "${tempo}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "tempo",
+            "uid": "${tempo}"
+          },
+          "queryType": "traceql",
+          "metricsQueryType": "range",
+          "query": "{ resource.service.name = \"jbh-personal-finance\" && (span:name = \"ai.jev.classify\") } | quantile_over_time(span:duration, .95) by (span:name)",
+          "limit": 20,
+          "tableType": "traces"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "auto",
+            "spanNulls": true
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 4,
+      "type": "table",
+      "title": "Slowest statement steps",
+      "description": "The slowest import step spans. Click a trace id to open the waterfall.",
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 9
+      },
+      "datasource": {
+        "type": "tempo",
+        "uid": "${tempo}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "tempo",
+            "uid": "${tempo}"
+          },
+          "queryType": "traceql",
+          "query": "{ resource.service.name = \"jbh-personal-finance\" && span:name =~ \"ai[.].*\" }",
+          "tableType": "spans",
+          "limit": 20,
+          "spss": 1
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true
+      }
+    }
+  ]
+}

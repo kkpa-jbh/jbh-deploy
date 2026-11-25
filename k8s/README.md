@@ -57,5 +57,5 @@ Rendering needs `k8s/overlays/local/.env.k8s` (copy it from `.env.k8s.example`).
 | [docs/concepts.md](docs/concepts.md) | What is a Pod, a Service, an Ingress, a PVC, ...? Where does JBH use each one? |
 | [docs/consul-vs-kubernetes.md](docs/consul-vs-kubernetes.md) | Do we still need Consul? What replaces it, and how? |
 | [docs/images-multistage-distroless.md](docs/images-multistage-distroless.md) | Do we need multi-stage and distroless images for Kubernetes? Tradeoffs? |
-| [docs/images-from-github-to-kubernetes.md](docs/images-from-github-to-kubernetes.md) | How does an image get from a commit to a running pod? Tags, multi-arch, public packages. |
+| [docs/images-from-github-to-kubernetes.md](docs/images-from-github-to-kubernetes.md) | How does an image get from a commit to a running pod? Tags, multi-arch, private packages and the pull Secret. |
 | [docs/github-actions-for-kubernetes.md](docs/github-actions-for-kubernetes.md) | What changed in GitHub Actions, and what comes later? |

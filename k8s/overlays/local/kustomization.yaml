@@ -57,6 +57,11 @@ patches:
   - path: patches/jbh-notification-config.yaml
   # The environment label, for every Java service.
   - path: patches/jbh-personal-finance-config.yaml
+  # Pull the private GHCR images with the Secret "jbh-ghcr-pull" (made by make k8s-ghcr-secret).
+  # It targets every Deployment, so a new service gets it without a change here.
+  - path: patches/image-pull-secret.yaml
+    target:
+      kind: Deployment
   # Postgres: use the fixed local disk (postgres-pv.yaml) instead of a new empty one.
   - path: patches/postgres-local-disk.yaml
     target:

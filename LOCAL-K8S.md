@@ -20,8 +20,8 @@ New to Kubernetes? Read [k8s/docs/concepts.md](k8s/docs/concepts.md) first. It e
 | Docker Desktop with **at least 6 GB** of memory | Docker Desktop → Settings → Resources → Memory. The services need about 3 GB, k3s about 0.5 GB. |
 | `k3d` | `brew install k3d` |
 | `kubectl` | `brew install kubectl` (probably already there) |
-| `gh`, logged in | Only for `make k8s-pin`: `gh auth status` |
-| The 5 GHCR images are public | GitHub → org `kkpa-jbh` → Packages → each package → Package settings → Change visibility. Check: `gh api /orgs/kkpa-jbh/packages/container/jbh-iam --jq .visibility` |
+| `gh`, logged in | For `make k8s-pin`, and for the image token below: `gh auth status` |
+| A token to pull the private GHCR images | Best: a classic token with only `read:packages` (GitHub → Settings → Developer settings → Personal access tokens). Run `export GHCR_TOKEN=<token>` before `make k8s-up`. Without it, your `gh` token is used: it works, but it has more rights. Never put it in `.env.k8s`. |
 
 **Stop the Compose stack first** (`make local-down`). Both at once may not fit in Docker Desktop's memory.
 
@@ -47,8 +47,9 @@ What `make k8s-up` does, step by step (`k8s.mk`):
 
 1. Creates the Docker volume `jbh-k8s-pgdata` for the Postgres data, owned by user 70 (Postgres runs without root).
 2. Creates the k3d cluster, if it does not exist: laptop port 8081 → Traefik (the Ingress controller), and the volume mounted into the node.
-3. Renders the files (`kubectl kustomize ... k8s/overlays/local`) and sends them to the cluster (`kubectl apply`).
-4. Waits until every pod is Ready (`kubectl wait`).
+3. Creates the namespace `jbh` and the Secret `jbh-ghcr-pull` (`scripts/k8s-ghcr-secret.sh`). Every Deployment pulls its image with it.
+4. Renders the files (`kubectl kustomize ... k8s/overlays/local`) and sends them to the cluster (`kubectl apply`).
+5. Waits until every Deployment and the Postgres StatefulSet have finished their rollout (`kubectl rollout status`).
 
 ## 3. Every day
 
@@ -62,6 +63,7 @@ What `make k8s-up` does, step by step (`k8s.mk`):
 | A new version of the services | `make k8s-pin`, then `make k8s-up` (a changed tag starts a rollout) |
 | Watch a rollout | `kubectl rollout status -n jbh deploy/jbh-iam` |
 | Go back one version | `kubectl rollout undo -n jbh deploy/jbh-iam` (the old image must still be in GHCR: the 10 newest are kept) |
+| Renew the image token (it expired) | `export GHCR_TOKEN=<new token>`, then `make k8s-ghcr-secret`. Failed pulls retry by themselves. |
 | Delete the cluster, keep the data | `make k8s-down` |
 | Delete the cluster and the data | `make k8s-reset-db` (asks first) |
 
@@ -90,7 +92,7 @@ kubectl debug -n jbh -it deploy/jbh-iam --image=busybox:1.36 --target=jbh-iam --
 
 | You see | Meaning | Fix |
 |---------|---------|-----|
-| `ImagePullBackOff` / `ErrImagePull` | The node cannot download the image | Is the package public? Does the tag exist (`make k8s-pin`)? Only the 10 newest images are kept. |
+| `ImagePullBackOff` / `ErrImagePull` | The node cannot download the image | `401 Unauthorized` in `kubectl describe pod`: the token is missing, expired or lacks `read:packages` (`make k8s-ghcr-secret`). `not found`: the tag is gone (`make k8s-pin`); only the 10 newest images are kept. |
 | `CrashLoopBackOff` | The app starts and stops again | `kubectl logs -n jbh deploy/<name> --previous` shows the last run's error (often a missing secret value). |
 | `Pending` | No node can take the pod | Usually not enough memory: raise Docker Desktop's memory. `kubectl describe pod` says why. |
 | `Running` but never `Ready` | The readiness probe fails | `kubectl describe pod`: look for "Readiness probe failed". Check the logs. |

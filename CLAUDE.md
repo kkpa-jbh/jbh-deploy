@@ -26,7 +26,7 @@ It also holds `README.md`: the system map of all JBH services. The `kkpa-jbh/CLA
 | `.github/workflows/deploy.yml` | `Deploy` workflow: SSH to the VPS, runs `ci-deploy.sh`. By hand, or from `jbh-app`'s `Image` (auto-deploy of `jbh-web`). |
 | `.github/workflows/multi-arch-image.yml` | Reusable workflow (`on: workflow_call`). Each service's `Image` workflow calls it, pinned to a commit SHA: amd64 + arm64 images, one tag, cleanup (keep 10 tagged). |
 | `.github/workflows/ci.yml`, `.github/scripts/install-tool.sh` | PR check: `actionlint`, render + `kubeconform` of `k8s/overlays/local`, `scripts/check-k8s-base.sh`, Kyverno "restricted" Pod Security. Tools at a fixed version and SHA-256. |
-| `k8s/`, `k8s.mk`, `LOCAL-K8S.md`, `scripts/k8s-pin.sh`, `scripts/check-k8s-base.sh` | Kubernetes (JBH-86): `base/` (same on every target), `components/postgres/`, `overlays/local/` (k3d), `policies/`, `docs/` (learning guides). `make k8s-up` / `k8s-down` / `k8s-pin`. Local only for now. Rule: `k8s/base/` holds no target-specific value (`k8s/README.md`). |
+| `k8s/`, `k8s.mk`, `LOCAL-K8S.md`, `scripts/k8s-pin.sh`, `scripts/k8s-ghcr-secret.sh`, `scripts/check-k8s-base.sh` | Kubernetes (JBH-86): `base/` (same on every target), `components/postgres/`, `overlays/local/` (k3d), `policies/`, `docs/` (learning guides). `make k8s-up` / `k8s-down` / `k8s-pin`. Local only for now. Rule: `k8s/base/` holds no target-specific value (`k8s/README.md`). |
 
 ## Rules
 

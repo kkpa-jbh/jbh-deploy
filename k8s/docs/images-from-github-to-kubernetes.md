@@ -47,11 +47,12 @@ Manifests:
 
 ## Public or private packages
 
-- **Public** (our choice): anyone can pull; no secret is needed. The repos are public anyway, and the images hold
-  no secrets: all config comes from env vars at start. Storage and downloads are free.
-- **Private:** every cluster needs an `imagePullSecret`, a Secret of type `docker-registry` with a token that has
-  only `read:packages`, named in each pod spec. GitHub Free also limits private packages to 500 MB and 1 GB of
-  downloads per month.
+- **Private** (our choice, as in production): every cluster needs an `imagePullSecret`, a Secret of type
+  `docker-registry` with a token that has only `read:packages`, named in each pod spec. The local overlay adds it to
+  every Deployment (`patches/image-pull-secret.yaml`), and `make k8s-ghcr-secret` creates the Secret.
+  The VPS does the same with `docker login ghcr.io`. GHCR storage and downloads are free today, also for private images.
+- **Public:** anyone can pull, and no secret is needed. But anyone can also open the layers and read every file.
+  One secret built into an image by mistake would leak. On EKS, nodes pull from ECR with their IAM role instead.
 
 ## Old images and rollbacks
 

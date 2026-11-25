@@ -14,7 +14,7 @@ K8S_PGUSER   = 70:70
 # The overlay reads initdb/ from outside its folder, so Kustomize must allow it.
 K8S_RENDER   = kubectl kustomize --load-restrictor LoadRestrictionsNone $(K8S_OVERLAY)
 
-.PHONY: k8s-up k8s-down k8s-reset-db k8s-pin k8s-status k8s-render
+.PHONY: k8s-up k8s-down k8s-reset-db k8s-pin k8s-status k8s-render k8s-ghcr-secret
 
 # Creates the cluster if it does not exist, then applies every object and waits until all pods are Ready.
 # Run it again after "make k8s-pin" (or after any change in k8s/): Kubernetes changes only what differs.
@@ -31,8 +31,15 @@ k8s-up:
 			--port "8081:80@loadbalancer" \
 			--volume "$(K8S_PGVOLUME):/var/lib/jbh/pgdata@server:0" \
 			--wait
+	@# The namespace first, then the image pull Secret, so the first pods can already pull the private images.
+	kubectl apply -f k8s/base/namespace.yaml
+	@bash scripts/k8s-ghcr-secret.sh jbh
 	$(K8S_RENDER) | kubectl apply -f -
-	kubectl wait --for=condition=Ready pods --all -n jbh --timeout=5m
+	@# Wait for each rollout, not for each pod: during a rollout the old pods of the replaced version are still listed,
+	@# never become Ready, and would make a plain "kubectl wait pods --all" time out although the new pods run fine.
+	@for r in $$(kubectl get deployment,statefulset -n jbh -o name); do \
+		kubectl rollout status "$$r" -n jbh --timeout=5m || exit 1; \
+	done
 	@echo "JBH runs on http://localhost:8081"
 
 # Deletes the cluster. The Postgres data stays in the Docker volume $(K8S_PGVOLUME).
@@ -50,6 +57,11 @@ k8s-reset-db:
 # Writes the newest git SHA of each image into the overlay's "images:" (scripts/k8s-pin.sh). Then run make k8s-up.
 k8s-pin:
 	@bash scripts/k8s-pin.sh $(K8S_OVERLAY)/kustomization.yaml
+
+# Creates or renews the Secret jbh-ghcr-pull: the token the cluster uses to pull the private GHCR images.
+# Set GHCR_TOKEN (a token with only read:packages) first; without it, your gh token is used. See the script.
+k8s-ghcr-secret:
+	@bash scripts/k8s-ghcr-secret.sh jbh
 
 # Pods, Services and the Ingress of JBH, with their state.
 k8s-status:

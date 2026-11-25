@@ -27,15 +27,15 @@ components:
 # Use a SHA, not "latest": with "latest" Kubernetes cannot see that a new image exists, and you cannot tell what runs.
 images:
   - name: ghcr.io/kkpa-jbh/jbh-iam
-    newTag: latest
+    newTag: 88af4f96ac7fb29bd055184cc0066b6e593a08d3
   - name: ghcr.io/kkpa-jbh/jbh-personal-finance
-    newTag: latest
+    newTag: 9c175780131233662f124460619dd6bbacbff4d6
   - name: ghcr.io/kkpa-jbh/jbh-notification
-    newTag: latest
+    newTag: 0dbc74d2e90cfeca98e1ec518215fcb484f1aee6
   - name: ghcr.io/kkpa-jbh/jbh-gateway
-    newTag: latest
+    newTag: aec73579b8e1ee9599de82f223c0def8be8ea2d3
   - name: ghcr.io/kkpa-jbh/jbh-web
-    newTag: latest
+    newTag: c1223e45319bfcd640e1a444afb1c114f846a646
 
 # Makes the Secret "jbh-secrets" from the file .env.k8s (KEY=value lines, git-ignored, never committed).
 # Copy .env.k8s.example to .env.k8s and fill it. Kustomize adds a hash to the Secret's name and updates every
@@ -57,6 +57,11 @@ patches:
   - path: patches/jbh-notification-config.yaml
   # The environment label, for every Java service.
   - path: patches/jbh-personal-finance-config.yaml
+  # Pull the private GHCR images with the Secret "jbh-ghcr-pull" (made by make k8s-ghcr-secret).
+  # It targets every Deployment, so a new service gets it without a change here.
+  - path: patches/image-pull-secret.yaml
+    target:
+      kind: Deployment
   # Postgres: use the fixed local disk (postgres-pv.yaml) instead of a new empty one.
   - path: patches/postgres-local-disk.yaml
     target:

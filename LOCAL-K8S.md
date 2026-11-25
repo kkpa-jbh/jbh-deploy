@@ -49,7 +49,7 @@ What `make k8s-up` does, step by step (`k8s.mk`):
 2. Creates the k3d cluster, if it does not exist: laptop port 8081 → Traefik (the Ingress controller), and the volume mounted into the node.
 3. Creates the namespace `jbh` and the Secret `jbh-ghcr-pull` (`scripts/k8s-ghcr-secret.sh`). Every Deployment pulls its image with it.
 4. Renders the files (`kubectl kustomize ... k8s/overlays/local`) and sends them to the cluster (`kubectl apply`).
-5. Waits until every pod is Ready (`kubectl wait`).
+5. Waits until every Deployment and the Postgres StatefulSet have finished their rollout (`kubectl rollout status`).
 
 ## 3. Every day
 

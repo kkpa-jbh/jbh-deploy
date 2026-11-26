@@ -57,6 +57,13 @@ faro.receiver "app" {
     cors_allowed_origins = ["http://localhost:8081"]
   }
 
+  // No sourcemap downloads. By default the receiver fetches any URL a client puts in a stack frame,
+  // so anyone who can reach /collect could make Alloy call internal services (SSRF).
+  // The production build has no sourcemaps anyway (angular.json: sourceMap false).
+  sourcemaps {
+    download = false
+  }
+
   output {
     logs   = [otelcol.receiver.loki.faro.receiver]
     traces = [otelcol.exporter.otlp.lgtm.input]

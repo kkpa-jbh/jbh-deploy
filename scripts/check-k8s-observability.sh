@@ -62,6 +62,12 @@ check_otel_env() {
     expect "$o" 'OTEL_SDK_DISABLED: "false"' "$component/otel-env.yaml ($cm)" || rc=1
     expect "$o" 'OTEL_EXPORTER_OTLP_ENDPOINT: http://jbh-alloy:4317' "$component/otel-env.yaml ($cm)" || rc=1
   done
+  # Without a pod template change, running pods keep their old env when the component is turned on.
+  local d
+  for d in jbh-iam jbh-personal-finance jbh-notification jbh-gateway; do
+    o=$(expect_object Deployment "$d" "k8s/base") || { rc=1; continue; }
+    expect "$o" 'jbh.kkpa/observability: "on"' "$component/otel-rollout.yaml ($d)" || rc=1
+  done
   return $rc
 }
 
@@ -74,14 +80,24 @@ check_alloy_deployment() {
   expect "$o" 'mountPath: /etc/alloy/modules' "$f" || rc=1
   expect "$o" 'mountPath: /etc/alloy/entry' "$f" || rc=1
   expect "$o" 'name: JBH_PG_MONITOR_DSN' "$f" || rc=1
+  # The Faro receiver must not fetch client-given sourcemap URLs (SSRF from /collect).
+  if o=$(expect_object ConfigMap jbh-alloy-entry "k8s/overlays/local/kustomization.yaml"); then
+    expect "$o" 'download = false' "observability/alloy/k8s-local.alloy (faro.receiver sourcemaps)" || rc=1
+  else
+    rc=1
+  fi
   return $rc
 }
 
 check_alloy_service() {
   local rc=0 o p f="$component/alloy-service.yaml"
   o=$(expect_object Service jbh-alloy "$f") || return 1
+  # The whole line, not a substring: "port: 4317" must not match "port: 43170" or "targetPort: 4317".
   for p in 4317 4318 12345 12347; do
-    expect "$o" "port: $p" "$f" || rc=1
+    if ! grep -qE "^[[:space:]]*(- )?port: $p$" <<< "$o"; then
+      echo "  missing 'port: $p' -> $f" >&2
+      rc=1
+    fi
   done
   return $rc
 }

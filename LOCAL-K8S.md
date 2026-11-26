@@ -100,7 +100,7 @@ kubectl debug -n jbh -it deploy/jbh-iam --image=busybox:1.36 --target=jbh-iam --
 | `Running` but never `Ready` | The readiness probe fails | `kubectl describe pod`: look for "Readiness probe failed". Check the logs. |
 | "image has non-numeric user" | The image runs as a user name, not a number | The image is older than JBH-86. Run `make k8s-pin` for a newer one. |
 | `make k8s-up` fails: port 8081 is in use | Another program uses it | Stop it, or change `8081` in `k8s.mk` (and the URLs in the local overlay). |
-| Alloy logs "connection refused" to `host.k3d.internal` | The LGTM is not running, or Docker Desktop does not forward the port to the k3d network | Start it (`make lgtm up` in `kkpa-docker-lab`). Still failing: `docker network connect k3d-jbh <lgtm container>`, then use that container's IP in `observability/alloy/k8s-local.alloy` (do not commit it). |
+| Alloy logs "connection refused" to `host.k3d.internal` | The LGTM is not running, or Docker Desktop does not forward the port to the k3d network | Start it (`make lgtm up` in `kkpa-docker-lab`). Still failing: `docker network connect k3d-jbh <lgtm container>`, then use that container's IP in `observability/alloy/k8s-local.alloy` (do not commit it) and run `make k8s-up` to apply it. |
 | Pods dashboard empty; Alloy UI (`kubectl port-forward -n jbh deploy/jbh-alloy 12345`) shows `kubernetes-cadvisor` down | `403`: the ClusterRole lost `nodes/metrics`. `x509`: the kubelet certificate does not match the cluster CA or the node IP | `403`: check `k8s/components/observability/alloy-rbac.yaml`. `x509`: open an issue; never set `insecure_skip_verify`, and never add `nodes/proxy` back. |
 | Postgres metrics: auth error for `jbh_monitor` | The role does not exist yet (old volume), or the password differs | `make k8s-pg-monitor`. After a password change: `make k8s-up` first, then `make k8s-pg-monitor`. |
 | Every `/collect` call gets 404, or no `/collect` call at all | Old `jbh-web` image without `runtime-config.js`, or the Ingress class of `jbh-faro` is missing | `make k8s-pin` after the `jbh-app` change is merged; `kubectl get ingress -n jbh` must list `jbh-faro` with class `traefik`. |
@@ -131,8 +131,8 @@ Steps:
 |------|---------|
 | Alloy UI (every component and its health) | `kubectl port-forward -n jbh svc/jbh-alloy 12345:12345`, then http://localhost:12345 |
 | Alloy logs | `kubectl logs -n jbh deploy/jbh-alloy` |
-| Can a pod reach the LGTM? | `kubectl run -n jbh nettest --rm -it --restart=Never --image=busybox:1.36 -- nc -zv host.k3d.internal 4317` (also 9090) |
-| Turn it all off | Remove the line `- ../../components/observability` in `k8s/overlays/local/kustomization.yaml`, then `make k8s-up` |
+| Can a pod reach the LGTM? | `kubectl run -n jbh nettest --rm -it --restart=Never --image=busybox:1.36 --override-type=strategic --overrides='{"spec":{"securityContext":{"runAsNonRoot":true,"runAsUser":65534,"seccompProfile":{"type":"RuntimeDefault"}},"containers":[{"name":"nettest","securityContext":{"allowPrivilegeEscalation":false,"capabilities":{"drop":["ALL"]}}}]}}' -- nc -zv host.k3d.internal 4317` (also 9090). The overrides are needed: the namespace refuses pods that do not meet the "restricted" policy. |
+| Turn it all off | 1. Remove the line `- ../../components/observability` in `k8s/overlays/local/kustomization.yaml`, then `make k8s-up`: the services restart without OTLP. 2. `make k8s-up` only applies, it never deletes, so delete Alloy by hand: `kubectl delete -n jbh deployment/jbh-alloy service/jbh-alloy ingress/jbh-faro serviceaccount/jbh-alloy role/jbh-alloy rolebinding/jbh-alloy` and `kubectl delete clusterrole/jbh-alloy clusterrolebinding/jbh-alloy`. Postgres data stays. |
 
 The Java services' logs appear twice in Loki: once over OTLP (with `traceId`), once from stdout (with `k8s_pod_name`).
 That is on purpose: stdout also shows a crash before the OTel SDK starts.

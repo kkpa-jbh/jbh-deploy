@@ -21,7 +21,8 @@ components:
   # Postgres runs inside the local cluster.
   - ../../components/postgres
   # Traces, logs and metrics to the local LGTM (kkpa-docker-lab), through an Alloy in the cluster.
-  # Remove this line to turn it all off. It must come after postgres: it patches the Postgres objects.
+  # Remove this line to turn it all off (LOCAL-K8S.md, "Turn it all off": running objects need a delete too).
+  # It must come after postgres: it patches the Postgres objects.
   - ../../components/observability
 
 # The image version of each service, in one place. Changing a tag here and applying it starts a rollout:
@@ -62,7 +63,12 @@ patches:
   # Which Ingress controller applies the rules: Traefik, built into k3s.
   - path: patches/ingress-traefik.yaml
   # The same for the Faro route (/collect -> jbh-alloy) of the observability component.
+  # A target, not only the name in the file: a target that finds nothing is skipped, so the overlay still
+  # renders when the component is turned off.
   - path: patches/ingress-traefik-faro.yaml
+    target:
+      kind: Ingress
+      name: jbh-faro
   # jbh-iam: the "local" profile (HTTP cookies) and a place for its log file.
   - path: patches/jbh-iam-config.yaml
   - path: patches/jbh-iam-logs.yaml

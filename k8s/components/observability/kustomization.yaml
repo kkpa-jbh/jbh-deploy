@@ -40,5 +40,6 @@ configMapGenerator:
 
 patches:
   - path: otel-env.yaml
+  - path: otel-rollout.yaml
   - path: postgres-monitor.yaml
   - path: web-runtime-config.yaml

@@ -1,0 +1,24 @@
+# Service jbh-alloy: a fixed DNS name for Alloy. The services send OTLP to http://jbh-alloy:4317,
+# the Ingress jbh-faro sends the browser's /collect to port 12347, and port-forward reaches the UI on 12345.
+apiVersion: v1
+kind: Service
+metadata:
+  name: jbh-alloy
+  labels:
+    app.kubernetes.io/name: jbh-alloy
+spec:
+  selector:
+    app.kubernetes.io/name: jbh-alloy
+  ports:
+    - name: otlp-grpc
+      port: 4317
+      targetPort: otlp-grpc
+    - name: otlp-http
+      port: 4318
+      targetPort: otlp-http
+    - name: faro
+      port: 12347
+      targetPort: faro
+    - name: ui
+      port: 12345
+      targetPort: ui

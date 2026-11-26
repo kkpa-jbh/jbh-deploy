@@ -1,0 +1,21 @@
+# Ingress jbh-faro: sends the browser's Faro data (/collect) to Alloy's faro.receiver.
+# The app and /collect share one origin (http://localhost:8081 locally), so the browser needs no CORS
+# and the trace header stays on the same origin. No ingressClassName and no host: the overlay adds the class.
+# A separate Ingress, so turning off this component removes the route with it.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: jbh-faro
+  labels:
+    app.kubernetes.io/name: jbh-alloy
+spec:
+  rules:
+    - http:
+        paths:
+          - path: /collect
+            pathType: Prefix
+            backend:
+              service:
+                name: jbh-alloy
+                port:
+                  number: 12347

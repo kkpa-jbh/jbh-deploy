@@ -14,7 +14,7 @@ K8S_PGUSER   = 70:70
 # The overlay reads initdb/ from outside its folder, so Kustomize must allow it.
 K8S_RENDER   = kubectl kustomize --load-restrictor LoadRestrictionsNone $(K8S_OVERLAY)
 
-.PHONY: k8s-up k8s-down k8s-reset-db k8s-pin k8s-status k8s-render k8s-ghcr-secret
+.PHONY: k8s-up k8s-down k8s-reset-db k8s-pin k8s-status k8s-render k8s-ghcr-secret k8s-pg-monitor
 
 # Creates the cluster if it does not exist, then applies every object and waits until all pods are Ready.
 # Run it again after "make k8s-pin" (or after any change in k8s/): Kubernetes changes only what differs.
@@ -62,6 +62,12 @@ k8s-pin:
 # Set GHCR_TOKEN (a token with only read:packages) first; without it, your gh token is used. See the script.
 k8s-ghcr-secret:
 	@bash scripts/k8s-ghcr-secret.sh jbh
+
+# initdb runs only on an empty volume. On an existing $(K8S_PGVOLUME) volume, this creates the jbh_monitor role once
+# (Postgres metrics, k8s/components/observability). Safe to run again. Needs JBH_PG_MONITOR_PASSWORD in $(K8S_ENV_FILE)
+# and a "make k8s-up" after you added it, so the pod has the value.
+k8s-pg-monitor:
+	kubectl exec -n jbh jbh-postgres-0 -c postgres -- sh /docker-entrypoint-initdb.d/02-create-monitor-role.sh
 
 # Pods, Services and the Ingress of JBH, with their state.
 k8s-status:

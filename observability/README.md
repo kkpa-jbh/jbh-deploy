@@ -75,6 +75,7 @@ Each JSON file in `grafana/` is one dashboard.
 | `grafana/jbh-service.json` (`jbh-service`) | One service (pick it in the `service` variable): p50, p95, p99 and errors per `uri`, JVM heap, GC, threads, CPU, DB pool (Agroal or Hikari) | `http_server_requests_seconds_*`, `jvm_*`, `process_cpu_usage`, `agroal_*`, `hikaricp_*` |
 | `grafana/jbh-postgres.json` (`jbh-postgres`) | Connections against `max_connections`, transactions, locks, deadlocks, cache hit ratio, size, top queries by total time | `pg_stat_*`, `pg_locks_count`, `pg_settings_max_connections`, `pg_stat_statements_*` |
 | `grafana/jbh-traces.json` (`jbh-traces`) | Tempo tables (slowest traces, traces with errors, traces with 3 services), service graph, call rate per client and server | Tempo (TraceQL), `traces_service_graph_request_*` |
+| `grafana/jbh-k8s-pods.json` (`jbh-k8s-pods`) | Pods of namespace `jbh` in the local Kubernetes cluster: memory against the limit, CPU, OOM kills, network, stdout logs (`pod` variable). Empty outside Kubernetes | cAdvisor `container_*` (job `kubernetes-cadvisor`), Loki `log_source="kubernetes-stdout"` |
 | `grafana/jbh-circuit-breakers.json` | Circuit breakers of `jbh-gateway-client`: state, failure rate, calls, rejected calls | `resilience4j_circuitbreaker_*` |
 | `grafana/jbh-statement-import.json` (`jbh-statement-import`) | Bank statement import in `jbh-personal-finance`: p95 of PDF to text (PDFBox or Azure), LLM (OpenRouter or Gemini) and Jev, plus the slowest step spans. Only a `tempo` variable. Empty when trace export is off | Tempo (TraceQL metrics, `quantile_over_time`) on the `ai.*` spans. Needs the Tempo processor `local-blocks` (below) |
 
@@ -109,6 +110,8 @@ The files hold no contact point, no e-mail address and no secret.
 
 Locally, Grafana Alloy (`jbh-alloy`) scrapes every endpoint below every 30 seconds and sends the samples to the local Prometheus
 (remote write, so metric names stay as the services expose them). Its config is in `alloy/` (`local.alloy` and `modules/`).
+The local Kubernetes cluster runs its own `jbh-alloy` with `alloy/k8s-local.alloy`: same modules, Service names instead of
+`host.docker.internal`, the LGTM through `host.k3d.internal`, plus pod logs and cAdvisor (`modules/kubernetes.alloy`, [`../LOCAL-K8S.md`](../LOCAL-K8S.md)).
 Production is not built yet.
 
 | Source | Endpoint (private, never public) | Tags |
@@ -118,6 +121,7 @@ Production is not built yet.
 | `jbh-iam` | `:9999/actuator/prometheus` | `service=jbh-iam`, `env` |
 | `jbh-gateway` | `:8080/actuator/prometheus` | `service=jbh-gateway` (added by Alloy) |
 | Postgres (`jbh-postgres`) | Alloy's built-in Postgres exporter, role `jbh_monitor`, with `pg_stat_statements` | `service=jbh-postgres` |
+| Kubernetes pods (cluster only) | cAdvisor, read straight from the kubelet (`:10250/metrics/cadvisor`, RBAC `nodes/metrics` only); namespace `jbh`, 6 metric names | `namespace`, `pod`, `container`, job `kubernetes-cadvisor` |
 
 Caddy and the gateway forward only `/jbh-api/...`, so these endpoints are reachable only on a private network.
 Traces and logs do not come from a scrape: the services push them over OTLP to Alloy (`localhost:14317` from the IDE).
@@ -137,6 +141,7 @@ Locally the limit does not bind, but the same budget keeps the config honest. Nu
 | `jbh-notification` | 600 | JVM, Agroal, few endpoints |
 | Postgres, default collectors | 350 | database `postgres` only |
 | Postgres `stat_statements` | 500 | about 100 statements x 5 counters |
+| cAdvisor (cluster only) | 100 | namespace `jbh`, 6 metric names, about 8 containers |
 | Alloy itself | 0 | its own metrics are not scraped |
 | **Total (local)** | **4,350 typical, 5,050 worst case** | Both below the 6,000 target |
 

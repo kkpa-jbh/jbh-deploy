@@ -1,0 +1,42 @@
+# Restarts the 4 Java services when this component is turned on or off.
+# Their OTEL_* values come from ConfigMaps with fixed names (otel-env.yaml). A pod reads env vars only at start,
+# so a changed ConfigMap alone does not reach running pods. A changed pod template annotation starts a rollout.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jbh-iam
+spec:
+  template:
+    metadata:
+      annotations:
+        jbh.kkpa/observability: "on"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jbh-personal-finance
+spec:
+  template:
+    metadata:
+      annotations:
+        jbh.kkpa/observability: "on"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jbh-notification
+spec:
+  template:
+    metadata:
+      annotations:
+        jbh.kkpa/observability: "on"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jbh-gateway
+spec:
+  template:
+    metadata:
+      annotations:
+        jbh.kkpa/observability: "on"

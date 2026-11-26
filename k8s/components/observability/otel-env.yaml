@@ -1,0 +1,43 @@
+# Turns on OTLP export in the 4 Java services: traces and logs go to jbh-alloy.
+# The same keys and values as compose.local.yaml, except the endpoint (the Service name jbh-alloy).
+# JBH_ENV is not here: each overlay sets it (local: k8s-local).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: jbh-iam-config
+data:
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://jbh-alloy:4317
+  OTEL_SDK_DISABLED: "false"
+  OTEL_TRACES_SAMPLER_ARG: "1.0"
+  JBH_SERVICE_VERSION: unknown
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: jbh-personal-finance-config
+data:
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://jbh-alloy:4317
+  OTEL_SDK_DISABLED: "false"
+  OTEL_TRACES_SAMPLER: parentbased_traceidratio
+  OTEL_TRACES_SAMPLER_ARG: "1.0"
+  JBH_SERVICE_VERSION: unknown
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: jbh-notification-config
+data:
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://jbh-alloy:4317
+  OTEL_SDK_DISABLED: "false"
+  OTEL_TRACES_SAMPLER: parentbased_traceidratio
+  OTEL_TRACES_SAMPLER_ARG: "1.0"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: jbh-gateway-config
+data:
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://jbh-alloy:4317
+  OTEL_SDK_DISABLED: "false"
+  OTEL_TRACES_SAMPLER_ARG: "1.0"
+  JBH_SERVICE_VERSION: unknown

@@ -1,6 +1,6 @@
 # Plain settings for jbh-personal-finance, as env vars (envFrom). Secrets come from "jbh-secrets".
 # Same values as compose.local.yaml, except: Service DNS names instead of host.docker.internal, Consul off,
-# and no OTEL_* variables (nothing is exported from the cluster).
+# and no OTEL_* variables here: k8s/components/observability (otel-env.yaml) adds them when an overlay turns it on.
 apiVersion: v1
 kind: ConfigMap
 metadata:

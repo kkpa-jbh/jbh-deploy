@@ -9,7 +9,7 @@ What you get:
 - `jbh-iam`, `jbh-personal-finance`, `jbh-notification`, `jbh-gateway`, `jbh-web` and Postgres, in the namespace `jbh`.
 - The app at **http://localhost:8081**.
 - No Consul: Kubernetes Services find the services ([why](k8s/docs/consul-vs-kubernetes.md)).
-- Nothing is sent to Loki or your local LGTM stack: telemetry export stays off in the cluster.
+- Traces, logs and metrics go to your local LGTM stack, through a Grafana Alloy in the cluster (section "Observability").
 
 New to Kubernetes? Read [k8s/docs/concepts.md](k8s/docs/concepts.md) first. It explains every object used here.
 
@@ -17,11 +17,11 @@ New to Kubernetes? Read [k8s/docs/concepts.md](k8s/docs/concepts.md) first. It e
 
 | Need | How |
 |------|-----|
-| Docker Desktop with **at least 6 GB** of memory | Docker Desktop → Settings → Resources → Memory. The services need about 3 GB, k3s about 0.5 GB. |
+| Docker Desktop with **at least 8 GB** of memory | Docker Desktop → Settings → Resources → Memory. The services and Alloy need about 3.5 GB, k3s about 0.5 GB, the LGTM container about 1 GB more. |
 | `k3d` | `brew install k3d` |
 | `kubectl` | `brew install kubectl` (probably already there) |
 | `gh`, logged in | For `make k8s-pin`, and for the image token below: `gh auth status` |
-| A token to pull the private GHCR images | Best: a classic token with only `read:packages` (GitHub → Settings → Developer settings → Personal access tokens). Run `export GHCR_TOKEN=<token>` before `make k8s-up`. Without it, your `gh` token is used: it works, but it has more rights. Never put it in `.env.k8s`. |
+| A token to pull the private GHCR images | Best: a classic token with only `read:packages` (GitHub → Settings → Developer settings → Personal access tokens). Run `export GHCR_TOKEN=<token>` before `make k8s-up`. It is required: without it, `make k8s-up` stops. The script never uses your `gh` token, because that token has more rights. Never put it in `.env.k8s`. |
 
 **Stop the Compose stack first** (`make local-down`). Both at once may not fit in Docker Desktop's memory.
 
@@ -64,6 +64,7 @@ What `make k8s-up` does, step by step (`k8s.mk`):
 | Watch a rollout | `kubectl rollout status -n jbh deploy/jbh-iam` |
 | Go back one version | `kubectl rollout undo -n jbh deploy/jbh-iam` (the old image must still be in GHCR: the 10 newest are kept) |
 | Renew the image token (it expired) | `export GHCR_TOKEN=<new token>`, then `make k8s-ghcr-secret`. Failed pulls retry by themselves. |
+| Create the Postgres monitor role on an existing volume | `make k8s-pg-monitor` (section 7) |
 | Delete the cluster, keep the data | `make k8s-down` |
 | Delete the cluster and the data | `make k8s-reset-db` (asks first) |
 
@@ -93,19 +94,55 @@ kubectl debug -n jbh -it deploy/jbh-iam --image=busybox:1.36 --target=jbh-iam --
 | You see | Meaning | Fix |
 |---------|---------|-----|
 | `ImagePullBackOff` / `ErrImagePull` | The node cannot download the image | `401 Unauthorized` in `kubectl describe pod`: the token is missing, expired or lacks `read:packages` (`make k8s-ghcr-secret`). `not found`: the tag is gone (`make k8s-pin`); only the 10 newest images are kept. |
+| `make k8s-up` stops: "GHCR_TOKEN is not set" | The image token is required; the script never uses your `gh` token | `export GHCR_TOKEN=<token>` (only `read:packages`), then `make k8s-up` again. |
 | `CrashLoopBackOff` | The app starts and stops again | `kubectl logs -n jbh deploy/<name> --previous` shows the last run's error (often a missing secret value). |
 | `Pending` | No node can take the pod | Usually not enough memory: raise Docker Desktop's memory. `kubectl describe pod` says why. |
 | `Running` but never `Ready` | The readiness probe fails | `kubectl describe pod`: look for "Readiness probe failed". Check the logs. |
 | "image has non-numeric user" | The image runs as a user name, not a number | The image is older than JBH-86. Run `make k8s-pin` for a newer one. |
 | `make k8s-up` fails: port 8081 is in use | Another program uses it | Stop it, or change `8081` in `k8s.mk` (and the URLs in the local overlay). |
+| Alloy logs "connection refused" to `host.k3d.internal` | The LGTM is not running, or Docker Desktop does not forward the port to the k3d network | Start it (`make lgtm up` in `kkpa-docker-lab`). Still failing: `docker network connect k3d-jbh <lgtm container>`, then use that container's IP in `observability/alloy/k8s-local.alloy` (do not commit it) and run `make k8s-up` to apply it. |
+| Pods dashboard empty; Alloy UI (`kubectl port-forward -n jbh deploy/jbh-alloy 12345`) shows `kubernetes-cadvisor` down | `403`: the ClusterRole lost `nodes/metrics`. `x509`: the kubelet certificate does not match the cluster CA or the node IP | `403`: check `k8s/components/observability/alloy-rbac.yaml`. `x509`: open an issue; never set `insecure_skip_verify`, and never add `nodes/proxy` back. |
+| Postgres metrics: auth error for `jbh_monitor` | The role does not exist yet (old volume), or the password differs | `make k8s-pg-monitor`. After a password change: `make k8s-up` first, then `make k8s-pg-monitor`. |
+| Every `/collect` call gets 404, or no `/collect` call at all | Old `jbh-web` image without `runtime-config.js`, or the Ingress class of `jbh-faro` is missing | `make k8s-pin` after the `jbh-app` change is merged; `kubectl get ingress -n jbh` must list `jbh-faro` with class `traefik`. |
 | Pod Security "violates PodSecurity restricted" | A pod could run as root or keep capabilities | The namespace refuses it on purpose. Fix the manifest; CI checks it too (`ci.yml`). |
 
-## 7. Google sign-in
+## 7. Observability (traces, logs, metrics)
+
+An Alloy in the cluster (`jbh-alloy`) collects everything and sends it to the LGTM stack on your laptop.
+The files: `k8s/components/observability/` (the same on every target) and, for this cluster, `observability/alloy/k8s-local.alloy`.
+
+- **Traces and logs:** the 4 Java services send OTLP to `http://jbh-alloy:4317`.
+- **Metrics:** Alloy scrapes the 4 services and Postgres, with the same `job` names as Compose. The dashboards work unchanged.
+- **Pod logs and pod CPU/memory:** Alloy reads stdout of every pod and the kubelet's cAdvisor (namespace `jbh` only).
+- **Browser (Faro):** `jbh-web` sends to `http://localhost:8081/collect`, the same origin as the app. The Ingress `jbh-faro` forwards it to Alloy.
+- Alloy reaches the LGTM through `host.k3d.internal`, a name k3d puts in the cluster DNS for your laptop.
+
+Steps:
+
+1. Start the LGTM first: `make lgtm up` in `kkpa-docker-lab`. Grafana: http://localhost:3000.
+2. Set `JBH_PG_MONITOR_PASSWORD` in `k8s/overlays/local/.env.k8s` (URL-safe characters), then `make k8s-up`.
+3. Your Postgres volume `jbh-k8s-pgdata` already has data, so the init scripts do not run again. Run `make k8s-pg-monitor` once.
+   It creates the role `jbh_monitor`. A new, empty volume does it by itself.
+4. In Grafana → Explore, filter on `deployment.environment.name = k8s-local` (Tempo) or `env`/`service` (Prometheus).
+   Pod logs in Loki: `{k8s_namespace_name="jbh"} | log_source="kubernetes-stdout"`. Dashboard: `observability/grafana/jbh-k8s-pods.json`.
+5. Faro needs a `jbh-web` image with `runtime-config.js` (from `jbh-app`). After that `jbh-app` change is merged, run `make k8s-pin`.
+
+| Task | Command |
+|------|---------|
+| Alloy UI (every component and its health) | `kubectl port-forward -n jbh svc/jbh-alloy 12345:12345`, then http://localhost:12345 |
+| Alloy logs | `kubectl logs -n jbh deploy/jbh-alloy` |
+| Can a pod reach the LGTM? | `kubectl run -n jbh nettest --rm -it --restart=Never --image=busybox:1.36 --override-type=strategic --overrides='{"spec":{"securityContext":{"runAsNonRoot":true,"runAsUser":65534,"seccompProfile":{"type":"RuntimeDefault"}},"containers":[{"name":"nettest","securityContext":{"allowPrivilegeEscalation":false,"capabilities":{"drop":["ALL"]}}}]}}' -- nc -zv host.k3d.internal 4317` (also 9090). The overrides are needed: the namespace refuses pods that do not meet the "restricted" policy. |
+| Turn it all off | 1. Remove the line `- ../../components/observability` in `k8s/overlays/local/kustomization.yaml`, then `make k8s-up`: the services restart without OTLP. 2. `make k8s-up` only applies, it never deletes, so delete Alloy by hand: `kubectl delete -n jbh deployment/jbh-alloy service/jbh-alloy ingress/jbh-faro serviceaccount/jbh-alloy role/jbh-alloy rolebinding/jbh-alloy` and `kubectl delete clusterrole/jbh-alloy clusterrolebinding/jbh-alloy`. Postgres data stays. |
+
+The Java services' logs appear twice in Loki: once over OTLP (with `traceId`), once from stdout (with `k8s_pod_name`).
+That is on purpose: stdout also shows a crash before the OTel SDK starts.
+
+## 8. Google sign-in
 
 The Google button needs `http://localhost:8081` in the OAuth client's "Authorized JavaScript origins"
 (Google Cloud Console → APIs & Services → Credentials). Email and password sign-in works without it.
 
-## 8. Read more
+## 9. Read more
 
 - [k8s/README.md](k8s/README.md): the folder map, and the portability rule (base vs overlay).
 - [k8s/docs/](k8s/docs/): concepts, Consul vs Kubernetes, images and distroless, GHCR → cluster, GitHub Actions.
